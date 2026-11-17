@@ -1,4 +1,4 @@
-QT += core gui qml quick quickcontrols2 multimedia dbus concurrent testlib
+QT += core gui qml quick quickcontrols2 multimedia dbus concurrent network testlib
 CONFIG += c++17 testcase link_pkgconfig
 PKGCONFIG += taglib
 LIBS += -pthread
@@ -8,6 +8,6 @@ TEMPLATE = app
 INCLUDEPATH += ../src
 
 HEADERS += ../src/ring.h ../src/dsp.h ../src/stream.h ../src/engine.h ../src/analysis.h ../src/library.h \
-           ../src/player.h ../src/visual.h ../src/remote.h ../src/theme.h ../src/translator.h
+           ../src/player.h ../src/visual.h ../src/remote.h ../src/theme.h ../src/translator.h ../src/lyrics.h
 SOURCES += halo_tests.cpp ../src/stream.cpp ../src/engine.cpp ../src/analysis.cpp ../src/library.cpp \
-           ../src/player.cpp ../src/visual.cpp ../src/remote.cpp ../src/theme.cpp ../src/translator.cpp
+           ../src/player.cpp ../src/visual.cpp ../src/remote.cpp ../src/theme.cpp ../src/translator.cpp ../src/lyrics.cpp

@@ -21,6 +21,8 @@ Rectangle {
         ["/  Ctrl+F", qsTr("Search")],
         ["1 2 3 4 5", qsTr("Albums, Songs, Queue, Moments, Most played")],
         ["F", qsTr("Now Playing, full window")],
+        ["L", qsTr("Lyrics, live with the song")],
+        [",  .", qsTr("Lyrics earlier or later (Shift: by half a second)")],
         ["M", qsTr("Save a moment at this second")],
         ["[  ]", qsTr("Jump to the previous or next moment")],
         ["B", qsTr("Blend: mix songs into each other")],

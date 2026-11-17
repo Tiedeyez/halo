@@ -17,6 +17,7 @@
 #include "audiooutput.h"
 #include "cli.h"
 #include "library.h"
+#include "lyrics.h"
 #include "player.h"
 #include "remote.h"
 #include "stream.h"
@@ -63,6 +64,22 @@ int main(int argc, char *argv[]) {
     app.setWindowIcon(QIcon::fromTheme("halo"));
     QQuickStyle::setStyle("Material");
 
+    // One Halo at a time: a second launch (a song double-clicked in the file
+    // manager while Halo plays) hands its files to the first and exits,
+    // before it reads the library or the saved queue, so it is quick and
+    // never writes over the running Halo's state.
+    auto handOver = [&files] {
+        QJsonArray list;
+        for (const QString &f : files)
+            list.append(f);
+        // Generous: the request is queued even if that Halo is busy.
+        Remote::send({{"cmd", "open"}, {"args", list}}, nullptr, 8000);
+    };
+    if (Remote::running()) {
+        handOver();
+        return 0;
+    }
+
     Translator translator;
     app.installTranslator(&translator);
     Theme theme;
@@ -70,14 +87,22 @@ int main(int argc, char *argv[]) {
     Analyzer analyzer;
     Player player(&library, &analyzer);
     Remote remote(&player);
+    // Lyrics follow the song: a new song looks them up, every position
+    // update moves the line being sung.
+    LyricsService lyrics;
+    remote.setLyrics(&lyrics);
+    auto loadLyrics = [&] {
+        lyrics.load(player.currentPath(), player.title(), player.artist(), player.album(), player.duration());
+    };
+    QObject::connect(&player, &Player::currentChanged, &lyrics, loadLyrics);
+    QObject::connect(&player, &Player::positionChanged, &lyrics, [&] { lyrics.follow(player.position()); });
+    QObject::connect(&player, &Player::seeked, &lyrics, [&](double seconds) { lyrics.follow(seconds); });
 
-    // One Halo at a time: a second launch hands its files to the first and
-    // brings it forward.
+    // Two launched at the same moment: the one that lost the race hands over
+    // too, and leaves the saved state alone.
     if (!remote.listen()) {
-        QJsonArray list;
-        for (const QString &f : files)
-            list.append(f);
-        Remote::send({{"cmd", "open"}, {"args", list}}, nullptr);
+        player.forgetState();
+        handOver();
         return 0;
     }
 
@@ -120,6 +145,8 @@ int main(int argc, char *argv[]) {
     context->setContextProperty("theme", &theme);
     context->setContextProperty("library", &library);
     context->setContextProperty("player", &player);
+    context->setContextProperty("lyrics", &lyrics);
+    qmlRegisterUncreatableType<LyricsService>("Halo", 1, 0, "Lyrics", "from main");
     context->setContextProperty("spectrumSource", &spectrum);
     context->setContextProperty("albums", &albums);
     context->setContextProperty("tracks", &tracks);

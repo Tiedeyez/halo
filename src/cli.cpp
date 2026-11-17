@@ -38,6 +38,11 @@ Control a running Halo:
   blend|drift|shuffle|normalize <on|off>
   repeat <off|all|one>
   sleep <minutes|off>          Fade out and pause after N minutes
+  lyrics [--json]              The current song's lyrics, the line being sung marked
+  lyrics online <on|off>       Look lyrics up on lrclib.net (sends title, artist,
+                               album and length of each song played)
+  lyrics retry                 Look again, ignoring a cached miss
+  lyrics offset <+N|-N|reset>  Show this song's lyrics N seconds earlier or later
   rescan                       Look for new music
 
 Commands that need no running Halo:
@@ -56,8 +61,9 @@ description: |
   Control Halo, the Omarchy music player, from the command line: what is
   playing, play/pause/skip, queue songs or folders, set volume, Blend
   (beat-aware crossfades), Drift (keeps playing similar music from the
-  library), moments, the sleep timer, and track analysis (tempo, loudness).
-  Use when asked to play, queue, pause or skip music, or what song is on.
+  library), moments, the sleep timer, live lyrics, and track analysis
+  (tempo, loudness). Use when asked to play, queue, pause or skip music,
+  what song is on, or what the words are.
 ---
 
 # Halo
@@ -75,7 +81,13 @@ halo queue --json
 halo blend on ; halo drift on ; halo repeat all ; halo sleep 30
 halo analyze track.mp3 --json   # {"bpm":..,"lufs":..,"start":..,"end":..}
 halo scan --json                # library size, no window needed
+halo lyrics --json              # {"lyrics":{"status":"found","kind":"words","current":12,"lines":[..]}}
+halo lyrics offset +0.3         # this song's lyrics 0.3 s earlier (saved per song)
 ```
+
+Online lyrics (lrclib.net) is off unless the user turned it on; it sends the
+title, artist, album and length of each song played. Don't switch it on
+(`halo lyrics online on`) without the user asking.
 
 Music lives in ~/Music (more folders, one per line, in ~/.config/halo/folders).
 Halo never edits or moves music files. State is in ~/.local/state/halo and
@@ -151,6 +163,38 @@ int remote(const QString &command, const QStringList &args, bool json) {
                   << (o.value("artist").toString().isEmpty() ? QString() : " - " + o.value("artist").toString())
                   << (o.value("drift").toBool() ? "  (drift)" : "") << "\n";
         }
+        return 0;
+    }
+    if (command == "lyrics") {
+        const QJsonObject l = reply.value("lyrics").toObject();
+        const QString status = l.value("status").toString();
+        const QString kind = l.value("kind").toString();
+        if (status == "offline") {
+            out() << "No lyrics on this computer for this song. Turn on lookups with: halo lyrics online on\n";
+            return 0;
+        }
+        if (status != "found") {
+            out() << (status == "searching" ? "Looking for lyrics..." : status == "not-found" ? "No lyrics found."
+                      : status == "failed" ? "Couldn't reach lrclib.net." : "Nothing playing.") << "\n";
+            return 0;
+        }
+        if (kind == "instrumental") {
+            out() << "Instrumental.\n";
+            return 0;
+        }
+        const int current = l.value("current").toInt();
+        const QJsonArray lines = l.value("lines").toArray();
+        for (int i = 0; i < lines.size(); ++i) {
+            const QJsonObject line = lines[i].toObject();
+            QString stamp = "     ";
+            if (line.contains("start")) {
+                const int s = int(line.value("start").toDouble());
+                stamp = QString("%1:%2").arg(s / 60).arg(s % 60, 2, 10, QChar('0'));
+            }
+            out() << (i == current ? "> " : "  ") << stamp.rightJustified(6) << "  " << line.value("text").toString() << "\n";
+        }
+        out() << "\n" << (kind == "words" ? "Timed word by word" : kind == "synced" ? "Timed line by line" : "Not timed")
+              << " · from " << l.value("source").toString() << "\n";
         return 0;
     }
     if (reply.contains("status"))
@@ -238,7 +282,7 @@ namespace Cli {
 bool isCommand(const QStringList &arguments) {
     static const QStringList commands{"status", "play", "pause", "toggle", "next", "previous", "prev", "seek",
                                       "volume", "add", "playnext", "queue", "clear", "moment", "blend", "drift",
-                                      "shuffle", "normalize", "repeat", "sleep", "rescan", "scan", "analyze",
+                                      "shuffle", "normalize", "repeat", "sleep", "rescan", "scan", "analyze", "lyrics",
                                       "skill", "grab", "ui", "help", "-h", "--help", "-v", "--version"};
     return arguments.size() > 1 && commands.contains(arguments[1]);
 }

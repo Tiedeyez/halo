@@ -1,4 +1,4 @@
-QT += core gui qml quick quickcontrols2 multimedia dbus concurrent
+QT += core gui qml quick quickcontrols2 multimedia dbus concurrent network
 
 CONFIG += c++17 release link_pkgconfig
 PKGCONFIG += taglib
@@ -19,7 +19,8 @@ HEADERS += \
     src/audiooutput.h \
     src/cli.h \
     src/theme.h \
-    src/translator.h
+    src/translator.h \
+    src/lyrics.h
 
 SOURCES += \
     src/main.cpp \
@@ -33,7 +34,8 @@ SOURCES += \
     src/audiooutput.cpp \
     src/cli.cpp \
     src/theme.cpp \
-    src/translator.cpp
+    src/translator.cpp \
+    src/lyrics.cpp
 
 RESOURCES += src/resources.qrc
 

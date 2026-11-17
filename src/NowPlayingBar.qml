@@ -72,7 +72,7 @@ Rectangle {
                 spacing: 2
                 Text {
                     Layout.fillWidth: true
-                    text: player.hasTrack ? player.title : qsTr("Nothing playing")
+                    text: player.hasTrack ? Style.mainTitle(player.title) : qsTr("Nothing playing")
                     color: Style.text
                     font.pixelSize: Style.fontBody + 1
                     font.weight: Font.DemiBold
@@ -83,6 +83,19 @@ Rectangle {
                     text: player.hasTrack ? Style.artistName(player.artist) : qsTr("Pick an album, or drop music here")
                     color: Style.muted
                     font.pixelSize: Style.fontBody
+                    elide: Text.ElideRight
+                }
+                // The line being sung, while the lyrics aren't on screen.
+                ScrambleText {
+                    readonly property bool singing: lyrics.status === Lyrics.Found && lyrics.current >= 0 &&
+                        (lyrics.kind === Lyrics.KindSynced || lyrics.kind === Lyrics.KindWords) && lyrics.gap <= 0
+                    Layout.fillWidth: true
+                    visible: singing && !(player.blending || player.blendIn >= 0 && player.blendIn < 30)
+                    target: singing ? (lyrics.lines[lyrics.current] || {}).text || "" : ""
+                    duration: 220
+                    color: Style.accentText
+                    font.family: Style.mono
+                    font.pixelSize: Style.fontSmall
                     elide: Text.ElideRight
                 }
                 Text {

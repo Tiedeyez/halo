@@ -107,6 +107,8 @@ private:
 };
 
 // The MPRIS service and the local socket the `halo` command talks to.
+class LyricsService;
+
 class Remote : public QObject {
     Q_OBJECT
 
@@ -118,11 +120,15 @@ public:
     static QString socketName();
     // Sends one request to a running Halo. Returns false if none answers.
     static bool send(const QJsonObject &request, QJsonObject *reply, int timeoutMs = 2000);
+    // Whether another Halo is listening, even if it is too busy to answer yet.
+    static bool running(int timeoutMs = 1000);
 
     // Starts listening; false (and nothing changed) if another Halo already
     // owns the socket.
     bool listen();
     QJsonObject handle(const QJsonObject &request);
+    // Lets `halo lyrics` read and steer the lyrics; optional.
+    void setLyrics(LyricsService *lyrics) { m_lyrics = lyrics; }
 
 signals:
     void raiseRequested();
@@ -133,6 +139,7 @@ signals:
 
 private:
     Player *m_player;
+    LyricsService *m_lyrics = nullptr;
     QLocalServer m_server;
     MprisRoot *m_root = nullptr;
     MprisPlayer *m_mpris = nullptr;

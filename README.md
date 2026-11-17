@@ -32,6 +32,15 @@ checked against the source.
   what it plays, not every sound on the machine) as a ring of square pixels
   around the cover in your theme's accent, torn sideways for a frame on hard
   beats. V switches to LED bars, C keeps it still.
+- **Live lyrics.** Press L. Timed lyrics scroll with the song and fill in
+  word by word in your accent, a block cursor riding the edge of the word
+  being sung; each new line decrypts into place, and long breaks count down
+  in pixels. Click a line to jump to it; scroll to read ahead. Lyrics come
+  from a `.lrc` file beside the song, its tags, or (only if you turn it on)
+  [LRCLIB](https://lrclib.net), the free lyrics database, which has word
+  timing for many songs. If the timing is off, `,` and `.` shift it for that
+  song, and Halo remembers. See [DISCLOSURE.md](DISCLOSURE.md) for exactly
+  what a lookup sends.
 - **Pixel glitch, Omarchy style.** Halo borrows the screensaver's look: a
   pixel wordmark, titles that decrypt into place through block shades, and a
   short pixel-and-slice glitch when the song or the view changes. C (calm)
@@ -80,6 +89,8 @@ Halo never changes, moves or deletes a music file.
 | `/`, Ctrl+F | Search |
 | 1 to 5 | Albums, Songs, Queue, Moments, Most played |
 | F | Now Playing, full window |
+| L | Lyrics, live with the song (opens Now Playing) |
+| `,`, `.` | Lyrics 0.1 s earlier or later for this song (with Shift: 0.5 s) |
 | M | Save a moment at this second |
 | `[`, `]` | Previous or next moment |
 | B | Blend on or off |
@@ -103,6 +114,9 @@ halo status                     # what is playing and the library scan; --json f
 halo add song.flac ; halo playnext ~/Music/Other
 halo next ; halo pause ; halo seek +30 ; halo volume 60
 halo blend on ; halo drift off ; halo repeat all ; halo sleep 30
+halo lyrics                     # the words of the song playing, the sung line marked
+halo lyrics online on           # look lyrics up on lrclib.net (off by default)
+halo lyrics offset +0.3         # this song's lyrics 0.3 s earlier
 halo analyze track.mp3 --json   # tempo, loudness, where the music starts and stops
 halo scan                       # what is in your music folders, no window needed
 halo skill install              # a skill for coding agents

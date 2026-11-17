@@ -68,6 +68,22 @@ QtObject {
         return h > 0 ? qsTr("%1 h %2 min").arg(h).arg(m) : qsTr("%n min", "", Math.max(1, Math.round(seconds / 60)))
     }
 
+    // "Any Many Miny Moe [Prod. By Drumma Boy]" -> "Any Many Miny Moe" for
+    // the big title; credits() gives "Prod. By Drumma Boy" for the line below.
+    readonly property var creditPattern: /\s*[\(\[]([^\)\]]*\b(prod|produced|feat|ft|featuring)\b[^\)\]]*)[\)\]]/gi
+    function mainTitle(title) {
+        const t = (title || "").replace(creditPattern, "").trim()
+        return t.length ? t : (title || "")
+    }
+    function credits(title) {
+        const out = []
+        const re = new RegExp(creditPattern.source, "gi")
+        let m
+        while ((m = re.exec(title || "")) !== null)
+            out.push(m[1].trim())
+        return out.join("  ·  ")
+    }
+
     function artistName(artist) {
         if (artist === "*")
             return qsTr("Various artists")

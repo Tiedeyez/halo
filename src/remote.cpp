@@ -16,6 +16,7 @@
 #include <cmath>
 
 #include "library.h"
+#include "lyrics.h"
 #include "player.h"
 
 namespace {
@@ -212,10 +213,21 @@ bool Remote::send(const QJsonObject &request, QJsonObject *reply, int timeoutMs)
     return true;
 }
 
+bool Remote::running(int timeoutMs) {
+    // A connection is accepted by the kernel even while that Halo's main
+    // thread is busy (starting a song, merging a scan), so this doesn't
+    // mistake a slow Halo for none. Waiting for a reply to a ping did, and
+    // the second launch then took the socket and played over the first.
+    QLocalSocket socket;
+    socket.connectToServer(socketName());
+    return socket.waitForConnected(timeoutMs);
+}
+
 bool Remote::listen() {
-    // Another Halo answering means this one should hand over and exit.
-    if (send({{"cmd", "ping"}}, nullptr, 300))
+    // Another Halo listening means this one should hand over and exit.
+    if (running())
         return false;
+    // Nobody listening: a socket file left behind by a crash is stale.
     QLocalServer::removeServer(socketName());
     m_server.setSocketOptions(QLocalServer::UserAccessOption);
     if (!m_server.listen(socketName()))
@@ -242,6 +254,27 @@ QJsonObject Remote::handle(const QJsonObject &request) {
 
     if (cmd == "ping")
         return {{"ok", true}};
+    if (cmd == "lyrics") {
+        if (!m_lyrics)
+            return {{"ok", false}, {"error", "lyrics aren't available"}};
+        const QString what = args.value(0);
+        if (what == "online" && args.size() == 2 && (args[1] == "on" || args[1] == "off"))
+            m_lyrics->setOnline(args[1] == "on");
+        else if (what == "retry")
+            m_lyrics->retry();
+        else if (what == "offset" && args.size() == 2) {
+            bool number = false;
+            const double seconds = args[1].toDouble(&number);
+            if (args[1] == "reset")
+                m_lyrics->resetOffset();
+            else if (number && std::abs(seconds) <= 30)
+                m_lyrics->nudge(seconds);
+            else
+                return {{"ok", false}, {"error", "offset takes seconds (-30 to 30, like +0.5) or reset"}};
+        } else if (!what.isEmpty())
+            return {{"ok", false}, {"error", "lyrics takes: online <on|off>, retry, offset <seconds|reset>"}};
+        return {{"ok", true}, {"lyrics", m_lyrics->toJson()}};
+    }
     if (cmd == "status")
         return ok();
     if (cmd == "play") {

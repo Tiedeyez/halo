@@ -16,6 +16,8 @@
         <file alias="PixelWordmark.qml">PixelWordmark.qml</file>
         <file alias="PixelLoader.qml">PixelLoader.qml</file>
         <file alias="EmptyState.qml">EmptyState.qml</file>
+        <file alias="LyricLine.qml">LyricLine.qml</file>
+        <file alias="LyricsView.qml">LyricsView.qml</file>
         <file alias="AlbumGrid.qml">AlbumGrid.qml</file>
         <file alias="AlbumPage.qml">AlbumPage.qml</file>
         <file alias="TrackList.qml">TrackList.qml</file>

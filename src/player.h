@@ -181,6 +181,8 @@ public:
                                   const QList<QPair<QString, TrackAnalysis>> &candidates);
 
     QJsonObject status() const;
+    // Never write the state file (a second Halo handing over to the first).
+    void forgetState() { m_stateFile.clear(); }
 
 public slots:
     void playPaths(const QStringList &paths, int start = 0);

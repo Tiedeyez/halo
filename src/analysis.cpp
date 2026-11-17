@@ -3,6 +3,9 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QFutureWatcher>
+#include <QThread>
+#include <QtConcurrent>
 #include <QJsonDocument>
 #include <QSaveFile>
 #include <QStandardPaths>
@@ -392,21 +395,36 @@ void Analyzer::next() {
 
 void Analyzer::finished() {
     const QString path = m_running;
-    m_running.clear();
     m_buffer.append(m_process.readAllStandardOutput());
     const QByteArray bytes = std::exchange(m_buffer, {});
-    if (!path.isEmpty()) {
-        TrackAnalysis analysis;
-        const size_t count = size_t(bytes.size()) / sizeof(float);
-        if (count > 0)
-            analysis = Analysis::analyze(reinterpret_cast<const float *>(bytes.constData()), count);
+    if (path.isEmpty()) {
+        QTimer::singleShot(0, this, &Analyzer::next);
+        return;
+    }
+    // The tempo and loudness maths runs over the whole song, up to a second
+    // on a laptop; on the GUI thread that froze the window once per song
+    // through a library sweep. It runs on a pool thread at low priority, and
+    // m_running stays set until it's done so only one song is in flight.
+    auto *watcher = new QFutureWatcher<TrackAnalysis>(this);
+    connect(watcher, &QFutureWatcher<TrackAnalysis>::finished, this, [this, watcher, path] {
+        watcher->deleteLater();
+        TrackAnalysis analysis = watcher->result();
         // A file ffmpeg can't read is remembered too, so it isn't retried
         // on every pass; its analysis is marked as having no beat.
         analysis.valid = true;
         m_results.insert(path, {QFileInfo(path).lastModified().toMSecsSinceEpoch(), analysis});
+        m_running.clear();
         scheduleSave();
         emit analyzed(path);
         emit progress();
-    }
-    QTimer::singleShot(0, this, &Analyzer::next);
+        next();
+    });
+    watcher->setFuture(QtConcurrent::run([bytes] {
+        QThread::currentThread()->setPriority(QThread::LowestPriority);
+        const size_t count = size_t(bytes.size()) / sizeof(float);
+        TrackAnalysis analysis;
+        if (count > 0)
+            analysis = Analysis::analyze(reinterpret_cast<const float *>(bytes.constData()), count);
+        return analysis;
+    }));
 }

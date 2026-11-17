@@ -81,6 +81,20 @@ ApplicationWindow {
     Shortcut { sequence: "4"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(4) }
     Shortcut { sequence: "5"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(5) }
     Shortcut { sequence: "F"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.nowPlaying = !win.nowPlaying }
+    // L opens the lyrics, in Now Playing; again hides them.
+    Shortcut {
+        sequence: "L"
+        context: Qt.ApplicationShortcut
+        enabled: win.free
+        onActivated: {
+            if (!win.nowPlaying) { win.nowPlaying = true; lyrics.shown = true }
+            else lyrics.shown = !lyrics.shown
+        }
+    }
+    Shortcut { sequence: ","; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: lyrics.nudge(0.1) }
+    Shortcut { sequence: "."; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: lyrics.nudge(-0.1) }
+    Shortcut { sequences: ["<", "Shift+,"]; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: lyrics.nudge(0.5) }
+    Shortcut { sequences: [">", "Shift+."]; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: lyrics.nudge(-0.5) }
     Shortcut { sequence: "M"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.addMoment() }
     Shortcut { sequence: "["; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.jumpMoment(-1) }
     Shortcut { sequence: "]"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.jumpMoment(1) }

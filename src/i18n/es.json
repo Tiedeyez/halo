@@ -182,5 +182,29 @@
   "%n files so far. Albums appear when the first pass is done.": {
     "one": "%n archivo por ahora. Los álbumes aparecen al terminar la primera pasada.",
     "other": "%n archivos por ahora. Los álbumes aparecen al terminar la primera pasada."
-  }
+  },
+  ", . earlier or later": ", . antes o después",
+  ".lrc file": "archivo .lrc",
+  "Asking lrclib.net, the free lyrics database.": "Consultando lrclib.net, la base de datos libre de letras.",
+  "Check the connection. Halo tries again on the next song.": "Revisa la conexión. Halo lo vuelve a intentar con la próxima canción.",
+  "Couldn't reach lrclib.net": "No se pudo conectar con lrclib.net",
+  "Instrumental": "Instrumental",
+  "LRCLIB doesn't have this one yet. Freestyles and DJ drops often aren't there. A .lrc file beside the song, named like it, works too.": "LRCLIB aún no tiene esta. Los freestyles y los drops de DJ no suelen estar. Un archivo .lrc junto a la canción, con el mismo nombre, también sirve.",
+  "Look again": "Buscar de nuevo",
+  "Lyrics": "Letra",
+  "Lyrics (L)": "Letra (L)",
+  "Lyrics earlier or later (Shift: by half a second)": "Letra antes o después (Shift: medio segundo)",
+  "Lyrics online is off": "Las letras en línea están desactivadas",
+  "Lyrics, live with the song": "Letra, en vivo con la canción",
+  "No lyrics found": "No se encontró la letra",
+  "No words in this one.": "Esta no tiene letra.",
+  "Play something and its words show here.": "Reproduce algo y su letra aparecerá aquí.",
+  "Searching lyrics": "Buscando la letra",
+  "There are no lyrics for this song on this computer. Halo can look them up on lrclib.net, sending the title, artist, album and length of each song you play. Nothing else leaves this computer.": "No hay letra para esta canción en este equipo. Halo puede buscarla en lrclib.net, enviando el título, artista, álbum y duración de cada canción que reproduzcas. Nada más sale de este equipo.",
+  "Turn on online lyrics": "Activar letras en línea",
+  "V switches the visual · C calms the motion · L shows the lyrics": "V cambia la visualización · C calma el movimiento · L muestra la letra",
+  "not timed": "sin tiempos",
+  "song tags": "etiquetas de la canción",
+  "timed by line": "sincronizada por línea",
+  "timed by word": "sincronizada por palabra"
 }

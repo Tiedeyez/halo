@@ -1186,6 +1186,8 @@ void Player::flush() {
 
 void Player::save() {
     m_saveTimer.stop();
+    if (m_stateFile.isEmpty())
+        return;
     QJsonArray moments;
     for (const Moment &m : m_moments)
         moments.append(QJsonObject{{"path", m.path}, {"seconds", m.seconds}, {"created", double(m.created)}});

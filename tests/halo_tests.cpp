@@ -8,12 +8,16 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QThread>
+#include <QTcpServer>
+#include <QTcpSocket>
+#include <QUrlQuery>
 #include <cmath>
 #include <vector>
 
 #include "analysis.h"
 #include "engine.h"
 #include "library.h"
+#include "lyrics.h"
 #include "player.h"
 #include "remote.h"
 #include "ring.h"
@@ -84,6 +88,54 @@ void waitDecoded(Stream &s) {
 }
 
 }
+
+
+// A tiny stand-in for lrclib.net: answers /api/get and /api/search from
+// canned replies and records every request it was sent.
+class FakeLrclib : public QObject {
+    Q_OBJECT
+public:
+    struct Reply {
+        int code = 200;
+        QByteArray body;
+        QByteArray extraHeaders;
+    };
+    QHash<QString, Reply> replies; // keyed by path ("/api/get")
+    QStringList requests;           // "path?query"
+    QStringList agents;
+
+    FakeLrclib() {
+        server.listen(QHostAddress::LocalHost, 0);
+        connect(&server, &QTcpServer::newConnection, this, [this] {
+            while (QTcpSocket *socket = server.nextPendingConnection()) {
+                connect(socket, &QTcpSocket::readyRead, socket, [this, socket] {
+                    buffer[socket] += socket->readAll();
+                    if (!buffer[socket].contains("\r\n\r\n"))
+                        return;
+                    const QByteArray head = buffer.take(socket);
+                    const QList<QByteArray> lines = head.split('\n');
+                    const QByteArray target = lines.value(0).split(' ').value(1);
+                    for (const QByteArray &l : lines)
+                        if (l.toLower().startsWith("user-agent:"))
+                            agents << QString::fromUtf8(l.mid(11).trimmed());
+                    requests << QString::fromUtf8(QByteArray::fromPercentEncoding(target));
+                    const QString path = QString::fromUtf8(target.split('?').value(0));
+                    const Reply r = replies.value(path, Reply{404, R"({"name":"TrackNotFound"})", {}});
+                    QByteArray out = "HTTP/1.1 " + QByteArray::number(r.code) + " X\r\nContent-Type: application/json\r\n" +
+                                     r.extraHeaders + "Content-Length: " + QByteArray::number(r.body.size()) +
+                                     "\r\nConnection: close\r\n\r\n" + r.body;
+                    socket->write(out);
+                    socket->disconnectFromHost();
+                });
+            }
+        });
+    }
+    QString url() const { return QString("http://127.0.0.1:%1").arg(server.serverPort()); }
+
+private:
+    QTcpServer server;
+    QHash<QTcpSocket *, QByteArray> buffer;
+};
 
 class HaloTests : public QObject {
     Q_OBJECT
@@ -489,6 +541,242 @@ private slots:
         f.write("accent = \"#89b4fa\"\n");
         f.close();
         QCOMPARE(Theme::readAccent(dir.filePath("colors.toml")), QString("#89b4fa"));
+    }
+
+    // ---- lyrics ----
+
+    void lrcParsesStampsOffsetsAndWords() {
+        const Lyrics l = Lyrics::parseLrc("[ti:Song]\n[offset:+500]\n[00:10.50]First line\n"
+                                          "[00:05.00][00:20.00]Chorus\n[00:12.00]\n[00:30.25]Last\n");
+        QCOMPARE(int(l.kind), int(Lyrics::Synced));
+        QCOMPARE(int(l.lines.size()), 4);
+        // Sorted by time, the offset shown 0.5 s earlier.
+        QCOMPARE(l.lines[0].text, QString("Chorus"));
+        QVERIFY(std::abs(l.lines[0].start - 4.5) < 1e-6);
+        QVERIFY(std::abs(l.lines[1].start - 10.0) < 1e-6);
+        // The empty stamp at 12 s ends "First line" there: a break.
+        QVERIFY(std::abs(l.lines[1].end - 11.5) < 1e-6);
+        QCOMPARE(l.lines[2].text, QString("Chorus"));
+
+        const Lyrics enhanced = Lyrics::parseLrc("[00:01.00]<00:01.00>Young <00:01.40>Money<00:02.00>\n");
+        QCOMPARE(int(enhanced.kind), int(Lyrics::Words));
+        QCOMPARE(enhanced.lines[0].text, QString("Young Money"));
+        QCOMPARE(int(enhanced.lines[0].words.size()), 2);
+        QVERIFY(std::abs(enhanced.lines[0].words[1].start - 1.4) < 1e-6);
+
+        const Lyrics pause = Lyrics::parseLrc("[00:01.00]Words here\n[00:03.00]()\n[00:09.00]More words\n");
+        QCOMPARE(int(pause.lines.size()), 2);
+        QVERIFY(std::abs(pause.lines[0].end - 3.0) < 1e-6);
+
+        const Lyrics plain = Lyrics::parseLrc("Line one\n\n\nLine two\n");
+        QCOMPARE(int(plain.kind), int(Lyrics::Plain));
+        QCOMPARE(int(plain.lines.size()), 3); // a single blank kept between verses
+    }
+
+    void lyricsfileGivesWordTiming() {
+        const QString yaml = "version: '1.0'\nmetadata:\n  title: A Milli\n  instrumental: false\nlines:\n"
+                             "- text: Young Money!\n  start_ms: 6320\n  end_ms: 12780\n  words:\n"
+                             "  - text: 'Young '\n    start_ms: 6320\n  - text: Money!\n    start_ms: 6620\n"
+                             "- text: 'Mack, I''m goin'' in'\n  start_ms: 16870\n  end_ms: 19680\n  words:\n"
+                             "  - text: 'Mack, '\n    start_ms: 16870\n  - text: \"I'm goin' in\"\n    start_ms: 17250\n";
+        const Lyrics l = Lyrics::parseLyricsfile(yaml);
+        QCOMPARE(int(l.kind), int(Lyrics::Words));
+        QCOMPARE(int(l.lines.size()), 2);
+        QCOMPARE(l.lines[1].text, QString("Mack, I'm goin' in"));
+        QVERIFY(std::abs(l.lines[0].end - 12.78) < 1e-6);
+        QCOMPARE(l.lines[0].words[0].text, QString("Young "));
+        QVERIFY(std::abs(l.lines[1].words[1].start - 17.25) < 1e-6);
+        QCOMPARE(l.lines[1].words[1].text, QString("I'm goin' in"));
+
+        const Lyrics instrumental = Lyrics::parseLyricsfile("version: '1.0'\nmetadata:\n  instrumental: true\nlines: []\n");
+        QCOMPARE(int(instrumental.kind), int(Lyrics::Instrumental));
+    }
+
+    void lyricsJunkIsRejected() {
+        QVERIFY(Lyrics::isJunk("MixFiend.com / MixtapeTorrent.com"));
+        QVERIFY(Lyrics::isJunk("Downloaded from www.example.net"));
+        QVERIFY(Lyrics::isJunk("   "));
+        QVERIFY(!Lyrics::isJunk("A millionaire, I'm a Young Money millionaire\nTougher than Nigerian hair\n"
+                                "My criteria compared to your career just isn't fair\nI'm a venereal disease"));
+    }
+
+    void lyricsQueriesAreTidied() {
+        QCOMPARE(LyricsQuery::cleanTitle("Hustle-MF"), QString("Hustle"));
+        QCOMPARE(LyricsQuery::cleanTitle("5. Damn Damn"), QString("Damn Damn"));
+        QCOMPARE(LyricsQuery::cleanTitle("Young Mulah Baby (Feat. Gorilla Zoe)"), QString("Young Mulah Baby"));
+        QCOMPARE(LyricsQuery::cleanTitle("3 Way [Prod. By Tm-88]"), QString("3 Way"));
+        QCOMPARE(LyricsQuery::cleanTitle("Dope Boy Swag ft. Lil Wayne"), QString("Dope Boy Swag"));
+        QCOMPARE(LyricsQuery::cleanTitle("99 Problems"), QString("99 Problems"));
+        QCOMPARE(LyricsQuery::mainArtist("Young Jeezy & T.I."), QString("Young Jeezy"));
+        QCOMPARE(LyricsQuery::mainArtist("Ace Hood, Rick Ross, Lil Wayne"), QString("Ace Hood"));
+        QCOMPARE(LyricsQuery::mainArtist("*"), QString());
+        QVERIFY(!LyricsQuery::searchable("lil wayne bad guy 4 - Track 28"));
+        QVERIFY(!LyricsQuery::searchable("Track 10"));
+        QVERIFY(!LyricsQuery::searchable("Untitled"));
+        QVERIFY(LyricsQuery::searchable("Back On Track"));
+        QVERIFY(LyricsQuery::searchable("Green And Yellow"));
+    }
+
+    void lyricsSearchPicksTheRightSong() {
+        LyricsQuery q{"Get Em Jeezy (Feat. X)", "Young Jeezy", "", 205};
+        auto record = [](QString artist, QString title, double length, bool synced, bool words = false) {
+            return QJsonObject{{"artistName", artist}, {"trackName", title}, {"duration", length},
+                               {"syncedLyrics", synced ? "[00:01.00]x" : ""}, {"plainLyrics", "x"},
+                               {"hasWordSync", words}, {"instrumental", false}};
+        };
+        QList<QJsonObject> results{record("Someone Else", "Get 'Em Jeezy", 205, true),
+                                   record("Young Jeezy", "Get 'Em Jeezy", 260, true),
+                                   record("Young Jeezy", "Get 'Em Jeezy", 206, false),
+                                   record("Young Jeezy", "Get 'Em Jeezy", 207, true)};
+        // Wrong artist and a far-off length are out; synced beats plain.
+        QCOMPARE(pickSearchResult(results, q), 3);
+        results << record("Young Jeezy", "Get Em Jeezy", 205, true, true);
+        QCOMPARE(pickSearchResult(results, q), 4);
+        QCOMPARE(pickSearchResult({record("Young Jeezy", "Trap Or Die", 205, true)}, q), -1);
+    }
+
+    void lyricsFollowLinesAndWords() {
+        Lyrics l = Lyrics::parseLrc("[00:10.00]<00:10.00>Ab <00:11.00>cd\n[00:20.00]<00:20.00>Next <00:21.00>one\n");
+        l.close(40);
+        QCOMPARE(l.lineAt(5), -1);
+        QCOMPARE(l.lineAt(10.5), 0);
+        QCOMPARE(l.lineAt(25), 1);
+
+        QTemporaryDir cache, state;
+        LyricsService service(cache.path(), state.path());
+        service.setEndpoint("http://127.0.0.1:9"); // never reached: offline
+        QTemporaryDir music;
+        const QString song = music.filePath("song.mp3");
+        QFile(song).open(QIODevice::WriteOnly);
+        QFile lrc(music.filePath("song.lrc"));
+        QVERIFY(lrc.open(QIODevice::WriteOnly));
+        lrc.write("[00:10.00]<00:10.00>Ab <00:11.00>cd\n[00:20.00]<00:20.00>Next <00:21.00>one\n[00:21.50]\n[00:40.00]Last line\n");
+        lrc.close();
+        service.load(song, "Song", "Artist", "", 60);
+        QCOMPARE(service.status(), int(LyricsService::Found));
+        QCOMPARE(service.source(), QString("file"));
+        QCOMPARE(service.kind(), int(Lyrics::Words));
+
+        service.follow(10.5); // half of "Ab " (3 of 5 characters sung: 1.5 rounded)
+        QCOMPARE(service.current(), 0);
+        QVERIFY(service.progress() > 0.2 && service.progress() < 0.6);
+        service.follow(19);
+        QVERIFY(service.progress() > 0.99);
+        // Before the first line, the wait counts down.
+        service.follow(5);
+        QCOMPARE(service.current(), -1);
+        QVERIFY(service.gap() > 0.4 && service.gap() < 0.6);
+        // After "one" ends at 21.5 there's a long break before "Last line".
+        service.follow(30);
+        QCOMPARE(service.current(), 1);
+        QVERIFY(service.gap() > 0.4 && service.gap() < 0.6);
+
+        // A nudge shows the lyrics earlier, and is kept for this song.
+        service.nudge(1.0);
+        service.follow(9.2);
+        QCOMPARE(service.current(), 0);
+        LyricsService again(cache.path(), state.path());
+        again.load(song, "Song", "Artist", "", 60);
+        QVERIFY(std::abs(again.offset() - 1.0) < 1e-6);
+    }
+
+    void lyricsComeFromLrclibAndAreCached() {
+        FakeLrclib lrclib;
+        // /api/get misses (404), search finds it with word timing.
+        const QByteArray yaml = "version: '1.0'\nlines:\n- text: Hello there\n  start_ms: 1000\n  end_ms: 3000\n  words:\n"
+                                "  - text: 'Hello '\n    start_ms: 1000\n  - text: there\n    start_ms: 1500\n";
+        QJsonObject hit{{"artistName", "Lil Wayne"}, {"trackName", "Hello"}, {"duration", 120}, {"instrumental", false},
+                        {"plainLyrics", "Hello there"}, {"syncedLyrics", "[00:01.00]Hello there"},
+                        {"hasWordSync", true}, {"lyricsfile", QString::fromUtf8(yaml)}};
+        lrclib.replies["/api/search"] = {200, QJsonDocument(QJsonArray{hit}).toJson(), {}};
+
+        QTemporaryDir cache, state, music;
+        const QString song = music.filePath("hello.mp3");
+        QFile(song).open(QIODevice::WriteOnly);
+        {
+            LyricsService service(cache.path(), state.path());
+            service.setEndpoint(lrclib.url());
+            // Off by default: nothing is sent.
+            service.load(song, "Hello (Feat. Drake)", "Lil Wayne", "Tape", 121);
+            QCOMPARE(service.status(), int(LyricsService::Offline));
+            QVERIFY(lrclib.requests.isEmpty());
+
+            service.setOnline(true);
+            QTRY_COMPARE(service.status(), int(LyricsService::Found));
+            QCOMPARE(service.kind(), int(Lyrics::Words));
+            QCOMPARE(service.source(), QString("lrclib"));
+            QCOMPARE(lrclib.requests.size(), 2);
+            QVERIFY(lrclib.requests[0].startsWith("/api/get?"));
+            QVERIFY(lrclib.requests[0].contains("track_name=Hello&"));
+            QVERIFY(lrclib.requests[0].contains("duration=121"));
+            QVERIFY(lrclib.requests[1].startsWith("/api/search?"));
+            QVERIFY(lrclib.agents.value(0).startsWith("Halo/"));
+        }
+        // The next time, the cache answers and LRCLIB isn't asked.
+        {
+            LyricsService service(cache.path(), state.path());
+            service.setEndpoint(lrclib.url());
+            QVERIFY(service.online()); // the choice is remembered
+            service.load(song, "Hello (Feat. Drake)", "Lil Wayne", "Tape", 121);
+            QCOMPARE(service.status(), int(LyricsService::Found));
+            QCOMPARE(lrclib.requests.size(), 2);
+        }
+        // A miss is cached too.
+        const QString other = music.filePath("freestyle.mp3");
+        QFile(other).open(QIODevice::WriteOnly);
+        {
+            LyricsService service(cache.path(), state.path());
+            service.setEndpoint(lrclib.url());
+            service.load(other, "Freestyle", "Nobody", "", 90);
+            QTRY_COMPARE(service.status(), int(LyricsService::NotFound));
+            const int asked = lrclib.requests.size();
+            service.load(song, "Hello", "Lil Wayne", "Tape", 121);
+            service.load(other, "Freestyle", "Nobody", "", 90);
+            QCOMPARE(service.status(), int(LyricsService::NotFound));
+            QCOMPARE(lrclib.requests.size(), asked);
+        }
+    }
+
+    void lyricsWithoutArtistSearchByTitle() {
+        FakeLrclib lrclib;
+        lrclib.replies["/api/search"] = {200, "[]", {}};
+        QTemporaryDir cache, state, music;
+        const QString song = music.filePath("x.mp3");
+        QFile(song).open(QIODevice::WriteOnly);
+        LyricsService service(cache.path(), state.path());
+        service.setEndpoint(lrclib.url());
+        service.setOnline(true);
+        service.load(song, "Green And Yellow Lil Wayne", "", "", 200);
+        QTRY_COMPARE(service.status(), int(LyricsService::NotFound));
+        QCOMPARE(lrclib.requests.size(), 1);
+        QVERIFY(lrclib.requests[0].startsWith("/api/search?"));
+        // A generic title costs no request at all.
+        const QString other = music.filePath("y.mp3");
+        QFile(other).open(QIODevice::WriteOnly);
+        service.load(other, "Track 12", "Lil Wayne", "", 200);
+        QCOMPARE(service.status(), int(LyricsService::NotFound));
+        QCOMPARE(lrclib.requests.size(), 1);
+    }
+
+    void lyricsHonourRetryAfter() {
+        FakeLrclib lrclib;
+        lrclib.replies["/api/get"] = {429, R"({"name":"RateLimitExceeded"})", "Retry-After: 60\r\n"};
+        QTemporaryDir cache, state, music;
+        const QString song = music.filePath("a.mp3");
+        QFile(song).open(QIODevice::WriteOnly);
+        LyricsService service(cache.path(), state.path());
+        service.setEndpoint(lrclib.url());
+        service.setOnline(true);
+        service.load(song, "A", "B", "", 100);
+        QTRY_COMPARE(lrclib.requests.size(), 1);
+        QTest::qWait(300);
+        // Still waiting, not hammering the server, not caching a miss.
+        QCOMPARE(service.status(), int(LyricsService::Searching));
+        const QString other = music.filePath("b.mp3");
+        QFile(other).open(QIODevice::WriteOnly);
+        service.load(other, "C", "D", "", 100);
+        QTest::qWait(300);
+        QCOMPARE(lrclib.requests.size(), 1);
     }
 };
 

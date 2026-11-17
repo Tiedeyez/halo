@@ -182,5 +182,29 @@
   "%n files so far. Albums appear when the first pass is done.": {
     "one": "%n file so far. Albums appear when the first pass is done.",
     "other": "%n files so far. Albums appear when the first pass is done."
-  }
+  },
+  ", . earlier or later": "",
+  ".lrc file": "",
+  "Asking lrclib.net, the free lyrics database.": "",
+  "Check the connection. Halo tries again on the next song.": "",
+  "Couldn't reach lrclib.net": "",
+  "Instrumental": "",
+  "LRCLIB doesn't have this one yet. Freestyles and DJ drops often aren't there. A .lrc file beside the song, named like it, works too.": "",
+  "Look again": "",
+  "Lyrics": "",
+  "Lyrics (L)": "",
+  "Lyrics earlier or later (Shift: by half a second)": "",
+  "Lyrics online is off": "",
+  "Lyrics, live with the song": "",
+  "No lyrics found": "",
+  "No words in this one.": "",
+  "Play something and its words show here.": "",
+  "Searching lyrics": "",
+  "There are no lyrics for this song on this computer. Halo can look them up on lrclib.net, sending the title, artist, album and length of each song you play. Nothing else leaves this computer.": "",
+  "Turn on online lyrics": "",
+  "V switches the visual · C calms the motion · L shows the lyrics": "",
+  "not timed": "",
+  "song tags": "",
+  "timed by line": "",
+  "timed by word": ""
 }

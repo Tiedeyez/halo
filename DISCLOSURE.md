@@ -23,6 +23,8 @@ program. It talks to PipeWire through Qt to play sound.
 | `~/.cache/halo/library.json` | The list of music files with their tags and durations | After each library scan |
 | `~/.cache/halo/analysis.json` | Tempo, loudness and silent edges per file | As songs are analysed |
 | `~/.cache/halo/covers/*.jpg` | Album covers, cut square and scaled | When a cover is first shown |
+| `~/.cache/halo/lyrics/*.json` | Lyrics found on lrclib.net, or a note that none were, one file per song | Only with online lyrics on, after a lookup |
+| `~/.local/state/halo/lyrics.json` | Whether online lyrics is on, whether lyrics are shown, and per-song timing nudges | When you change them |
 | `$XDG_RUNTIME_DIR/halo.sock` | The local socket the `halo` command talks to | While Halo runs |
 | `~/.agents/skills/halo/SKILL.md` and the link `~/.claude/skills/halo` | A skill for coding agents | Only when you run `halo skill install` |
 | A `.png` path you name | A picture of the window | Only on the socket command `grab`, and never over an existing file |
@@ -40,8 +42,11 @@ Omarchy or Hyprland configuration.
   embedded covers through TagLib, and their audio through ffmpeg. Image
   files in those folders, for covers. Files named `.haloignore` or
   `.nomedia`, to skip a folder.
+- For the song playing: a `.lrc` file beside it with the same name, and
+  lyrics in its tags, for the lyrics view.
 - `~/.local/state/omarchy/current/theme/colors.toml` for the accent colour,
-  `~/.config/omarchy/language` for the language, and
+  `$OMARCHY_LANGUAGE_FILE` or `~/.config/omarchy/language` (under
+  `$XDG_CONFIG_HOME` when set) for the language, and
   `$OMARCHY_PATH/default/i18n/locales.json` for number formats.
 
 It reads nothing else in your home folder.
@@ -63,19 +68,39 @@ per file.
 
 ## Network
 
-None. Halo opens no network connection, has no telemetry, no analytics, no
-accounts and no automatic updates. It listens only on a local socket that
-only your user can open, and it registers `org.mpris.MediaPlayer2.halo` on
-your D-Bus session bus so media keys and bar widgets can control it.
+Off unless you turn on online lyrics. With it off (the default) Halo opens
+no network connection. There is no telemetry, no analytics, no accounts and
+no automatic updates.
+
+**Online lyrics** (the "Turn on online lyrics" button, or
+`halo lyrics online on`): when a song starts and no lyrics for it are on
+this computer or already cached, Halo asks lrclib.net, a free lyrics
+database, over HTTPS:
+
+- `GET https://lrclib.net/api/get` with the song's title, its first artist,
+  album, and length in whole seconds; if that misses,
+- `GET https://lrclib.net/api/search` with the title and first artist.
+
+The request carries the User-Agent `Halo/0.1.0 (Omarchy music player)` and
+nothing else about you: no file paths, no account, no identifier. LRCLIB
+sees your IP address, as any website would, and which songs you play. Each
+song is looked up once: the answer, or the fact that there was none, is
+cached (a miss is asked again after a week). When LRCLIB asks clients to
+slow down, Halo waits as long as it says. `halo lyrics online off` stops
+all of it; the cache stays until you delete `~/.cache/halo/lyrics`.
+
+Locally, Halo listens only on a socket that only your user can open, and it
+registers `org.mpris.MediaPlayer2.halo` on your D-Bus session bus so media
+keys and bar widgets can control it.
 
 Anything running as your user can send commands on that socket or over
-MPRIS: play, pause, queue files, change settings, or save a picture of the
-window to a new `.png` file.
+MPRIS: play, pause, queue files, change settings (online lyrics included),
+or save a picture of the window to a new `.png` file.
 
 ## How to check this yourself
 
 ```sh
-grep -rnE "QNetwork|QTcp|QUdp|connectToHost" src/        # no network code
+grep -rnE "QNetwork|QTcp|QUdp|connectToHost" src/        # network code: src/lyrics.cpp only
 grep -rnE "QProcess|posix_spawn|startDetached" src/       # every process it starts
 grep -rnE "QSaveFile|mkpath|QFile::link|\.save\(" src/    # every place it writes
 ```
