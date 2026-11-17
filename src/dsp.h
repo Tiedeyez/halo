@@ -12,8 +12,11 @@ namespace Dsp {
 
 constexpr double Pi = 3.14159265358979323846;
 
+// Double precision: in float, the low bands' poles sit so close to the unit
+// circle that rounding moved the response; the EQ's error against an exact
+// reference was -49 dB, and is now below -140 (tools/audio-lab/eq.cpp).
 struct Coefficients {
-    float b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
+    double b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
 };
 
 inline Coefficients peaking(double rate, double frequency, double q, double gainDb) {
@@ -21,8 +24,8 @@ inline Coefficients peaking(double rate, double frequency, double q, double gain
     const double w = 2 * Pi * frequency / rate;
     const double alpha = std::sin(w) / (2 * q);
     const double a0 = 1 + alpha / a;
-    return {float((1 + alpha * a) / a0), float(-2 * std::cos(w) / a0), float((1 - alpha * a) / a0),
-            float(-2 * std::cos(w) / a0), float((1 - alpha / a) / a0)};
+    return {((1 + alpha * a) / a0), (-2 * std::cos(w) / a0), ((1 - alpha * a) / a0),
+            (-2 * std::cos(w) / a0), ((1 - alpha / a) / a0)};
 }
 
 inline Coefficients highPass(double rate, double frequency, double q) {
@@ -30,8 +33,8 @@ inline Coefficients highPass(double rate, double frequency, double q) {
     const double alpha = std::sin(w) / (2 * q);
     const double c = std::cos(w);
     const double a0 = 1 + alpha;
-    return {float((1 + c) / 2 / a0), float(-(1 + c) / a0), float((1 + c) / 2 / a0), float(-2 * c / a0),
-            float((1 - alpha) / a0)};
+    return {((1 + c) / 2 / a0), (-(1 + c) / a0), ((1 + c) / 2 / a0), (-2 * c / a0),
+            ((1 - alpha) / a0)};
 }
 
 inline Coefficients highShelf(double rate, double frequency, double q, double gainDb) {
@@ -41,19 +44,20 @@ inline Coefficients highShelf(double rate, double frequency, double q, double ga
     const double c = std::cos(w);
     const double s = 2 * std::sqrt(a) * alpha;
     const double a0 = (a + 1) - (a - 1) * c + s;
-    return {float(a * ((a + 1) + (a - 1) * c + s) / a0), float(-2 * a * ((a - 1) + (a + 1) * c) / a0),
-            float(a * ((a + 1) + (a - 1) * c - s) / a0), float(2 * ((a - 1) - (a + 1) * c) / a0),
-            float(((a + 1) - (a - 1) * c - s) / a0)};
+    return {(a * ((a + 1) + (a - 1) * c + s) / a0), (-2 * a * ((a - 1) + (a + 1) * c) / a0),
+            (a * ((a + 1) + (a - 1) * c - s) / a0), (2 * ((a - 1) - (a + 1) * c) / a0),
+            (((a + 1) - (a - 1) * c - s) / a0)};
 }
 
 // Transposed direct form II, one channel.
 struct Biquad {
-    float z1 = 0, z2 = 0;
-    float process(const Coefficients &c, float x) {
-        const float y = c.b0 * x + z1;
+    double z1 = 0, z2 = 0;
+    float process(const Coefficients &c, float in) {
+        const double x = in;
+        const double y = c.b0 * x + z1;
         z1 = c.b1 * x - c.a1 * y + z2;
         z2 = c.b2 * x - c.a2 * y;
-        return y;
+        return float(y);
     }
     void reset() { z1 = z2 = 0; }
 };

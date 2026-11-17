@@ -68,14 +68,26 @@ void AudioOutput::start() {
     } else {
         float *scratch = m_scratch.data();
         const qsizetype capacity = qsizetype(m_scratch.size() / 2);
-        m_sink->start([engine, scratch, capacity](QSpan<qint16> buffer) {
+        // TPDF dither (two uniform values, one least significant bit each)
+        // before rounding to 16 bits, so quiet passages fade into steady
+        // hiss instead of the distortion plain rounding leaves.
+        m_sink->start([engine, scratch, capacity, seed = quint32(0x9e3779b9)](QSpan<qint16> buffer) mutable {
+            auto uniform = [&seed] {
+                seed ^= seed << 13;
+                seed ^= seed >> 17;
+                seed ^= seed << 5;
+                return float(seed) * (1.0f / 4294967296.0f);
+            };
             qsizetype done = 0;
             const qsizetype frames = buffer.size() / 2;
             while (done < frames) {
                 const qsizetype block = std::min(capacity, frames - done);
                 engine->render(scratch, int(block));
-                for (qsizetype i = 0; i < block * 2; ++i)
-                    buffer[done * 2 + i] = qint16(std::lround(std::clamp(scratch[i], -1.0f, 1.0f) * 32767.0f));
+                for (qsizetype i = 0; i < block * 2; ++i) {
+                    const float dither = uniform() - uniform();
+                    const float v = std::clamp(scratch[i] * 32767.0f + dither, -32768.0f, 32767.0f);
+                    buffer[done * 2 + i] = qint16(std::lround(v));
+                }
                 done += block;
             }
         });
