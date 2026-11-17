@@ -21,7 +21,7 @@ program. It talks to PipeWire through Qt to play sound.
 | `~/.local/state/halo/state.json` | The queue, position, volume, settings, equalizer, moments | As they change, and on quit |
 | `~/.local/state/halo/stats.json` | Play counts and last-played times per file | After you hear half a song |
 | `~/.cache/halo/library.json` | The list of music files with their tags and durations | After each library scan |
-| `~/.cache/halo/analysis.json` | Tempo, loudness and silent edges per file | As songs are analysed |
+| `~/.cache/halo/analysis.json` | Tempo, loudness, true peak and silent edges per file | As songs are analysed |
 | `~/.cache/halo/covers/*.jpg` | Album covers, cut square and scaled | When a cover is first shown |
 | `~/.cache/halo/lyrics/*.json` | Lyrics found on lrclib.net, or a note that none were, one file per song | Only with online lyrics on, after a lookup |
 | `~/.local/state/halo/lyrics.json` | Whether online lyrics is on, whether lyrics are shown, and per-song timing nudges | When you change them |

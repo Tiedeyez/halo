@@ -18,6 +18,9 @@ namespace {
 
 // Loudness everything is brought to, the level most streaming services use.
 constexpr double TargetLufs = -14.0;
+// Loudness correction never lifts a song's true peak above this, so the
+// limiter is left for blends and EQ boosts.
+constexpr double PeakCeilingDbtp = -1.0;
 // How long before a track ends the next one starts decoding.
 constexpr double PrepareAhead = 20.0;
 
@@ -509,8 +512,11 @@ void Player::setPlaying(bool playing) {
 void Player::updateGain(int deck, const QString &path) {
     double db = 0;
     TrackAnalysis a;
-    if (m_normalize && m_analyzer->lookup(path, a) && a.loudness > -60)
+    if (m_normalize && m_analyzer->lookup(path, a) && a.loudness > -60) {
         db = std::clamp(TargetLufs - a.loudness, -12.0, 6.0);
+        if (a.hasTruePeak())
+            db = std::min(db, PeakCeilingDbtp - a.truePeak);
+    }
     m_engine.setTrackGain(deck, float(db));
 }
 

@@ -126,7 +126,7 @@ private:
     float m_preamp = 1;
     std::array<Dsp::Coefficients, 10> m_eq{};
     std::array<std::array<Dsp::Biquad, 10>, 2> m_eqState{};
-    float m_limiterEnvelope = 0;
+    Dsp::TruePeakLimiter m_limiter{48000, -1.0};
 
     std::vector<float> m_mix, m_scratch;
     Ring m_tap{16384};

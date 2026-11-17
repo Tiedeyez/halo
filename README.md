@@ -48,9 +48,15 @@ checked against the source.
 - **DJ tapes read right.** When a tape tags the host as every track's artist
   and puts the credit in the title ("10 Mack Maine - Young Mulah Baby"), the
   performer becomes the artist and the host stays the album artist.
-- **Even loudness.** Every song is measured (ITU-R BS.1770, within a few
-  tenths of ffmpeg's EBU R128 meter) and brought to -14 LUFS, with a peak
-  limiter after it.
+- **Even loudness.** Every song is measured with ffmpeg's EBU R128 meter
+  (ITU-R BS.1770 loudness and 4x oversampled true peak) and brought to
+  -14 LUFS, but never boosted past -1 dBTP, so the limiter is left for
+  blends and EQ boosts.
+- **Clean output.** Songs that aren't 48 kHz are resampled with soxr (alias
+  products at -159 dB). The output limiter looks 1.6 ms ahead and detects
+  peaks between samples: it holds -1 dBTP with distortion under -87 dB even
+  on loud bass, and quiet music passes through bit for bit.
+  `tools/audio-lab/` measures both.
 - **Equalizer.** Ten bands, a preamp and presets, with the limiter behind it.
 - **Sleep timer.** Fades out over fifteen seconds and pauses (Z).
 - **Most played.** Counted on this computer when you hear half a song.
@@ -149,10 +155,11 @@ After `bin/install`, Halo is in the app launcher (Super+Space).
 - The audio callback mixes two decks with no locks and no allocation: the
   window posts commands to a lock-free queue the callback drains. Gapless
   hand-over happens inside the callback, on the next sample.
-- Analysis decodes each song once to 22 kHz mono at the lowest CPU priority.
-  Tempo comes from the autocorrelation of a spectral-flux onset envelope,
-  with a prior toward 120 BPM and a check that the beat stands out;
-  loudness is BS.1770 with gating; silent edges are found in 50 ms windows.
+- Analysis decodes each song once at the lowest CPU priority: ffmpeg's
+  ebur128 meter takes loudness and true peak from the song as it is, and a
+  22 kHz mono copy feeds the rest. Tempo comes from the autocorrelation of a
+  spectral-flux onset envelope, with a prior toward 120 BPM and a check that
+  the beat stands out; silent edges are found in 50 ms windows.
 - Tags, durations and embedded covers come from TagLib. The library is
   cached and rescanned only where files changed.
 

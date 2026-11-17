@@ -6,16 +6,20 @@
 #include <QProcess>
 #include <QStringList>
 #include <QTimer>
+#include <cmath>
 #include <vector>
 
 // What Halo knows about a track after listening to it once.
 struct TrackAnalysis {
     double bpm = 0;          // 0 when no steady beat was found
-    double loudness = -14;   // integrated loudness, LUFS (approximate)
+    double loudness = -14;   // integrated loudness, LUFS (BS.1770 by ffmpeg's ebur128)
+    double truePeak = NAN;   // dBTP, 4x oversampled; NaN until measured
     double audibleStart = 0; // seconds of silence before the music starts
     double audibleEnd = 0;   // where the music stops, seconds (0 = unknown)
     double duration = 0;     // seconds analysed
     bool valid = false;
+
+    bool hasTruePeak() const { return std::isfinite(truePeak); }
 
     QJsonObject toJson() const;
     static TrackAnalysis fromJson(const QJsonObject &o);
@@ -33,6 +37,9 @@ void audibleEdges(const float *mono, size_t count, int rate, double &start, doub
 // Decodes a file with ffmpeg and analyses it, blocking. For the CLI.
 TrackAnalysis analyzeFile(const QString &path, QString *error = nullptr);
 QStringList ffmpegArguments(const QString &path);
+// Reads integrated loudness and true peak from ebur128's summary on
+// ffmpeg's stderr. False when either is missing (or -inf, for silence).
+bool parseEbur128(const QByteArray &log, double &lufs, double &truePeak);
 }
 
 // Analyses tracks in the background, one ffmpeg at a time at the lowest CPU
@@ -47,6 +54,8 @@ public:
 
     // A result if we have a current one for this file.
     bool lookup(const QString &path, TrackAnalysis &out) const;
+    // Not analysed, changed since, or analysed before true peak was measured.
+    bool needsWork(const QString &path) const;
     bool has(const QString &path) const { return m_results.contains(path); }
     // Jumps the queue: wanted now (current or next track).
     void prioritize(const QString &path);

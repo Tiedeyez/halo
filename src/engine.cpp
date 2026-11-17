@@ -15,9 +15,6 @@ constexpr float GainSmoothing = 1.0f / (Rate * 0.25f);
 // measured in the background), so it glides in over two seconds.
 constexpr float TrackGainSmoothing = 1.0f / (Rate * 2.0f);
 constexpr int DeclickFrames = 480;
-constexpr float LimiterCeiling = 0.97f;
-// Release of the limiter, about 150 ms.
-const float LimiterRelease = std::exp(-1.0f / (Rate * 0.150f));
 }
 
 Engine::Engine() {
@@ -291,14 +288,9 @@ void Engine::render(float *out, int frames) {
         l *= v;
         r *= v;
 
-        // Peak limiter: instant attack, smooth release, never over full scale.
-        const float peak = std::max(std::fabs(l), std::fabs(r));
-        m_limiterEnvelope = peak > m_limiterEnvelope ? peak : m_limiterEnvelope * LimiterRelease;
-        if (m_limiterEnvelope > LimiterCeiling) {
-            const float g = LimiterCeiling / m_limiterEnvelope;
-            l *= g;
-            r *= g;
-        }
+        // True-peak limiter at -1 dBTP with 1.6 ms lookahead
+        // (Dsp::TruePeakLimiter; tools/audio-lab/limiter.cpp measures it).
+        m_limiter.process(l, r);
         out[i * 2] = l;
         out[i * 2 + 1] = r;
     }

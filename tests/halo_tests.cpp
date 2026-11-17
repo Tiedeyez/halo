@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QSet>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QThread>
@@ -15,6 +16,7 @@
 #include <vector>
 
 #include "analysis.h"
+#include "dsp.h"
 #include "engine.h"
 #include "library.h"
 #include "lyrics.h"
@@ -205,6 +207,114 @@ private slots:
         for (float &s : tone)
             s *= 2;
         QVERIFY(std::fabs(Analysis::loudness(tone.data(), tone.size()) - lufs - 6.02) < 0.2);
+    }
+
+    void readsEbur128Summary() {
+        const QByteArray log = "[Parsed_ebur128_1 @ 0x1] Summary:\n\n  Integrated loudness:\n    I:         -11.2 LUFS\n"
+                               "    Threshold: -21.3 LUFS\n\n  Loudness range:\n    LRA:         5.6 LU\n\n"
+                               "  True peak:\n    Peak:        0.3 dBFS\n";
+        double lufs = 0, peak = 0;
+        QVERIFY(Analysis::parseEbur128(log, lufs, peak));
+        QCOMPARE(lufs, -11.2);
+        QCOMPARE(peak, 0.3);
+        // Silence: no finite peak, so nothing is taken from it.
+        const QByteArray silent = "Summary:\n  Integrated loudness:\n    I: -70.0 LUFS\n  True peak:\n    Peak: -inf dBFS\n";
+        lufs = 1, peak = 1;
+        QVERIFY(!Analysis::parseEbur128(silent, lufs, peak));
+        QCOMPARE(lufs, 1.0);
+        QVERIFY(!Analysis::parseEbur128("no summary here", lufs, peak));
+    }
+
+    void measuresTruePeakBetweenSamples() {
+        // A sine at a quarter of the sample rate, 45 degrees out of phase:
+        // every sample is +-0.7071 (-3 dBFS), but the waveform between them
+        // reaches 1.0 (0 dBTP). A sample-peak meter would miss 3 dB.
+        if (QStandardPaths::findExecutable("ffmpeg").isEmpty())
+            QSKIP("ffmpeg isn't installed");
+        QTemporaryDir dir;
+        const QString path = dir.filePath("overs.wav");
+        const int rate = 48000, frames = rate * 5;
+        QByteArray pcm;
+        for (int i = 0; i < frames; ++i) {
+            const float s = float(std::sin(2 * Pi * 0.25 * i + Pi / 4));
+            pcm.append(reinterpret_cast<const char *>(&s), 4).append(reinterpret_cast<const char *>(&s), 4);
+        }
+        auto u32 = [](quint32 v) { return QByteArray(reinterpret_cast<const char *>(&v), 4); };
+        auto u16 = [](quint16 v) { return QByteArray(reinterpret_cast<const char *>(&v), 2); };
+        QByteArray wav = "RIFF" + u32(36 + pcm.size()) + "WAVEfmt " + u32(16) + u16(3) + u16(2) + u32(rate) +
+                         u32(rate * 8) + u16(8) + u16(32) + "data" + u32(pcm.size()) + pcm;
+        QFile f(path);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write(wav);
+        f.close();
+        QString error;
+        const TrackAnalysis a = Analysis::analyzeFile(path, &error);
+        QVERIFY2(a.hasTruePeak(), qPrintable(error));
+        // ffmpeg's meter reads high near the top of the band (+0.6 dB here,
+        // up to about +1 dB at 15 kHz) and never low, so the gain cap built
+        // on it errs on the safe side. What matters is that the hidden 3 dB
+        // is caught.
+        QVERIFY2(a.truePeak > -0.3 && a.truePeak < 1.2, qPrintable(QString::number(a.truePeak)));
+        // And it survives the cache.
+        QCOMPARE(TrackAnalysis::fromJson(a.toJson()).truePeak, std::round(a.truePeak * 10) / 10);
+        QVERIFY(!TrackAnalysis::fromJson(QJsonObject{{"lufs", -14}}).hasTruePeak());
+    }
+
+    void limiterIsTransparentThenHoldsTheCeiling() {
+        using Dsp::TruePeakLimiter;
+        const int delay = TruePeakLimiter::Delay;
+        auto run = [delay](const std::vector<float> &x) {
+            TruePeakLimiter lim;
+            std::vector<float> y;
+            for (size_t i = 0; i < x.size() + size_t(delay); ++i) {
+                float l = i < x.size() ? x[i] : 0, r = l;
+                lim.process(l, r);
+                if (i >= size_t(delay))
+                    y.push_back(l);
+            }
+            return y;
+        };
+        auto sine = [](double f, double amp, double phase = 0) {
+            std::vector<float> x(48000);
+            for (size_t i = 0; i < x.size(); ++i)
+                x[i] = float(amp * std::sin(2 * Pi * f * double(i) / 48000 + phase));
+            return x;
+        };
+        // Below the ceiling: the same samples, only delayed.
+        const auto quiet = sine(1000, 0.5);
+        QVERIFY(run(quiet) == quiet);
+
+        // Peaks between samples are held under -1 dBTP: check the output
+        // at 8 points between every pair of samples.
+        const auto overs = run(sine(12000, 1.0, Pi / 4));
+        double peak = 0;
+        for (size_t n = 32; n + 32 < overs.size(); ++n)
+            for (int k = 0; k < 8; ++k) {
+                double s = 0;
+                for (int j = -31; j <= 32; ++j) {
+                    const double t = j - k / 8.0;
+                    const double sinc = t == 0 ? 1 : std::sin(Pi * t) / (Pi * t);
+                    s += overs[n + j] * sinc * (0.42 + 0.5 * std::cos(Pi * t / 32) + 0.08 * std::cos(2 * Pi * t / 32));
+                }
+                peak = std::max(peak, std::fabs(s));
+            }
+        QVERIFY2(20 * std::log10(peak) < -0.9, qPrintable(QString::number(20 * std::log10(peak))));
+
+        // Loud bass is turned down, not distorted: the residual after a
+        // best-fit 60 Hz sine is under -80 dB.
+        const auto bass = run(sine(60, 1.4));
+        double ss = 0, cc = 0, sc = 0, ys = 0, yc = 0;
+        for (size_t n = 24000; n < 44000; ++n) {
+            const double s = std::sin(2 * Pi * 60 * n / 48000), c = std::cos(2 * Pi * 60 * n / 48000);
+            ss += s * s, cc += c * c, sc += s * c, ys += bass[n] * s, yc += bass[n] * c;
+        }
+        const double det = ss * cc - sc * sc, a = (ys * cc - yc * sc) / det, b = (yc * ss - ys * sc) / det;
+        double sig = 0, res = 0;
+        for (size_t n = 24000; n < 44000; ++n) {
+            const double fit = a * std::sin(2 * Pi * 60 * n / 48000) + b * std::cos(2 * Pi * 60 * n / 48000);
+            sig += fit * fit, res += (bass[n] - fit) * (bass[n] - fit);
+        }
+        QVERIFY2(10 * std::log10(res / sig) < -80, qPrintable(QString::number(10 * std::log10(res / sig))));
     }
 
     void findsWhereTheMusicIs() {

@@ -19,6 +19,7 @@
 QJsonObject TrackAnalysis::toJson() const {
     return {{"bpm", std::round(bpm * 10) / 10},
             {"lufs", std::round(loudness * 10) / 10},
+            {"tp", hasTruePeak() ? QJsonValue(std::round(truePeak * 10) / 10) : QJsonValue()},
             {"start", std::round(audibleStart * 100) / 100},
             {"end", std::round(audibleEnd * 100) / 100},
             {"duration", std::round(duration * 100) / 100}};
@@ -28,6 +29,7 @@ TrackAnalysis TrackAnalysis::fromJson(const QJsonObject &o) {
     TrackAnalysis a;
     a.bpm = o.value("bpm").toDouble();
     a.loudness = o.value("lufs").toDouble(-14);
+    a.truePeak = o.value("tp").isDouble() ? o.value("tp").toDouble() : NAN;
     a.audibleStart = o.value("start").toDouble();
     a.audibleEnd = o.value("end").toDouble();
     a.duration = o.value("duration").toDouble();
@@ -234,9 +236,44 @@ TrackAnalysis analyze(const float *mono, size_t count, int rate) {
 
 // Eight minutes is enough to know a song; a long DJ mix is measured on its
 // first eight and its end is taken from its length.
+// Two branches: ebur128 measures loudness and true peak (4x oversampled) on
+// the song as it is, and a 22 kHz mono copy feeds the tempo and edge maths.
+// -v info is what lets ebur128 print its summary; -nostats keeps the
+// progress line out.
 QStringList ffmpegArguments(const QString &path) {
-    return {"-nostdin", "-hide_banner", "-v", "error", "-i", path, "-t", "480", "-map", "0:a:0",
-            "-vn", "-ac", "1", "-ar", QString::number(Rate), "-f", "f32le", "pipe:1"};
+    return {"-nostdin", "-hide_banner", "-nostats", "-v", "info", "-i", path, "-t", "480",
+            "-filter_complex",
+            QString("[0:a:0]asplit=2[m][a];[m]ebur128=peak=true:framelog=quiet,anullsink;"
+                    "[a]aresample=%1,aformat=sample_fmts=flt:channel_layouts=mono[out]").arg(Rate),
+            "-map", "[out]", "-f", "f32le", "pipe:1"};
+}
+
+bool parseEbur128(const QByteArray &log, double &lufs, double &truePeak) {
+    // The summary is the last block ebur128 prints:
+    //   Integrated loudness:\n    I:  -11.2 LUFS ... True peak:\n    Peak:  0.3 dBFS
+    const int summary = log.lastIndexOf("Summary:");
+    if (summary < 0)
+        return false;
+    const QByteArray tail = log.mid(summary);
+    auto number = [&tail](const QByteArray &section, const QByteArray &key, double &out) {
+        const int s = tail.indexOf(section);
+        const int k = s < 0 ? -1 : tail.indexOf(key, s);
+        if (k < 0)
+            return false;
+        int end = tail.indexOf('\n', k);
+        if (end < 0)
+            end = tail.size();
+        const QList<QByteArray> words = tail.mid(k + key.size(), end - k - key.size()).simplified().split(' ');
+        bool ok = false;
+        out = words.value(0).toDouble(&ok);
+        return ok && std::isfinite(out);
+    };
+    double i = 0, tp = 0;
+    if (!number("Integrated loudness:", "I:", i) || !number("True peak:", "Peak:", tp))
+        return false;
+    lufs = i;
+    truePeak = tp;
+    return true;
 }
 
 TrackAnalysis analyzeFile(const QString &path, QString *error) {
@@ -256,6 +293,7 @@ TrackAnalysis analyzeFile(const QString &path, QString *error) {
         return {};
     }
     const QByteArray bytes = process.readAllStandardOutput();
+    const QByteArray log = process.readAllStandardError();
     const auto *samples = reinterpret_cast<const float *>(bytes.constData());
     const size_t count = size_t(bytes.size()) / sizeof(float);
     if (count == 0) {
@@ -263,7 +301,9 @@ TrackAnalysis analyzeFile(const QString &path, QString *error) {
             *error = "no audio in the file";
         return {};
     }
-    return analyze(samples, count);
+    TrackAnalysis a = analyze(samples, count);
+    parseEbur128(log, a.loudness, a.truePeak);
+    return a;
 }
 
 }
@@ -338,9 +378,13 @@ bool Analyzer::lookup(const QString &path, TrackAnalysis &out) const {
     return true;
 }
 
+bool Analyzer::needsWork(const QString &path) const {
+    TrackAnalysis a;
+    return !lookup(path, a) || !a.hasTruePeak();
+}
+
 void Analyzer::prioritize(const QString &path) {
-    TrackAnalysis unused;
-    if (path.isEmpty() || path == m_running || lookup(path, unused))
+    if (path.isEmpty() || path == m_running || !needsWork(path))
         return;
     m_urgent.removeAll(path);
     m_urgent.prepend(path);
@@ -349,8 +393,8 @@ void Analyzer::prioritize(const QString &path) {
 
 void Analyzer::enqueue(const QStringList &paths) {
     for (const QString &path : paths) {
-        const auto it = m_results.constFind(path);
-        if (it == m_results.constEnd())
+        // Songs analysed before true peak was measured go round once more.
+        if (needsWork(path) && !m_queue.contains(path))
             m_queue.append(path);
     }
     emit progress();
@@ -366,15 +410,14 @@ void Analyzer::next() {
     if (m_process.state() != QProcess::NotRunning || !m_running.isEmpty())
         return;
     QString path;
-    TrackAnalysis unused;
     while (!m_urgent.isEmpty() && path.isEmpty()) {
         path = m_urgent.takeFirst();
-        if (lookup(path, unused))
+        if (!needsWork(path))
             path.clear();
     }
     while (path.isEmpty() && m_background && !m_queue.isEmpty()) {
         path = m_queue.takeFirst();
-        if (lookup(path, unused) || !QFileInfo::exists(path))
+        if (!needsWork(path) || !QFileInfo::exists(path))
             path.clear();
     }
     if (path.isEmpty())
@@ -397,6 +440,7 @@ void Analyzer::finished() {
     const QString path = m_running;
     m_buffer.append(m_process.readAllStandardOutput());
     const QByteArray bytes = std::exchange(m_buffer, {});
+    const QByteArray log = m_process.readAllStandardError();
     if (path.isEmpty()) {
         QTimer::singleShot(0, this, &Analyzer::next);
         return;
@@ -419,12 +463,17 @@ void Analyzer::finished() {
         emit progress();
         next();
     });
-    watcher->setFuture(QtConcurrent::run([bytes] {
+    watcher->setFuture(QtConcurrent::run([bytes, log] {
         QThread::currentThread()->setPriority(QThread::LowestPriority);
         const size_t count = size_t(bytes.size()) / sizeof(float);
         TrackAnalysis analysis;
-        if (count > 0)
+        if (count > 0) {
             analysis = Analysis::analyze(reinterpret_cast<const float *>(bytes.constData()), count);
+            // ebur128 replaces the estimate when it reported; a song with no
+            // finite peak (silence) keeps the estimate and is marked measured.
+            if (!Analysis::parseEbur128(log, analysis.loudness, analysis.truePeak))
+                analysis.truePeak = -144;
+        }
         return analysis;
     }));
 }
