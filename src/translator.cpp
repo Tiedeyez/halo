@@ -9,9 +9,20 @@
 #include <QLocale>
 #include <QRegularExpression>
 
+// Where omarchy-language keeps the choice, found the same way it finds it:
+// $OMARCHY_LANGUAGE_FILE, else $XDG_CONFIG_HOME/omarchy/language, else
+// ~/.config/omarchy/language.
+QString Translator::defaultLanguageFile() {
+    const QString overridden = qEnvironmentVariable("OMARCHY_LANGUAGE_FILE");
+    if (!overridden.isEmpty())
+        return overridden;
+    const QString config = qEnvironmentVariable("XDG_CONFIG_HOME");
+    return (config.isEmpty() ? QDir::homePath() + "/.config" : config) + "/omarchy/language";
+}
+
 Translator::Translator(const QString &languageFile, const QString &catalogDirectory, QObject *parent)
     : QTranslator(parent),
-      m_languageFile(languageFile.isEmpty() ? QDir::homePath() + "/.config/omarchy/language" : languageFile),
+      m_languageFile(languageFile.isEmpty() ? defaultLanguageFile() : languageFile),
       m_catalogDirectory(catalogDirectory) {
     m_debounce.setSingleShot(true);
     m_debounce.setInterval(80);
@@ -86,8 +97,13 @@ QString Translator::translate(const char *, const char *sourceText, const char *
         return value.toString();
     if (value.isObject()) {
         const QJsonObject forms = value.toObject();
-        const QString form = forms.value(n < 0 ? "other" : pluralCategory(m_language, n)).toString();
-        return form.isEmpty() ? forms.value("other").toString() : form;
+        QString form = forms.value(n < 0 ? "other" : pluralCategory(m_language, n)).toString();
+        if (form.isEmpty())
+            form = forms.value("other").toString();
+        // %Ln makes Qt write the count with the language's separators
+        // ("8.143 filer", "8,143 files") instead of bare digits.
+        form.replace(QLatin1String("%n"), QLatin1String("%Ln"));
+        return form;
     }
     return {};
 }

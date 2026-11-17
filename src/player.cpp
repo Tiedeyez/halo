@@ -74,6 +74,12 @@ QVariant QueueModel::data(const QModelIndex &index, int role) const {
     if (role == DriftRole)
         return m_player->isDrift(index.row());
     const Track *t = m_player->library()->track(path);
+    if (!t && QFileInfo::exists(path)) {
+        auto it = m_described.find(path);
+        if (it == m_described.end())
+            it = m_described.insert(path, m_player->library()->describe(path));
+        t = &it.value();
+    }
     switch (role) {
     case TitleRole: return t ? t->title : Library::titleFromFileName(path);
     case ArtistRole: return t ? t->artist : QString();
@@ -85,6 +91,7 @@ QVariant QueueModel::data(const QModelIndex &index, int role) const {
 
 void QueueModel::reset() {
     beginResetModel();
+    m_described.clear();
     endResetModel();
     emit countChanged();
 }
@@ -294,7 +301,12 @@ QJsonObject Player::status() const {
                   {"shuffle", m_shuffle},
                   {"repeat", m_repeat == RepeatOne ? "one" : m_repeat == RepeatAll ? "all" : "off"},
                   {"normalize", m_normalize},
-                  {"sleep", sleepRemaining()}};
+                  {"sleep", sleepRemaining()},
+                  // So scripts (and tests) can wait for a scan to finish.
+                  {"library", QJsonObject{{"scanning", m_library->scanning()},
+                                          {"scanned", m_library->scanned()},
+                                          {"songs", m_library->trackCount()},
+                                          {"albums", m_library->albumCount()}}}};
     if (m_currentAnalysis.valid)
         o.insert("analysis", m_currentAnalysis.toJson());
     if (!m_nextTrack.path.isEmpty())

@@ -69,6 +69,7 @@ public:
     static Track readTrack(const QString &path);
     static QString titleFromFileName(const QString &fileName);
     static QString cleanTitle(const QString &title, const QString &artist);
+    static void splitCredit(Track &t);
     static QString prettyFolderName(const QString &folder);
     // Scans synchronously on the calling thread (for the CLI and tests).
     static std::vector<Track> scanFolders(const QStringList &folders, const QHash<QString, Track> &previous,

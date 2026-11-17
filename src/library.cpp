@@ -265,6 +265,25 @@ QString Library::cleanTitle(const QString &title, const QString &artist) {
     return t.isEmpty() ? title : t;
 }
 
+// DJ tapes tag every track with the host as the artist and put the real
+// credit in the title: "10 Mack Maine - Young Mulah Baby". When the leading
+// number is the track's own number, the title is "<number> <artist> - <song>",
+// so the song becomes the title and the performer the artist; the host stays
+// as the album artist so the tape still groups and reads as theirs.
+void Library::splitCredit(Track &t) {
+    static const QRegularExpression credited("^\\s*(\\d{1,3})\\s+(\\S.*?)\\s+-\\s+(\\S.*)$");
+    const auto m = credited.match(t.title);
+    if (!m.hasMatch() || t.number <= 0 || m.captured(1).toInt() != t.number)
+        return;
+    const QString performer = m.captured(2).trimmed(), song = m.captured(3).trimmed();
+    if (performer.compare(t.artist, Qt::CaseInsensitive) == 0)
+        return; // cleanTitle already handles the artist repeating itself
+    if (t.albumArtist.isEmpty())
+        t.albumArtist = t.artist;
+    t.artist = performer;
+    t.title = song;
+}
+
 // "01 - Artist - Song [Prod. X].mp3" reads as "Artist - Song [Prod. X]".
 QString Library::titleFromFileName(const QString &fileName) {
     QString name = QFileInfo(fileName).completeBaseName();
@@ -419,6 +438,7 @@ void Library::adopt(std::vector<Track> all) {
         if (t.duration <= 0 || t.duration >= MinimumSeconds)
             tracks.push_back(t);
     for (Track &t : tracks) {
+        splitCredit(t);
         t.title = cleanTitle(t.title, t.artist);
         t.search = searchText(t);
     }
@@ -495,6 +515,7 @@ Track Library::describe(const QString &path) const {
     if (const Track *t = track(path))
         return *t;
     Track t = readTrack(path);
+    splitCredit(t);
     t.title = cleanTitle(t.title, t.artist);
     return t;
 }

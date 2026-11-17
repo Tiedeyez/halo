@@ -40,6 +40,10 @@ signals:
 
 private:
     Player *m_player;
+    // Songs queued before the library has read them (opened from a file
+    // manager while the first scan runs) are described from their tags once
+    // and kept here until the library changes.
+    mutable QHash<QString, Track> m_described;
 };
 
 // Saved seconds in tracks.

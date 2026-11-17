@@ -18,6 +18,7 @@ class Translator : public QTranslator {
     Q_PROPERTY(QString language READ language NOTIFY changed)
 
 public:
+    static QString defaultLanguageFile();
     explicit Translator(const QString &languageFile = {}, const QString &catalogDirectory = ":/i18n",
                         QObject *parent = nullptr);
 

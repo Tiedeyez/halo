@@ -19,6 +19,7 @@
 #include "ring.h"
 #include "stream.h"
 #include "theme.h"
+#include "translator.h"
 #include "visual.h"
 
 namespace {
@@ -88,6 +89,21 @@ class HaloTests : public QObject {
     Q_OBJECT
 
 private slots:
+    // Halo finds Omarchy's language choice where omarchy-language puts it.
+    void languageFileFollowsOmarchy() {
+        const QByteArray oldOverride = qgetenv("OMARCHY_LANGUAGE_FILE"), oldConfig = qgetenv("XDG_CONFIG_HOME");
+        qunsetenv("OMARCHY_LANGUAGE_FILE");
+        qputenv("XDG_CONFIG_HOME", "/x/config");
+        QCOMPARE(Translator::defaultLanguageFile(), QString("/x/config/omarchy/language"));
+        qputenv("OMARCHY_LANGUAGE_FILE", "/y/language");
+        QCOMPARE(Translator::defaultLanguageFile(), QString("/y/language"));
+        qunsetenv("XDG_CONFIG_HOME");
+        qunsetenv("OMARCHY_LANGUAGE_FILE");
+        QCOMPARE(Translator::defaultLanguageFile(), QDir::homePath() + "/.config/omarchy/language");
+        if (!oldOverride.isEmpty()) qputenv("OMARCHY_LANGUAGE_FILE", oldOverride);
+        if (!oldConfig.isEmpty()) qputenv("XDG_CONFIG_HOME", oldConfig);
+    }
+
     void ringWrapsAround() {
         Ring ring(8);
         float in[6] = {1, 2, 3, 4, 5, 6}, out[8] = {};
@@ -325,6 +341,26 @@ private slots:
         QCOMPARE(Library::cleanTitle("21 Savage", ""), QString("21 Savage"));
         QCOMPARE(Library::cleanTitle("99 Problems", "Jay-Z"), QString("99 Problems"));
         QCOMPARE(Library::cleanTitle("03. Intro", ""), QString("Intro"));
+        {
+            Track t;
+            t.title = "10 Mack Maine - Young Mulah Baby (Feat. Gorilla Zoe)";
+            t.artist = "Biggy Jiggy Mixtapes";
+            t.number = 10;
+            Library::splitCredit(t);
+            QCOMPARE(t.title, QString("Young Mulah Baby (Feat. Gorilla Zoe)"));
+            QCOMPARE(t.artist, QString("Mack Maine"));
+            QCOMPARE(t.albumArtist, QString("Biggy Jiggy Mixtapes"));
+        }
+        {
+            // The number isn't this track's, so it's part of the name.
+            Track t;
+            t.title = "99 Problems - Remix";
+            t.artist = "Jay-Z";
+            t.number = 4;
+            Library::splitCredit(t);
+            QCOMPARE(t.title, QString("99 Problems - Remix"));
+            QCOMPARE(t.artist, QString("Jay-Z"));
+        }
         QCOMPARE(Library::prettyFolderName("/m/Young_Dolph_-_16_Zips-2015"), QString("Young Dolph - 16 Zips (2015)"));
         QVERIFY(Library::isAudioFile("/a/b.FLAC"));
         QVERIFY(!Library::isAudioFile("/a/cover.jpg"));
