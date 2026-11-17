@@ -9,6 +9,7 @@
         <file alias="NowPlayingBar.qml">NowPlayingBar.qml</file>
         <file alias="NowPlayingView.qml">NowPlayingView.qml</file>
         <file alias="Sidebar.qml">Sidebar.qml</file>
+        <file alias="Keycap.qml">Keycap.qml</file>
         <file alias="AlbumGrid.qml">AlbumGrid.qml</file>
         <file alias="AlbumPage.qml">AlbumPage.qml</file>
         <file alias="TrackList.qml">TrackList.qml</file>
