@@ -13,6 +13,7 @@
 #include <QStandardPaths>
 #include <QUrl>
 
+#include "mandelpilot.h"
 #include "analysis.h"
 #include "audiooutput.h"
 #include "cli.h"
@@ -128,6 +129,7 @@ int main(int argc, char *argv[]) {
 
     Spectrum spectrum(&player.engine());
     qmlRegisterType<HaloView>("Halo", 1, 0, "HaloView");
+    qmlRegisterType<MandelPilot>("Halo", 1, 0, "MandelPilot");
     qmlRegisterSingletonType(QUrl("qrc:/Style.qml"), "Halo", 1, 0, "Style");
     qmlRegisterUncreatableType<QueueModel>("Halo", 1, 0, "QueueModel", "from player");
     qmlRegisterUncreatableType<MomentModel>("Halo", 1, 0, "MomentModel", "from player");

@@ -32,9 +32,10 @@ checked against the source.
   what it plays, not every sound on the machine) as a ring of square pixels
   around the cover in your theme's accent, torn sideways for a frame on hard
   beats. V cycles to LED bars, then to the Mandelbrot: the set in square
-  pixels, in your theme's colours with a pearl's sheen, on a slow voyage
-  into Seahorse Valley and three other famous places, kicked by the beat.
-  C keeps any of them still.
+  pixels, in your theme's colours with a pearl's sheen, on an endless dive
+  that only goes in. An autopilot steers toward the set's edge on a random
+  path, the beat adds thrust, and when the GPU's precision runs out a pixel
+  dissolve hands over to a fresh dive. C keeps any of them still.
 - **Live lyrics.** Press L. Timed lyrics scroll with the song and fill in
   word by word in your accent, a block cursor riding the edge of the word
   being sung; each new line decrypts into place, and long breaks count down

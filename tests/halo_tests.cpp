@@ -20,6 +20,7 @@
 #include "engine.h"
 #include "library.h"
 #include "lyrics.h"
+#include "mandelpilot.h"
 #include "player.h"
 #include "remote.h"
 #include "ring.h"
@@ -315,6 +316,44 @@ private slots:
             sig += fit * fit, res += (bass[n] - fit) * (bass[n] - fit);
         }
         QVERIFY2(10 * std::log10(res / sig) < -80, qPrintable(QString::number(10 * std::log10(res / sig))));
+    }
+
+    void mandelbrotOnlyDivesIn() {
+        // Ten minutes of music with a hard beat twice a second.
+        Mandel::Pilot pilot(1234);
+        double scale = pilot.current().scale;
+        int interesting = 0, looks = 0;
+        for (int frame = 0; frame < 30 * 600; ++frame) {
+            const double pulse = (frame % 15) < 3 ? 1.0 : 0.0;
+            pilot.step(1.0 / 30, pulse, 0.5);
+            // Never back out: the dive being shown only gets deeper (a new
+            // dive takes over through the dissolve, already well in).
+            if (pilot.reveal() == 0) {
+                QVERIFY2(pilot.current().scale <= scale || pilot.current().scale <= Mandel::Pilot::StartScale * std::exp(-2.0) + 1e-12,
+                         qPrintable(QString::number(frame)));
+                scale = pilot.current().scale;
+            }
+            // Never past where the GPU's floats run out.
+            QVERIFY(pilot.current().scale >= Mandel::Pilot::DeepestScale * 0.9);
+            // Once a second: is the middle of the view on the edge of the
+            // set, where the detail is (some points escape late, some
+            // never or early)?
+            if (frame % 30 == 0) {
+                const auto &v = pilot.current();
+                const int limit = 400;
+                int inside = 0, late = 0;
+                for (int j = -4; j <= 4; ++j)
+                    for (int i = -4; i <= 4; ++i) {
+                        const int n = Mandel::escape(v.x + i * v.scale * 0.05, v.y + j * v.scale * 0.05, limit);
+                        inside += n >= limit;
+                        late += n < limit && n > 30;
+                    }
+                ++looks;
+                interesting += inside < 81 && late > 0;
+            }
+        }
+        QVERIFY2(pilot.dives() >= 4, qPrintable(QString::number(pilot.dives())));
+        QVERIFY2(interesting >= looks * 9 / 10, qPrintable(QString("%1 of %2").arg(interesting).arg(looks)));
     }
 
     void findsWhereTheMusicIs() {

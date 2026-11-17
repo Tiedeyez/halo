@@ -1,10 +1,11 @@
 #version 440
 
 // The Mandelbrot visual: the set in square pixels, coloured from the Omarchy
-// theme with a pearl's sheen, on a slow voyage into one of four famous
-// places and back out. The beat kicks the zoom and flashes the pearl; the
-// bass turns it; the treble brightens the sheen; loudness sets the glow.
-// Time stands still when calm or paused, so it holds a still image.
+// theme with a pearl's sheen, on an endless dive that only goes in. Where it
+// looks is flown by MandelPilot (C++, double precision): `view` is the dive
+// now, `next` the one a pixel dissolve is handing over to, `reveal` how far.
+// The beat flashes the pearl (its thrust is the pilot's), the treble
+// brightens the sheen, loudness sets the glow. Calm or paused, it holds.
 //
 // Colour: smooth escape time picks a place on four of the theme's colours
 // (a loop, so the bands never jump). The pearl is a soft thin-film iridescence
@@ -22,8 +23,10 @@ layout(std140, binding = 0) uniform buf {
     float level;    // 0..1, loudness
     float low;      // 0..1, bass
     float high;     // 0..1, treble
-    float cell;     // pixel size in screen pixels
-    vec2 size;      // item size in screen pixels
+    vec2 size;      // the grid, in pixels of the set (one fragment each)
+    vec4 view;      // x, y, width across the shorter side, angle
+    vec4 next;      // the dive being handed over to
+    float reveal;   // 0..1 of the pixels showing `next`
     vec4 c0;        // accent
     vec4 c1;        // cyan
     vec4 c2;        // blue
@@ -33,14 +36,10 @@ layout(std140, binding = 0) uniform buf {
     vec4 window;    // the window colour, inside the set
 };
 
-const float Voyage = 40.0;   // seconds in and back out
-const float Deepest = 8.2;   // e^8.2, about 3600x: float precision holds
-
-vec2 target(int i) {
-    if (i == 0) return vec2(-0.743643887, 0.131825904);   // Seahorse Valley
-    if (i == 1) return vec2(0.2549870, 0.0005000);        // Elephant Valley
-    if (i == 2) return vec2(-0.0452407411, 0.9868162204); // a triple spiral
-    return vec2(-1.7686, -0.0017);                        // a mini-brot on the needle
+float hash(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
 }
 
 vec3 palette(float t) {
@@ -56,15 +55,15 @@ vec3 palette(float t) {
 }
 
 void main() {
-    vec2 px = qt_TexCoord0 * size;
-    vec2 id = floor(px / cell);
-    vec2 inCell = fract(px / cell);
-    float gap = 1.0 / cell;
-    float inside = step(gap, inCell.x) * step(gap, inCell.y);
+    // This is drawn into a small texture, one fragment per pixel of the
+    // set; shaders/pixelgrid.frag enlarges it with the gaps between pixels.
+    // Computing per screen pixel did the same sum 30 to 50 times over and
+    // held the laptop's GPU near its top clock.
+    vec2 id = floor(qt_TexCoord0 * size);
 
     // Centre of this pixel, -0.5..0.5 across the shorter side.
     float side = min(size.x, size.y);
-    vec2 uv = ((id + 0.5) * cell - size * 0.5) / side;
+    vec2 uv = (id + 0.5 - size * 0.5) / side;
     // A round window, its edge stepped in whole pixels.
     float r = length(uv) * 2.0;
     if (r > 1.0) {
@@ -72,26 +71,20 @@ void main() {
         return;
     }
 
-    // The voyage: out at home, in to one place, out again, then the next.
-    float voyage = time / Voyage;
-    int place = int(mod(floor(voyage), 4.0));
-    float phase = fract(voyage);
-    float depth = Deepest * smoothstep(0.0, 1.0, 1.0 - abs(phase * 2.0 - 1.0));
-    float zoom = exp(depth);
-    vec2 home = vec2(-0.6, 0.0);
-    vec2 centre = mix(home, target(place), 1.0 - 1.0 / zoom);
-    float scale = 2.7 / zoom * (1.0 - 0.05 * pulse);
-    float angle = time * 0.025 + low * 0.25;
-    mat2 turn = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
-    vec2 c = centre + turn * uv * scale;
+    // Which dive this pixel shows: during a hand-over, pixels switch to the
+    // new one in a random order.
+    vec4 v = hash(id) < reveal ? next : view;
+    float depth = log(2.4 / v.z);
+    mat2 turn = mat2(cos(v.w), -sin(v.w), sin(v.w), cos(v.w));
+    vec2 c = v.xy + turn * uv * v.z;
 
     // Escape time, with the derivative for the surface normal.
-    int limit = int(90.0 + depth * 14.0);
+    int limit = int(90.0 + depth * 15.0);
     vec2 z = vec2(0.0);
     vec2 dz = vec2(0.0);
     int n = 0;
     float m2 = 0.0;
-    for (int k = 0; k < 220; ++k) {
+    for (int k = 0; k < 270; ++k) {
         if (k >= limit) break;
         dz = 2.0 * vec2(z.x * dz.x - z.y * dz.y, z.x * dz.y + z.y * dz.x) + vec2(1.0, 0.0);
         z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + c;
@@ -108,7 +101,7 @@ void main() {
         colour = mix(window.rgb, c0.rgb, 0.04 + 0.10 * pulse);
     } else {
         float mu = float(n) + 1.0 - log2(log(sqrt(m2)));
-        float t = mu * 0.028 + time * 0.035 + pulse * 0.12;
+        float t = mu * 0.028 + time * 0.035;
         vec3 base = palette(t);
 
         // The pearl: a normal from z / z', lit from the upper left.
@@ -132,6 +125,5 @@ void main() {
     colour = min(colour, vec3(0.95));
     // The rim of the window fades in whole pixels.
     alpha *= 1.0 - smoothstep(0.86, 1.0, r);
-    colour = mix(window.rgb * 0.6, colour, inside);
     fragColor = vec4(colour * alpha, alpha) * qt_Opacity;
 }
