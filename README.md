@@ -1,0 +1,140 @@
+# Halo
+
+![Halo playing a song inside its halo, with two saved moments on the seek bar](docs/screenshot.png)
+
+A music player for Omarchy. Halo plays the music on your disk, analyses
+every song once for its tempo and loudness, and uses that to play your
+library the way a DJ would: songs blend into each other on the phrase, the
+queue never has to run out, and a loud mixtape sits next to a quiet album
+at the same level. Nothing leaves your computer. The window follows your
+Omarchy theme and language.
+
+What [DISCLOSURE.md](DISCLOSURE.md) says Halo reads, writes and runs is
+checked against the source.
+
+## What it does
+
+- **Blend.** Instead of a fixed crossfade, Halo mixes for eight beats at the
+  outgoing song's tempo, starting where its music really ends rather than at
+  its last second, and skipping the next song's silent lead-in. Halfway
+  through, the bass swaps: the outgoing song's lows are filtered away as the
+  incoming song's arrive, so two kick drums never pile up. Turn Blend off
+  (B) for exact gapless playback, sample for sample.
+- **Drift.** When the queue runs out, Halo keeps going from your library,
+  picking songs close in tempo (half and double time count) and loudness,
+  not played recently, and preferably from another album. Songs Drift adds
+  are marked with a wave in the queue.
+- **Moments.** Press M to pin the second you are hearing: the drop, the verse,
+  the start of a song inside an hour-long mixtape. Moments are ticks on the
+  seek bar, `[` and `]` jump between them, and the Moments view replays any of
+  them.
+- **The halo.** The visual is drawn from the song itself (Halo's own FFT of
+  what it plays, not every sound on the machine) as a ring of light around
+  the cover in your theme's accent. V switches to bars, C keeps it still.
+- **Even loudness.** Every song is measured (ITU-R BS.1770, within a few
+  tenths of ffmpeg's EBU R128 meter) and brought to -14 LUFS, with a peak
+  limiter after it.
+- **Equalizer.** Ten bands, a preamp and presets, with the limiter behind it.
+- **Sleep timer.** Fades out over fifteen seconds and pauses (Z).
+- **Most played.** Counted on this computer when you hear half a song.
+- **Every bar widget is a remote.** Halo speaks MPRIS, so media keys, the
+  Omarchy bar, and the now-playing widgets on the plugin marketplace control
+  it.
+- **Agents can drive it.** `halo status --json`, `halo add <folder>`,
+  `halo analyze <file> --json` and more; `halo skill install` teaches coding
+  agents how.
+
+![The album grid](docs/albums.png)
+
+## Your music
+
+Halo reads `~/Music`, and any more folders listed one per line in
+`~/.config/halo/folders`. A folder is an album, which is how mixtapes, rips
+and downloads are laid out; a `CD1` or `Disc 2` folder joins its parent.
+Covers come from an image in the folder or from the files' tags. Files
+shorter than ten seconds (drum one-shots, sample packs) stay out of the
+library, and a folder holding a `.haloignore` or `.nomedia` file is skipped.
+Drop files or folders on the window to play them.
+
+Halo never changes, moves or deletes a music file.
+
+## Keys
+
+| Key | Action |
+| --- | --- |
+| Space | Play or pause |
+| N, P | Next or previous song |
+| Shift+Left, Shift+Right | Back or forward 10 seconds |
+| `-`, `=` | Volume down or up |
+| Enter | Play the selected song or album |
+| Shift+Enter | Play the selected song next |
+| A | Add the selected song to the queue |
+| `/`, Ctrl+F | Search |
+| 1 to 5 | Albums, Songs, Queue, Moments, Most played |
+| F | Now Playing, full window |
+| M | Save a moment at this second |
+| `[`, `]` | Previous or next moment |
+| B | Blend on or off |
+| D | Drift on or off |
+| S, R | Shuffle, repeat (off, all, one) |
+| E | Equalizer |
+| Z | Sleep timer: 15, 30, 60, 90 minutes, off |
+| V, C | Switch the visual, calm the motion |
+| Delete | Remove the selected song from the queue |
+| Alt+Up, Alt+Down | Move a song in the queue |
+| Ctrl+Z, Ctrl+Shift+Z | Undo and redo queue changes |
+| Ctrl+R | Look for new music |
+| ? | Show every shortcut |
+| Q | Quit |
+
+## From a terminal
+
+```sh
+halo open ~/Music/SomeAlbum     # play a folder (or files)
+halo status                     # what is playing; --json for scripts
+halo add song.flac ; halo playnext ~/Music/Other
+halo next ; halo pause ; halo seek +30 ; halo volume 60
+halo blend on ; halo drift off ; halo repeat all ; halo sleep 30
+halo analyze track.mp3 --json   # tempo, loudness, where the music starts and stops
+halo scan                       # what is in your music folders, no window needed
+halo skill install              # a skill for coding agents
+```
+
+Every command takes `--json` and exits 0 on success or 1 with the error on
+stderr.
+
+## Build
+
+Halo is C++ and Qt Quick, built with qmake into one binary. It needs Qt 6
+(base, declarative, multimedia, wayland), TagLib and ffmpeg, all in Arch's
+repositories and all but TagLib already part of Omarchy.
+
+```sh
+bin/build      # build/halo
+bin/test       # the Qt Test suite, offscreen
+bin/install    # makepkg -fsi: installs halo, its icon and launcher entry
+```
+
+After `bin/install`, Halo is in the app launcher (Super+Space).
+
+## How it works
+
+- Each song is decoded by its own `ffmpeg` process into 48 kHz floats on a
+  pipe. A thread copies them into a six-second ring only while the ring has
+  room, so the pipe fills and ffmpeg waits: an hour-long mix is never decoded
+  into memory.
+- The audio callback mixes two decks with no locks and no allocation: the
+  window posts commands to a lock-free queue the callback drains. Gapless
+  hand-over happens inside the callback, on the next sample.
+- Analysis decodes each song once to 22 kHz mono at the lowest CPU priority.
+  Tempo comes from the autocorrelation of a spectral-flux onset envelope,
+  with a prior toward 120 BPM and a check that the beat stands out;
+  loudness is BS.1770 with gating; silent edges are found in 50 ms windows.
+- Tags, durations and embedded covers come from TagLib. The library is
+  cached and rescanned only where files changed.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE). The theme and language plumbing follows Omacut
+and Monologue (MIT, David Heinemeier Hansson). The icons are paths from
+Google's Material Design icons (Apache 2.0).

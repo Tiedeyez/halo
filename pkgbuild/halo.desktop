@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Halo
+GenericName=Music Player
+GenericName[da]=Musikafspiller
+GenericName[es]=Reproductor de música
+Comment=Play your music library, mixed like a DJ would
+Comment[da]=Afspil dit musikbibliotek, mikset som en DJ ville gøre det
+Comment[es]=Reproduce tu biblioteca de música, mezclada como lo haría un DJ
+Exec=halo %F
+Icon=halo
+Terminal=false
+Categories=AudioVideo;Audio;Player;Music;
+MimeType=audio/mpeg;audio/flac;audio/ogg;audio/opus;audio/mp4;audio/aac;audio/x-wav;audio/x-ms-wma;audio/x-aiff;audio/x-ape;audio/x-wavpack;
+Keywords=music;player;mixtape;playlist;dj;
+StartupWMClass=halo

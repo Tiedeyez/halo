@@ -1,0 +1,23 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="Main.qml">Main.qml</file>
+        <file alias="Style.qml">Style.qml</file>
+        <file alias="Glyph.qml">Glyph.qml</file>
+        <file alias="IconButton.qml">IconButton.qml</file>
+        <file alias="CoverArt.qml">CoverArt.qml</file>
+        <file alias="SeekBar.qml">SeekBar.qml</file>
+        <file alias="NowPlayingBar.qml">NowPlayingBar.qml</file>
+        <file alias="NowPlayingView.qml">NowPlayingView.qml</file>
+        <file alias="Sidebar.qml">Sidebar.qml</file>
+        <file alias="AlbumGrid.qml">AlbumGrid.qml</file>
+        <file alias="AlbumPage.qml">AlbumPage.qml</file>
+        <file alias="TrackList.qml">TrackList.qml</file>
+        <file alias="QueuePage.qml">QueuePage.qml</file>
+        <file alias="MomentsPage.qml">MomentsPage.qml</file>
+        <file alias="EqPanel.qml">EqPanel.qml</file>
+        <file alias="HelpOverlay.qml">HelpOverlay.qml</file>
+        <file alias="i18n/en.json">i18n/en.json</file>
+        <file alias="i18n/es.json">i18n/es.json</file>
+        <file alias="i18n/da.json">i18n/da.json</file>
+    </qresource>
+</RCC>
