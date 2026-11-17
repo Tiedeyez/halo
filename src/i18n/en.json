@@ -207,5 +207,11 @@
   "song tags": "",
   "timed by line": "",
   "timed by word": "",
-  "Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.": ""
+  "Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.": "",
+  "Looking for lyrics": "",
+  "No lyrics on this computer": "",
+  "No lyrics": "",
+  "Asking lrclib.net. The words appear here when they arrive.": "",
+  "Looking them up sends the title, artist, album and length to lrclib.net.": "",
+  "LRCLIB doesn't have this one. A .lrc file beside the song works too.": ""
 }

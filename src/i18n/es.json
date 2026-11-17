@@ -207,5 +207,11 @@
   "song tags": "etiquetas de la canción",
   "timed by line": "sincronizada por línea",
   "timed by word": "sincronizada por palabra",
-  "Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.": "Halo no pudo abrir su socket de control %1 (%2), así que los comandos `halo` desde una terminal no llegarán a esta ventana."
+  "Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.": "Halo no pudo abrir su socket de control %1 (%2), así que los comandos `halo` desde una terminal no llegarán a esta ventana.",
+  "Looking for lyrics": "Buscando la letra",
+  "No lyrics on this computer": "No hay letra en este equipo",
+  "No lyrics": "Sin letra",
+  "Asking lrclib.net. The words appear here when they arrive.": "Consultando lrclib.net. La letra aparece aquí cuando llegue.",
+  "Looking them up sends the title, artist, album and length to lrclib.net.": "Buscarla envía el título, el artista, el álbum y la duración a lrclib.net.",
+  "LRCLIB doesn't have this one. A .lrc file beside the song works too.": "LRCLIB no tiene esta. Un archivo .lrc junto a la canción también sirve."
 }

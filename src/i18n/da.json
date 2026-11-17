@@ -207,5 +207,11 @@
   "song tags": "sangens tags",
   "timed by line": "tidssat pr. linje",
   "timed by word": "tidssat pr. ord",
-  "Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.": "Halo kunne ikke åbne sin kontrol-socket %1 (%2), så `halo`-kommandoer fra en terminal når ikke dette vindue."
+  "Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.": "Halo kunne ikke åbne sin kontrol-socket %1 (%2), så `halo`-kommandoer fra en terminal når ikke dette vindue.",
+  "Looking for lyrics": "Leder efter sangtekst",
+  "No lyrics on this computer": "Ingen sangtekst på denne computer",
+  "No lyrics": "Ingen sangtekst",
+  "Asking lrclib.net. The words appear here when they arrive.": "Spørger lrclib.net. Teksten vises her, når den kommer.",
+  "Looking them up sends the title, artist, album and length to lrclib.net.": "Et opslag sender titel, kunstner, album og længde til lrclib.net.",
+  "LRCLIB doesn't have this one. A .lrc file beside the song works too.": "LRCLIB har ikke denne. En .lrc-fil ved siden af sangen virker også."
 }

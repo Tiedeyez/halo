@@ -14,6 +14,11 @@ Rectangle {
     color: Style.window
 
     readonly property bool lyricsOn: lyrics.shown
+    // Words to show. Without them (none found, still looking, an
+    // instrumental) the song keeps its full layout and a note says why.
+    readonly property bool hasWords: lyrics.status === Lyrics.Found && lyrics.count > 0
+                                     && lyrics.kind !== Lyrics.KindInstrumental
+    readonly property bool showWords: lyricsOn && hasWords
     readonly property bool wide: width >= 1080 && height >= 560
     readonly property real gutter: Math.max(16, Math.min(48, Math.min(width, height) * 0.05))
 
@@ -37,7 +42,7 @@ Rectangle {
     PixelField {
         anchors.fill: parent
         cell: 7
-        origin: Qt.point(width * (root.lyricsOn ? 0.2 : 0.32), height * 0.42)
+        origin: Qt.point(width * (root.showWords ? 0.2 : 0.32), height * 0.42)
     }
 
     // ---- pieces ----
@@ -202,6 +207,49 @@ Rectangle {
         }
     }
 
+    // A short note in place of the lyrics when there are none to show.
+    component LyricsNote: ColumnLayout {
+        spacing: 6
+        readonly property bool canAct: lyrics.status === Lyrics.Offline || lyrics.status === Lyrics.NotFound
+                                       || lyrics.status === Lyrics.Failed
+        Text {
+            Layout.fillWidth: true
+            text: lyrics.status === Lyrics.Searching ? qsTr("Looking for lyrics")
+                : lyrics.status === Lyrics.Offline ? qsTr("No lyrics on this computer")
+                : lyrics.status === Lyrics.NotFound ? qsTr("No lyrics found")
+                : lyrics.status === Lyrics.Failed ? qsTr("Couldn't reach lrclib.net")
+                : lyrics.kind === Lyrics.KindInstrumental ? qsTr("Instrumental") : qsTr("No lyrics")
+            color: Style.faint
+            font.pixelSize: Style.fontSmall
+            font.family: Style.mono
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 1
+        }
+        Text {
+            Layout.fillWidth: true
+            text: lyrics.status === Lyrics.Searching ? qsTr("Asking lrclib.net. The words appear here when they arrive.")
+                : lyrics.status === Lyrics.Offline ? qsTr("Looking them up sends the title, artist, album and length to lrclib.net.")
+                : lyrics.status === Lyrics.NotFound ? qsTr("LRCLIB doesn't have this one. A .lrc file beside the song works too.")
+                : lyrics.status === Lyrics.Failed ? qsTr("Check the connection. Halo tries again on the next song.")
+                : lyrics.kind === Lyrics.KindInstrumental ? qsTr("No words in this one.") : ""
+            visible: text.length > 0
+            color: Style.muted
+            font.pixelSize: Style.fontBody
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+        }
+        Button {
+            visible: parent.canAct
+            text: lyrics.status === Lyrics.Offline ? qsTr("Turn on online lyrics") : qsTr("Look again")
+            flat: true
+            Material.foreground: Style.accent
+            Material.roundedScale: Style.radius
+            implicitHeight: Style.target
+            leftPadding: 0
+            onClicked: lyrics.status === Lyrics.Offline ? lyrics.online = true : lyrics.retry()
+        }
+    }
+
     // ---- layouts ----
 
     // Without lyrics: the halo large, the song beside it.
@@ -247,6 +295,11 @@ Rectangle {
                         font.pixelSize: Style.fontBody
                         elide: Text.ElideRight
                     }
+                }
+                LyricsNote {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 18
+                    visible: root.lyricsOn && player.hasTrack && !root.hasWords
                 }
                 Item { Layout.fillHeight: true }
                 Text {
@@ -300,30 +353,18 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.rightMargin: 48 // clear of the close button
                 spacing: 14
-                Item {
-                    Layout.preferredWidth: 64
-                    Layout.preferredHeight: 64
-                    HaloView {
-                        anchors.fill: parent
-                        spectrum: spectrumSource
-                        color: Style.accent
-                        inner: 0.72
-                        calm: player.calm
-                    }
-                    CoverArt {
-                        anchors.centerIn: parent
-                        glitchOnChange: true
-                        width: 44
-                        height: 44
-                        albumId: player.albumId
-                        title: player.album
-                        size: 256
-                    }
+                // The cover and the visualiser stay in view, as large as the
+                // window allows while leaving the words most of the room.
+                Stage {
+                    readonly property real side: Math.max(120, Math.min(260, root.height * 0.30, root.width * 0.42))
+                    Layout.preferredWidth: side
+                    Layout.preferredHeight: side
                 }
                 Header {
                     Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
                     titleSize: Style.fontLarge + 5
-                    titleLines: 1
+                    titleLines: 2
                     chips: false
                     spacing: 2
                 }
@@ -341,7 +382,7 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: root.gutter
         anchors.bottomMargin: Math.max(16, root.gutter * 0.7)
-        sourceComponent: !root.lyricsOn ? songLayout : root.wide ? wideLyricsLayout : compactLyricsLayout
+        sourceComponent: !root.showWords ? songLayout : root.wide ? wideLyricsLayout : compactLyricsLayout
     }
 
     IconButton {
