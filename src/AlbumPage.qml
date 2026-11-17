@@ -48,9 +48,9 @@ FocusScope {
                         onClicked: root.back()
                         Layout.leftMargin: -12
                     }
-                    Text {
+                    ScrambleText {
                         Layout.fillWidth: true
-                        text: root.title
+                        target: root.title
                         color: Style.text
                         font.pixelSize: Style.fontHero
                         font.weight: Font.Bold

@@ -20,6 +20,15 @@ QtObject {
     // The accent as text: lightened until it reads at 7:1 on the panel.
     readonly property color accentText: readable(theme.accent, panel)
 
+    // Omarchy's terminal font, for the pixel-and-terminal touches: labels,
+    // numbers, keys and the decrypting text. Falls back to any monospace.
+    readonly property string mono: "JetBrainsMono Nerd Font, JetBrains Mono, monospace"
+    // What the decrypting text cycles through before it settles, the block
+    // shades and symbols Omarchy's screensaver effects scramble with.
+    readonly property string noise: "█▓▒░#%&@$*+=<>/\\|"
+    // Motion is reducible: Halo's calm setting (C) turns every glitch off.
+    readonly property bool motion: !player.calm
+
     readonly property int radius: theme.radius
     readonly property int small: Math.min(4, theme.radius)
     readonly property int target: 44

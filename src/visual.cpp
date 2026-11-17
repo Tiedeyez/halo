@@ -161,13 +161,28 @@ void HaloView::setStyle(int style) {
 }
 
 void HaloView::paint(QPainter *p) {
-    p->setRenderHint(QPainter::Antialiasing);
+    // Square pixels on a grid, so no antialiasing: edges stay hard.
+    p->setRenderHint(QPainter::Antialiasing, false);
     if (m_style == Bars)
         paintBars(p);
     else
         paintRays(p);
 }
 
+namespace {
+// Four brightness steps, like the block shades the screensaver draws with
+// (light, medium, dark, full), instead of a smooth fade.
+QColor shade(QColor c, double v) {
+    static constexpr double steps[] = {0.28, 0.5, 0.75, 1.0};
+    c.setAlphaF(steps[std::clamp(int(v * 4), 0, 3)]);
+    return c;
+}
+}
+
+// The halo as pixel art: the ring is a grid of square cells around the cover;
+// a cell lights when its band reaches out that far. Rays are mirrored left and
+// right with the lows at the top, so the ring reads as one shape. On a hard
+// beat a few rows of cells tear sideways for a frame, the screensaver's glitch.
 void HaloView::paintRays(QPainter *p) {
     const double w = width(), h = height();
     const QPointF centre(w / 2, h / 2);
@@ -176,10 +191,10 @@ void HaloView::paintRays(QPainter *p) {
     const double pulse = m_spectrum && !m_calm ? m_spectrum->pulse() : 0;
     const double level = m_spectrum ? m_spectrum->level() : 0;
 
-    // The glow behind the cover swells with the music.
+    // A soft glow behind the pixels, swelling with the music.
     QRadialGradient glow(centre, outer);
     QColor core = m_color;
-    core.setAlphaF(std::clamp(0.10 + level * 0.45 + pulse * 0.25, 0.0, 0.7));
+    core.setAlphaF(std::clamp(0.08 + level * 0.35 + pulse * 0.2, 0.0, 0.55));
     QColor edge = m_color;
     edge.setAlphaF(0);
     glow.setColorAt(m_inner * 0.9, core);
@@ -190,27 +205,50 @@ void HaloView::paintRays(QPainter *p) {
 
     if (!m_spectrum)
         return;
-    // Rays mirrored left and right, lows at the top, so the ring reads as one
-    // shape instead of a spinning chart. Calm mode keeps a still ring.
     const auto &bands = m_spectrum->bands();
     const int rays = Spectrum::Bands * 2;
     const double span = outer - inner;
     if (!m_calm)
         m_rotation += 0.0006 + level * 0.004;
-    for (int i = 0; i < rays; ++i) {
-        const int band = i < Spectrum::Bands ? i : rays - 1 - i;
-        const double v = m_calm ? 0.15 : bands[size_t(band)];
-        const double angle = -Dsp::Pi / 2 + (double(i) + 0.5) / rays * 2 * Dsp::Pi + m_rotation;
-        const double r0 = inner + 4 + pulse * span * 0.06;
-        const double r1 = r0 + 2 + v * (span - 8) * (0.75 + pulse * 0.25);
-        QColor c = m_color;
-        c.setAlphaF(std::clamp(0.35 + v * 0.65, 0.0, 1.0));
-        p->setPen(QPen(c, std::max(1.5, outer * 2 * Dsp::Pi / rays * 0.45), Qt::SolidLine, Qt::RoundCap));
-        p->drawLine(QPointF(centre.x() + std::cos(angle) * r0, centre.y() + std::sin(angle) * r0),
-                    QPointF(centre.x() + std::cos(angle) * r1, centre.y() + std::sin(angle) * r1));
+
+    const int cell = std::max(4, int(std::round(outer / 34)));
+    const int gap = std::max(1, cell / 5);
+    const int half = int(std::ceil(outer / cell));
+    // Rows torn on this frame: only on strong beats, and never when calm.
+    const bool tearing = !m_calm && pulse > 0.72;
+    const quint32 tearSeed = quint32(m_rotation * 100000);
+
+    for (int gy = -half; gy < half; ++gy) {
+        int shift = 0;
+        if (tearing) {
+            const quint32 hsh = (quint32(gy + 1000) * 2654435761u) ^ tearSeed;
+            if (hsh % 9 == 0)
+                shift = (hsh & 16) ? cell : -cell;
+        }
+        for (int gx = -half; gx < half; ++gx) {
+            const double x = (gx + 0.5) * cell, y = (gy + 0.5) * cell;
+            const double r = std::hypot(x, y);
+            const double r0 = inner + 4 + pulse * span * 0.05;
+            if (r < r0 || r > outer)
+                continue;
+            double angle = std::atan2(y, x) + Dsp::Pi / 2 - m_rotation;
+            angle = std::fmod(angle + 4 * Dsp::Pi, 2 * Dsp::Pi);
+            const int i = std::clamp(int(angle / (2 * Dsp::Pi) * rays), 0, rays - 1);
+            const int band = i < Spectrum::Bands ? i : rays - 1 - i;
+            const double v = m_calm ? 0.15 : bands[size_t(band)];
+            const double reach = r0 + cell + v * (span - cell * 2) * (0.75 + pulse * 0.25);
+            if (r > reach)
+                continue;
+            // Brighter towards the cover, like light leaving it.
+            const double fade = 1.0 - (r - r0) / std::max(1.0, reach - r0) * 0.6;
+            p->fillRect(QRectF(centre.x() + gx * cell + shift + gap / 2.0, centre.y() + gy * cell + gap / 2.0,
+                               cell - gap, cell - gap),
+                        shade(m_color, std::clamp(v * 0.6 + fade * 0.5, 0.0, 1.0)));
+        }
     }
 }
 
+// Bars as stacks of LED cells with a floating peak cell.
 void HaloView::paintBars(QPainter *p) {
     if (!m_spectrum)
         return;
@@ -218,17 +256,17 @@ void HaloView::paintBars(QPainter *p) {
     const auto &peaks = m_spectrum->peaks();
     const double w = width(), h = height();
     const double step = w / Spectrum::Bands;
+    const double cell = std::max(3.0, std::floor(step));
+    const int rows = std::max(1, int(h / cell));
     for (int b = 0; b < Spectrum::Bands; ++b) {
         const double v = m_calm ? 0.05 : bands[size_t(b)];
-        QColor c = m_color;
-        c.setAlphaF(0.35 + v * 0.65);
-        p->setPen(Qt::NoPen);
-        p->setBrush(c);
-        const double bh = std::max(1.0, v * h);
-        p->drawRect(QRectF(b * step + 1, h - bh, std::max(1.0, step - 2), bh));
+        const int lit = std::max(1, int(std::round(v * rows)));
+        const double x = std::floor(b * step) + 1;
+        for (int r = 0; r < lit; ++r)
+            p->fillRect(QRectF(x, h - (r + 1) * cell + 1, cell - 2, cell - 2), shade(m_color, 0.3 + double(r) / rows * 0.7));
         if (!m_calm) {
-            p->setBrush(m_color);
-            p->drawRect(QRectF(b * step + 1, h - peaks[size_t(b)] * h - 2, std::max(1.0, step - 2), 2));
+            const int peak = std::clamp(int(std::round(peaks[size_t(b)] * rows)), lit, rows - 1);
+            p->fillRect(QRectF(x, h - (peak + 1) * cell + 1, cell - 2, cell - 2), m_color);
         }
     }
 }

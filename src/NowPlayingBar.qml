@@ -50,6 +50,7 @@ Rectangle {
                     Glyph { anchors.centerIn: parent; name: "halo"; color: Style.faint; width: 26; height: 26 }
                 }
                 CoverArt {
+                    glitchOnChange: true
                     anchors.centerIn: parent
                     width: 58
                     height: 58

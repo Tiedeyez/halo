@@ -22,17 +22,11 @@ Rectangle {
         anchors.rightMargin: 17
         spacing: 6
 
-        RowLayout {
-            Layout.bottomMargin: 10
-            spacing: 10
-            Glyph { name: "halo"; color: Style.accent; width: 30; height: 30 }
-            Text {
-                text: "Halo"
-                color: Style.text
-                font.pixelSize: 22
-                font.weight: Font.Bold
-                font.letterSpacing: 0.5
-            }
+        PixelWordmark {
+            Layout.topMargin: 4
+            Layout.leftMargin: 2
+            Layout.bottomMargin: 14
+            cell: 5
         }
 
         TextField {
@@ -90,13 +84,15 @@ Rectangle {
                 background: Rectangle {
                     radius: Style.small
                     color: item.selected ? Style.raised : item.hovered ? Style.hover : "transparent"
-                    Rectangle {
+                    // The selected row's marker: three stacked pixels.
+                    Column {
                         visible: item.selected
-                        width: 3
-                        height: parent.height - 16
                         anchors.verticalCenter: parent.verticalCenter
-                        color: Style.accent
-                        radius: 1
+                        spacing: 1
+                        Repeater {
+                            model: 4
+                            Rectangle { width: 4; height: 5; color: Style.accent }
+                        }
                     }
                 }
                 contentItem: RowLayout {
@@ -157,6 +153,7 @@ Rectangle {
                 text: qsTr("Up next")
                 color: Style.faint
                 font.pixelSize: Style.fontSmall
+                font.family: Style.mono
                 font.capitalization: Font.AllUppercase
                 font.letterSpacing: 1
             }

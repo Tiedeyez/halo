@@ -170,5 +170,17 @@
   "Loudness": "Loudness",
   "Late night": "Noche",
   "Warm": "Cálido",
-  "Custom": "Personalizado"
+  "Custom": "Personalizado",
+  "Reading your music": "Leyendo tu música",
+  "No matches": "Sin resultados",
+  "No music yet": "Todavía no hay música",
+  "Nothing queued": "Nada en la cola",
+  "No moments yet": "Aún no hay momentos",
+  "Press M while a song plays to pin that second.": "Pulsa M mientras suena una canción para marcar ese segundo.",
+  "%1 percent": "%1 por ciento",
+  "Working": "Trabajando",
+  "%n files so far. Albums appear when the first pass is done.": {
+    "one": "%n archivo por ahora. Los álbumes aparecen al terminar la primera pasada.",
+    "other": "%n archivos por ahora. Los álbumes aparecen al terminar la primera pasada."
+  }
 }

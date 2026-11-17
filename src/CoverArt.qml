@@ -12,6 +12,14 @@ Item {
     property real corner: Style.small
 
     readonly property bool hasImage: image.status === Image.Ready
+    // Tear the cover apart for a moment when it changes to another album,
+    // as the song changes. Off for grid tiles, which change while scrolling.
+    property bool glitchOnChange: false
+
+    GlitchDriver { id: glitch; duration: 420 }
+    layer.enabled: glitch.active
+    layer.effect: GlitchEffect { amount: glitch.amount; seed: glitch.seed }
+    onAlbumIdChanged: if (glitchOnChange && albumId.length) glitch.kick(1)
 
     function hue(text) {
         let h = 0
@@ -37,6 +45,7 @@ Item {
             anchors.centerIn: parent
             text: cover.initials(cover.title)
             color: "#f4f4f7"
+            font.family: Style.mono
             font.pixelSize: Math.max(12, cover.width * 0.28)
             font.weight: Font.DemiBold
             opacity: 0.9

@@ -158,11 +158,15 @@ ApplicationWindow {
                     search.Keys.onReturnPressed: { if (pages.currentItem) pages.currentItem.forceActiveFocus() }
                 }
 
+                GlitchDriver { id: pageGlitch; duration: 300 }
                 StackLayout {
                     id: pages
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     currentIndex: win.view
+                    onCurrentIndexChanged: pageGlitch.kick(0.7)
+                    layer.enabled: pageGlitch.active
+                    layer.effect: GlitchEffect { amount: pageGlitch.amount; seed: pageGlitch.seed }
                     readonly property Item currentItem: children[currentIndex] || null
 
                     AlbumGrid {
@@ -183,8 +187,8 @@ ApplicationWindow {
                             RowLayout {
                                 Layout.margins: 24
                                 Layout.bottomMargin: 12
-                                Text {
-                                    text: qsTr("Songs")
+                                ScrambleText {
+                                    target: qsTr("Songs")
                                     color: Style.text
                                     font.pixelSize: Style.fontTitle
                                     font.weight: Font.Bold
@@ -212,10 +216,10 @@ ApplicationWindow {
                         ColumnLayout {
                             anchors.fill: parent
                             spacing: 0
-                            Text {
+                            ScrambleText {
                                 Layout.margins: 24
                                 Layout.bottomMargin: 4
-                                text: qsTr("Most played")
+                                target: qsTr("Most played")
                                 color: Style.text
                                 font.pixelSize: Style.fontTitle
                                 font.weight: Font.Bold

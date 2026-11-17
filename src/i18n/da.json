@@ -170,5 +170,17 @@
   "Loudness": "Loudness",
   "Late night": "Sent om aftenen",
   "Warm": "Varm",
-  "Custom": "Tilpasset"
+  "Custom": "Tilpasset",
+  "Reading your music": "Læser din musik",
+  "No matches": "Ingen match",
+  "No music yet": "Ingen musik endnu",
+  "Nothing queued": "Intet i køen",
+  "No moments yet": "Ingen øjeblikke endnu",
+  "Press M while a song plays to pin that second.": "Tryk M mens en sang spiller for at gemme det sekund.",
+  "%1 percent": "%1 procent",
+  "Working": "Arbejder",
+  "%n files so far. Albums appear when the first pass is done.": {
+    "one": "%n fil indtil videre. Album vises, når første gennemgang er færdig.",
+    "other": "%n filer indtil videre. Album vises, når første gennemgang er færdig."
+  }
 }

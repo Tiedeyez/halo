@@ -17,8 +17,8 @@ FocusScope {
             Layout.fillWidth: true
             Layout.margins: 24
             Layout.bottomMargin: 12
-            Text {
-                text: qsTr("Queue")
+            ScrambleText {
+                target: qsTr("Queue")
                 color: Style.text
                 font.pixelSize: Style.fontTitle
                 font.weight: Font.Bold
@@ -170,15 +170,11 @@ FocusScope {
                 Accessible.name: row.title + ", " + Style.artistName(row.artist)
             }
 
-            Text {
+            EmptyState {
                 anchors.centerIn: parent
-                width: Math.min(parent.width - 48, 420)
                 visible: view.count === 0
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                text: qsTr("The queue is empty. Play an album, or select songs and press A to add them.")
-                color: Style.muted
-                font.pixelSize: Style.fontBody
+                headline: qsTr("Nothing queued")
+                body: qsTr("The queue is empty. Play an album, or select songs and press A to add them.")
             }
         }
 

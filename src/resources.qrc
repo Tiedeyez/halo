@@ -10,6 +10,12 @@
         <file alias="NowPlayingView.qml">NowPlayingView.qml</file>
         <file alias="Sidebar.qml">Sidebar.qml</file>
         <file alias="Keycap.qml">Keycap.qml</file>
+        <file alias="GlitchEffect.qml">GlitchEffect.qml</file>
+        <file alias="GlitchDriver.qml">GlitchDriver.qml</file>
+        <file alias="ScrambleText.qml">ScrambleText.qml</file>
+        <file alias="PixelWordmark.qml">PixelWordmark.qml</file>
+        <file alias="PixelLoader.qml">PixelLoader.qml</file>
+        <file alias="EmptyState.qml">EmptyState.qml</file>
         <file alias="AlbumGrid.qml">AlbumGrid.qml</file>
         <file alias="AlbumPage.qml">AlbumPage.qml</file>
         <file alias="TrackList.qml">TrackList.qml</file>

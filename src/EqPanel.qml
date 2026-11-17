@@ -27,8 +27,8 @@ Popup {
 
         RowLayout {
             Layout.fillWidth: true
-            Text {
-                text: qsTr("Equalizer")
+            ScrambleText {
+                target: qsTr("Equalizer")
                 color: Style.text
                 font.pixelSize: Style.fontTitle - 2
                 font.weight: Font.Bold

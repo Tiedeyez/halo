@@ -170,5 +170,17 @@
   "Loudness": "",
   "Late night": "",
   "Warm": "",
-  "Custom": ""
+  "Custom": "",
+  "Reading your music": "",
+  "No matches": "",
+  "No music yet": "",
+  "Nothing queued": "",
+  "No moments yet": "",
+  "Press M while a song plays to pin that second.": "",
+  "%1 percent": "",
+  "Working": "",
+  "%n files so far. Albums appear when the first pass is done.": {
+    "one": "%n file so far. Albums appear when the first pass is done.",
+    "other": "%n files so far. Albums appear when the first pass is done."
+  }
 }

@@ -62,6 +62,7 @@ Rectangle {
             }
             CoverArt {
                 anchors.centerIn: parent
+                glitchOnChange: true
                 width: stage.side * (player.visualStyle === 0 ? 0.52 : 0.78)
                 height: width
                 albumId: player.albumId
@@ -90,9 +91,10 @@ Rectangle {
 
             Item { Layout.fillHeight: true }
 
-            Text {
+            ScrambleText {
                 Layout.fillWidth: true
-                text: player.hasTrack ? player.title : qsTr("Nothing playing")
+                target: player.hasTrack ? player.title : qsTr("Nothing playing")
+                duration: 560
                 color: Style.text
                 font.pixelSize: Style.fontHero + 6
                 font.weight: Font.Bold
@@ -145,6 +147,7 @@ Rectangle {
                             text: parent.modelData
                             color: Style.muted
                             font.pixelSize: Style.fontSmall + 1
+                            font.family: Style.mono
                         }
                     }
                 }
@@ -158,7 +161,7 @@ Rectangle {
                     text: Style.clock(player.position)
                     color: Style.muted
                     font.pixelSize: Style.fontSmall + 1
-                    font.features: { "tnum": 1 }
+                    font.family: Style.mono
                 }
                 SeekBar {
                     Layout.fillWidth: true
@@ -171,7 +174,7 @@ Rectangle {
                     text: Style.clock(player.duration)
                     color: Style.muted
                     font.pixelSize: Style.fontSmall + 1
-                    font.features: { "tnum": 1 }
+                    font.family: Style.mono
                 }
             }
 
@@ -200,6 +203,7 @@ Rectangle {
                         : player.blendIn >= 0 ? qsTr("Blends in %1").arg(Style.clock(player.blendIn)) : qsTr("Up next")
                     color: Style.faint
                     font.pixelSize: Style.fontSmall
+                    font.family: Style.mono
                     font.capitalization: Font.AllUppercase
                     font.letterSpacing: 1
                 }
@@ -217,6 +221,7 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 text: qsTr("V switches the visual · C calms the motion")
+                font.family: Style.mono
                 color: Style.faint
                 font.pixelSize: Style.fontSmall
             }

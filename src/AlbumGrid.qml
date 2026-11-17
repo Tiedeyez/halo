@@ -17,8 +17,8 @@ FocusScope {
             Layout.fillWidth: true
             Layout.margins: 24
             Layout.bottomMargin: 12
-            Text {
-                text: qsTr("Albums")
+            ScrambleText {
+                target: qsTr("Albums")
                 color: Style.text
                 font.pixelSize: Style.fontTitle
                 font.weight: Font.Bold
@@ -143,17 +143,16 @@ FocusScope {
                 Accessible.name: cell.title + ", " + Style.artistName(cell.artist)
             }
 
-            Text {
+            EmptyState {
                 anchors.centerIn: parent
-                width: Math.min(parent.width - 48, 440)
-                visible: grid.count === 0 && !library.scanning
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                text: albums.query.length ? qsTr("No albums match “%1”.").arg(albums.query)
-                                          : qsTr("No music found in %1. Put music there, list more folders in ~/.config/halo/folders, or drop files on this window.")
-                                                .arg(library.folders.join(", "))
-                color: Style.muted
-                font.pixelSize: Style.fontBody
+                visible: grid.count === 0
+                busy: library.scanning
+                headline: library.scanning ? qsTr("Reading your music")
+                        : albums.query.length ? qsTr("No matches") : qsTr("No music yet")
+                body: library.scanning ? qsTr("%n files so far. Albums appear when the first pass is done.", "", library.scanned)
+                    : albums.query.length ? qsTr("No albums match “%1”.").arg(albums.query)
+                    : qsTr("No music found in %1. Put music there, list more folders in ~/.config/halo/folders, or drop files on this window.")
+                          .arg(library.folders.join(", "))
             }
         }
     }

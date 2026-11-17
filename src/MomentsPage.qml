@@ -12,10 +12,10 @@ FocusScope {
         anchors.fill: parent
         spacing: 0
 
-        Text {
+        ScrambleText {
             Layout.margins: 24
             Layout.bottomMargin: 4
-            text: qsTr("Moments")
+            target: qsTr("Moments")
             color: Style.text
             font.pixelSize: Style.fontTitle
             font.weight: Font.Bold
@@ -131,15 +131,11 @@ FocusScope {
                 Accessible.name: row.title + ", " + Style.clock(row.seconds)
             }
 
-            Text {
+            EmptyState {
                 anchors.centerIn: parent
-                width: Math.min(parent.width - 48, 420)
                 visible: view.count === 0
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                text: qsTr("No moments yet.")
-                color: Style.muted
-                font.pixelSize: Style.fontBody
+                headline: qsTr("No moments yet")
+                body: qsTr("Press M while a song plays to pin that second.")
             }
         }
     }

@@ -29,8 +29,16 @@ checked against the source.
   seek bar, `[` and `]` jump between them, and the Moments view replays any of
   them.
 - **The halo.** The visual is drawn from the song itself (Halo's own FFT of
-  what it plays, not every sound on the machine) as a ring of light around
-  the cover in your theme's accent. V switches to bars, C keeps it still.
+  what it plays, not every sound on the machine) as a ring of square pixels
+  around the cover in your theme's accent, torn sideways for a frame on hard
+  beats. V switches to LED bars, C keeps it still.
+- **Pixel glitch, Omarchy style.** Halo borrows the screensaver's look: a
+  pixel wordmark, titles that decrypt into place through block shades, and a
+  short pixel-and-slice glitch when the song or the view changes. C (calm)
+  turns every bit of that motion off.
+- **DJ tapes read right.** When a tape tags the host as every track's artist
+  and puts the credit in the title ("10 Mack Maine - Young Mulah Baby"), the
+  performer becomes the artist and the host stays the album artist.
 - **Even loudness.** Every song is measured (ITU-R BS.1770, within a few
   tenths of ffmpeg's EBU R128 meter) and brought to -14 LUFS, with a peak
   limiter after it.
@@ -91,7 +99,7 @@ Halo never changes, moves or deletes a music file.
 
 ```sh
 halo open ~/Music/SomeAlbum     # play a folder (or files)
-halo status                     # what is playing; --json for scripts
+halo status                     # what is playing and the library scan; --json for scripts
 halo add song.flac ; halo playnext ~/Music/Other
 halo next ; halo pause ; halo seek +30 ; halo volume 60
 halo blend on ; halo drift off ; halo repeat all ; halo sleep 30
@@ -107,7 +115,8 @@ stderr.
 
 Halo is C++ and Qt Quick, built with qmake into one binary. It needs Qt 6
 (base, declarative, multimedia, wayland), TagLib and ffmpeg, all in Arch's
-repositories and all but TagLib already part of Omarchy.
+repositories and all but TagLib already part of Omarchy. Building also needs
+`qt6-shadertools` for `qsb`, which compiles the glitch shader into the binary.
 
 ```sh
 bin/build      # build/halo

@@ -56,8 +56,8 @@ Rectangle {
                 width: parent.width
                 spacing: 6
 
-                Text {
-                    text: qsTr("Shortcuts")
+                ScrambleText {
+                    target: qsTr("Shortcuts")
                     color: Style.text
                     font.pixelSize: Style.fontTitle - 2
                     font.weight: Font.Bold
