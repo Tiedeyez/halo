@@ -61,6 +61,34 @@ void Theme::refreshRounding() {
     m_roundingTimeout.start();
 }
 
+namespace {
+// colors.toml comes from the theme, not from Halo: read at most 64 KiB of
+// it, and only ever take #rrggbb values out of it.
+QString readTheme(const QString &path) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    return QString::fromUtf8(file.read(64 * 1024));
+}
+
+QString themeColour(const QString &text, const QString &key) {
+    const QRegularExpression expression(QString(R"re(^\s*%1\s*=\s*["'](#[0-9a-fA-F]{6})["'])re").arg(key),
+                                        QRegularExpression::MultilineOption);
+    const auto match = expression.match(text);
+    return match.hasMatch() ? match.captured(1) : QString();
+}
+}
+
+QStringList Theme::readPalette(const QString &path, const QString &accent) {
+    const QString text = readTheme(path);
+    QStringList out;
+    for (const char *key : {"accent", "cyan", "blue", "magenta", "bright_cyan", "foreground"}) {
+        const QString c = themeColour(text, key);
+        out << (c.isEmpty() ? accent : c);
+    }
+    return out;
+}
+
 QString Theme::readAccent(const QString &path) {
     QFile file(path);
     if (file.open(QIODevice::ReadOnly)) {
@@ -101,8 +129,10 @@ void Theme::reload() {
             m_watcher.addPath(path);
 
     const auto accent = readAccent(m_directory + "/theme/colors.toml");
-    if (accent != m_accent) {
+    const auto palette = readPalette(m_directory + "/theme/colors.toml", accent);
+    if (accent != m_accent || palette != m_palette) {
         m_accent = accent;
+        m_palette = palette;
         emit changed();
     }
 }

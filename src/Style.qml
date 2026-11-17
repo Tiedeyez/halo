@@ -16,6 +16,9 @@ QtObject {
     readonly property color danger: "#ff7a85"
 
     readonly property color accent: theme.accent
+    // One of the theme's six visual colours (accent, cyan, blue, magenta,
+    // bright cyan, foreground); the accent when a theme lacks one.
+    function paletteColour(i) { return theme.palette.length > i ? theme.palette[i] : theme.accent }
     readonly property color onAccent: theme.accentForeground
     // The accent as text: lightened until it reads at 7:1 on the panel.
     readonly property color accentText: readable(theme.accent, panel)

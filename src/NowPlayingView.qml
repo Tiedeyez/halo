@@ -62,10 +62,18 @@ Rectangle {
             style: HaloView.Rays
             visible: player.visualStyle === 0
         }
+        PixelMandelbrot {
+            anchors.centerIn: parent
+            width: stage.side
+            height: stage.side
+            cell: Math.max(4, Math.round(stage.side / 90))
+            visible: player.visualStyle === 2
+        }
         CoverArt {
             anchors.centerIn: parent
             glitchOnChange: true
-            width: stage.side * (player.visualStyle === 0 ? 0.52 : 0.78)
+            // Smaller in the Mandelbrot, so the set has a wide ring to show.
+            width: stage.side * (player.visualStyle === 1 ? 0.78 : player.visualStyle === 2 ? 0.36 : 0.52)
             height: width
             albumId: player.albumId
             title: player.album

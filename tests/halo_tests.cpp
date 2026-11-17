@@ -664,6 +664,16 @@ private slots:
     void themeAccentFallsBack() {
         QTemporaryDir dir;
         QCOMPARE(Theme::readAccent(dir.filePath("missing.toml")), QString("#FFD60A"));
+
+        // The visuals' palette: six theme colours, the accent standing in
+        // for any a theme leaves out.
+        QFile partial(dir.filePath("partial.toml"));
+        QVERIFY(partial.open(QIODevice::WriteOnly));
+        partial.write("accent = \"#82FB9C\"\ncyan = \"#7cf8f7\"\nmagenta = '#86a7df'\nforeground = \"#ddf7ff\"\n");
+        partial.close();
+        QCOMPARE(Theme::readPalette(partial.fileName(), "#82FB9C"),
+                 (QStringList{"#82FB9C", "#7cf8f7", "#82FB9C", "#86a7df", "#82FB9C", "#ddf7ff"}));
+        QCOMPARE(Theme::readPalette(dir.filePath("missing.toml"), "#FFD60A").size(), 6);
         QFile f(dir.filePath("colors.toml"));
         QVERIFY(f.open(QIODevice::WriteOnly));
         f.write("accent = \"#89b4fa\"\n");

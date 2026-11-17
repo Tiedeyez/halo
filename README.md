@@ -31,7 +31,10 @@ checked against the source.
 - **The halo.** The visual is drawn from the song itself (Halo's own FFT of
   what it plays, not every sound on the machine) as a ring of square pixels
   around the cover in your theme's accent, torn sideways for a frame on hard
-  beats. V switches to LED bars, C keeps it still.
+  beats. V cycles to LED bars, then to the Mandelbrot: the set in square
+  pixels, in your theme's colours with a pearl's sheen, on a slow voyage
+  into Seahorse Valley and three other famous places, kicked by the beat.
+  C keeps any of them still.
 - **Live lyrics.** Press L. Timed lyrics scroll with the song and fill in
   word by word in your accent, a block cursor riding the edge of the word
   being sung; each new line decrypts into place, and long breaks count down

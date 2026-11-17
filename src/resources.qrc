@@ -17,6 +17,7 @@
         <file alias="PixelLoader.qml">PixelLoader.qml</file>
         <file alias="EmptyState.qml">EmptyState.qml</file>
         <file alias="PixelField.qml">PixelField.qml</file>
+        <file alias="PixelMandelbrot.qml">PixelMandelbrot.qml</file>
         <file alias="PixelBrackets.qml">PixelBrackets.qml</file>
         <file alias="PixelCircle.qml">PixelCircle.qml</file>
         <file alias="PixelRule.qml">PixelRule.qml</file>
