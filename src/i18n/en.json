@@ -213,5 +213,10 @@
   "No lyrics": "",
   "Asking lrclib.net. The words appear here when they arrive.": "",
   "Looking them up sends the title, artist, album and length to lrclib.net.": "",
-  "LRCLIB doesn't have this one. A .lrc file beside the song works too.": ""
+  "LRCLIB doesn't have this one. A .lrc file beside the song works too.": "",
+  "Headphone correction": "",
+  "%1, measured by %2. Makes them neutral; the equalizer above is then your taste on top.": "",
+  "Nothing to correct on %1. Halo knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.": "",
+  "this output": "",
+  "Tuned for %1 · E to change": ""
 }

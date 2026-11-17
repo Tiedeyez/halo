@@ -56,6 +56,12 @@ checked against the source.
   (ITU-R BS.1770 loudness and 4x oversampled true peak) and brought to
   -14 LUFS, but never boosted past -1 dBTP, so the limiter is left for
   blends and EQ boosts.
+- **Headphone correction, by itself.** When the output changes, Halo looks
+  its name up among 6,229 headphones measured by oratory1990, crinacle,
+  Rtings and others (OPRA's dataset, which includes AutoEQ's) and, on an
+  exact match, makes them neutral before your EQ. Bluetooth and USB
+  headphones name themselves; ones in a headphone jack can't be told apart.
+  Nothing is looked up online. E shows it and turns it off per device.
 - **Clean output.** Songs that aren't 48 kHz are resampled with soxr (alias
   products at -159 dB). The output limiter looks 1.6 ms ahead and detects
   peaks between samples: it holds -1 dBTP with distortion under -87 dB even

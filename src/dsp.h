@@ -37,6 +37,18 @@ inline Coefficients highPass(double rate, double frequency, double q) {
             ((1 - alpha) / a0)};
 }
 
+inline Coefficients lowShelf(double rate, double frequency, double q, double gainDb) {
+    const double a = std::pow(10.0, gainDb / 40.0);
+    const double w = 2 * Pi * frequency / rate;
+    const double alpha = std::sin(w) / (2 * q);
+    const double c = std::cos(w);
+    const double s = 2 * std::sqrt(a) * alpha;
+    const double a0 = (a + 1) + (a - 1) * c + s;
+    return {(a * ((a + 1) - (a - 1) * c + s) / a0), (2 * a * ((a - 1) - (a + 1) * c) / a0),
+            (a * ((a + 1) - (a - 1) * c - s) / a0), (-2 * ((a - 1) + (a + 1) * c) / a0),
+            (((a + 1) + (a - 1) * c - s) / a0)};
+}
+
 inline Coefficients highShelf(double rate, double frequency, double q, double gainDb) {
     const double a = std::pow(10.0, gainDb / 40.0);
     const double w = 2 * Pi * frequency / rate;

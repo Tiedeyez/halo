@@ -309,12 +309,24 @@ ApplicationWindow {
             }
             Behavior on opacity { NumberAnimation { duration: 160 } }
             Timer { id: toastTimer; interval: 2200; onTriggered: toast.opacity = 0 }
+            function show(text) {
+                toastText.target = text
+                toast.opacity = 1
+                toastTimer.restart()
+            }
             Connections {
                 target: player
-                function onMessage(text) {
-                    toastText.target = text
-                    toast.opacity = 1
-                    toastTimer.restart()
+                function onMessage(text) { toast.show(text) }
+            }
+            // Say so when a correction starts on its own (E to turn it off).
+            property string tunedFor: ""
+            Connections {
+                target: headphones
+                function onChanged() {
+                    const now = headphones.active ? headphones.model : ""
+                    if (now.length > 0 && now !== toast.tunedFor)
+                        toast.show(qsTr("Tuned for %1 · E to change").arg(now))
+                    toast.tunedFor = now
                 }
             }
         }

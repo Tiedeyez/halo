@@ -213,5 +213,10 @@
   "No lyrics": "Sin letra",
   "Asking lrclib.net. The words appear here when they arrive.": "Consultando lrclib.net. La letra aparece aquí cuando llegue.",
   "Looking them up sends the title, artist, album and length to lrclib.net.": "Buscarla envía el título, el artista, el álbum y la duración a lrclib.net.",
-  "LRCLIB doesn't have this one. A .lrc file beside the song works too.": "LRCLIB no tiene esta. Un archivo .lrc junto a la canción también sirve."
+  "LRCLIB doesn't have this one. A .lrc file beside the song works too.": "LRCLIB no tiene esta. Un archivo .lrc junto a la canción también sirve.",
+  "Headphone correction": "Corrección de auriculares",
+  "%1, measured by %2. Makes them neutral; the equalizer above is then your taste on top.": "%1, medidos por %2. Los deja neutros; el ecualizador de arriba es tu gusto encima.",
+  "Nothing to correct on %1. Halo knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.": "Nada que corregir en %1. Halo conoce %2 auriculares por su nombre; los Bluetooth y USB dicen su nombre, los de un conector de 3,5 mm no se pueden distinguir.",
+  "this output": "esta salida",
+  "Tuned for %1 · E to change": "Ajustado para %1 · E para cambiar"
 }

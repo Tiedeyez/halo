@@ -40,6 +40,10 @@ public:
     void setTrackGain(int deck, float db);
     // Ten band gains in dB and a preamp; flat when `enabled` is false.
     void setEqualizer(const std::array<float, 10> &gains, float preampDb, bool enabled);
+    // Headphone correction (src/headphones.h): filters already designed for
+    // 48 kHz, applied before the user's EQ. An empty list turns it off.
+    static constexpr int MaxCorrection = 16;
+    void setCorrection(const std::vector<Dsp::Coefficients> &filters, float preampDb);
 
     int current() const { return m_current.load(); }
     // Bumps every time the engine switched decks by itself (a gapless hand-over).
@@ -56,7 +60,7 @@ public:
     void render(float *out, int frames);
 
 private:
-    enum class Op { Load, PlayNow, Arm, Blend, Unload, Pause, Volume, Gain, Eq };
+    enum class Op { Load, PlayNow, Arm, Blend, Unload, Pause, Volume, Gain, Eq, Correction };
     struct Command {
         Op op;
         int deck = 0;
@@ -64,6 +68,8 @@ private:
         float value = 0;
         bool flag = false;
         std::array<float, 11> eq{};
+        std::array<Dsp::Coefficients, MaxCorrection> correction{};
+        int filters = 0;
     };
 
     // A tiny SPSC queue of commands, same scheme as Ring.
@@ -126,6 +132,10 @@ private:
     float m_preamp = 1;
     std::array<Dsp::Coefficients, 10> m_eq{};
     std::array<std::array<Dsp::Biquad, 10>, 2> m_eqState{};
+    std::array<Dsp::Coefficients, MaxCorrection> m_correction{};
+    std::array<std::array<Dsp::Biquad, MaxCorrection>, 2> m_correctionState{};
+    int m_correctionFilters = 0;
+    float m_correctionGain = 1;
     Dsp::TruePeakLimiter m_limiter{48000, -1.0};
 
     std::vector<float> m_mix, m_scratch;

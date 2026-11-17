@@ -213,5 +213,10 @@
   "No lyrics": "Ingen sangtekst",
   "Asking lrclib.net. The words appear here when they arrive.": "Spørger lrclib.net. Teksten vises her, når den kommer.",
   "Looking them up sends the title, artist, album and length to lrclib.net.": "Et opslag sender titel, kunstner, album og længde til lrclib.net.",
-  "LRCLIB doesn't have this one. A .lrc file beside the song works too.": "LRCLIB har ikke denne. En .lrc-fil ved siden af sangen virker også."
+  "LRCLIB doesn't have this one. A .lrc file beside the song works too.": "LRCLIB har ikke denne. En .lrc-fil ved siden af sangen virker også.",
+  "Headphone correction": "Hovedtelefonkorrektion",
+  "%1, measured by %2. Makes them neutral; the equalizer above is then your taste on top.": "%1, målt af %2. Gør dem neutrale; equalizeren ovenfor er så din smag oven på.",
+  "Nothing to correct on %1. Halo knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.": "Intet at korrigere på %1. Halo kender %2 hovedtelefoner ved navn; Bluetooth- og USB-hovedtelefoner oplyser deres navn, dem i et minijackstik kan ikke skelnes.",
+  "this output": "denne udgang",
+  "Tuned for %1 · E to change": "Indstillet til %1 · E for at ændre"
 }

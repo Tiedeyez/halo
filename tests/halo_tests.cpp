@@ -20,6 +20,7 @@
 #include "engine.h"
 #include "library.h"
 #include "lyrics.h"
+#include "headphones.h"
 #include "mandelpilot.h"
 #include "player.h"
 #include "remote.h"
@@ -354,6 +355,59 @@ private slots:
         }
         QVERIFY2(pilot.dives() >= 4, qPrintable(QString::number(pilot.dives())));
         QVERIFY2(interesting >= looks * 9 / 10, qPrintable(QString("%1 of %2").arg(interesting).arg(looks)));
+    }
+
+    void headphoneNamesMatchOnlyExactly() {
+        QCOMPARE(Hp::modelPart("Ana's AirPods Pro"), QString("AirPods Pro"));
+        QCOMPARE(Hp::modelPart("WH-1000XM4 (A2DP)"), QString("WH-1000XM4"));
+        QCOMPARE(Hp::modelPart("Arctis 7 Analog Stereo"), QString("Arctis 7"));
+        QCOMPARE(Hp::modelPart("Jabra Elite 85h Hands-Free"), QString("Jabra Elite 85h"));
+
+        Hp::Database db;
+        QVERIFY(db.load(R"({"headphones":[
+            ["Sony","WH-1000XM4","over_the_ear","oratory1990",-6.1,[[1,105,4.5,0.7],[0,3000,-2,2],[2,10000,-1,0.7]]],
+            ["Apple","AirPods Pro","in_ear","crinacle",-3,[[0,200,1,1]]],
+            ["Acme","Elite","in_ear","x",-1,[[0,200,1,1]]],
+            ["Other","Elite","over_the_ear","x",-1,[[0,200,1,1]]],
+            ["Koss","770","over_the_ear","x",-1,[[0,200,1,1]]]]})"));
+        QCOMPARE(db.match("WH-1000XM4")->title(), QString("Sony WH-1000XM4"));
+        QCOMPARE(db.match("Sony WH-1000XM4 (LE)")->title(), QString("Sony WH-1000XM4"));
+        QCOMPARE(db.match("Sam’s AirPods Pro")->title(), QString("Apple AirPods Pro"));
+        // Two products called "Elite": only the brand settles it.
+        QVERIFY(db.match("Elite") == nullptr);
+        QCOMPARE(db.match("Acme Elite")->title(), QString("Acme Elite"));
+        // Never a near miss, a number alone, or the computer's own output.
+        QVERIFY(db.match("WH-1000XM3") == nullptr);
+        QVERIFY(db.match("770") == nullptr);
+        QVERIFY(db.match("Built-in Audio Analog Stereo") == nullptr);
+        QVERIFY(db.match("WH202A") == nullptr);
+
+        // The filters do what the profile says: +4.5 dB well under the
+        // 105 Hz shelf, -2 dB at the 3 kHz peak.
+        const auto filters = Hp::design(*db.match("WH-1000XM4"));
+        auto gainAt = [&](double f) {
+            std::vector<Dsp::Biquad> state(filters.size());
+            double peak = 0;
+            for (int n = 0; n < 48000; ++n) {
+                float x = float(std::sin(2 * Pi * f * n / 48000));
+                for (size_t i = 0; i < filters.size(); ++i)
+                    x = state[i].process(filters[i], x);
+                if (n > 24000)
+                    peak = std::max(peak, double(std::fabs(x)));
+            }
+            return 20 * std::log10(peak);
+        };
+        QVERIFY2(std::fabs(gainAt(30) - 4.5) < 0.6, qPrintable(QString::number(gainAt(30))));
+        QVERIFY2(std::fabs(gainAt(3000) + 2) < 0.4, qPrintable(QString::number(gainAt(3000))));
+
+        // The real bundled database loads and knows the well-known ones.
+        QFile real(QFINDTESTDATA("../src/data/headphones.json"));
+        QVERIFY(real.open(QIODevice::ReadOnly));
+        Hp::Database all;
+        QVERIFY(all.load(real.readAll()));
+        QVERIFY2(all.size() > 6000, qPrintable(QString::number(all.size())));
+        QVERIFY(all.match("WH-1000XM4") != nullptr);
+        QVERIFY(all.match("Built-in Audio Analog Stereo") == nullptr);
     }
 
     void findsWhereTheMusicIs() {

@@ -13,6 +13,7 @@
 #include <QStandardPaths>
 #include <QUrl>
 
+#include "headphones.h"
 #include "mandelpilot.h"
 #include "analysis.h"
 #include "audiooutput.h"
@@ -120,6 +121,8 @@ int main(int argc, char *argv[]) {
     });
 
     AudioOutput audio(&player.engine());
+    Headphones headphones(&player.engine());
+    QObject::connect(&audio, &AudioOutput::deviceChanged, &headphones, &Headphones::outputChanged);
     QObject::connect(&audio, &AudioOutput::problemChanged, &player, [&] { player.setAudioProblem(audio.problem()); });
     audio.start();
     player.setAudioProblem(audio.problem().isEmpty() ? remote.error() : audio.problem());
@@ -148,6 +151,7 @@ int main(int argc, char *argv[]) {
     context->setContextProperty("library", &library);
     context->setContextProperty("player", &player);
     context->setContextProperty("lyrics", &lyrics);
+    context->setContextProperty("headphones", &headphones);
     qmlRegisterUncreatableType<LyricsService>("Halo", 1, 0, "Lyrics", "from main");
     context->setContextProperty("spectrumSource", &spectrum);
     context->setContextProperty("albums", &albums);

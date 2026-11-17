@@ -51,6 +51,7 @@ void AudioOutput::start() {
         return;
     }
 
+    emit deviceChanged(device.description());
     m_sink = std::make_unique<QAudioSink>(device, format);
     m_sink->setBufferFrameCount(PeriodFrames * 2);
     connect(m_sink.get(), &QAudioSink::stateChanged, this, [this](QAudio::State) {

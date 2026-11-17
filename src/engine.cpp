@@ -55,6 +55,14 @@ void Engine::setEqualizer(const std::array<float, 10> &gains, float preampDb, bo
     post(c);
 }
 
+void Engine::setCorrection(const std::vector<Dsp::Coefficients> &filters, float preampDb) {
+    Command c{Op::Correction, 0, nullptr, preampDb, !filters.empty()};
+    c.filters = int(std::min<size_t>(filters.size(), MaxCorrection));
+    for (int i = 0; i < c.filters; ++i)
+        c.correction[size_t(i)] = filters[size_t(i)];
+    post(c);
+}
+
 Stream *Engine::retired() {
     for (auto &slot : m_retired)
         if (Stream *s = slot.exchange(nullptr))
@@ -150,6 +158,14 @@ void Engine::apply(const Command &c) {
         m_preamp = Dsp::dbToGain(c.value);
         for (int i = 0; i < 10; ++i)
             m_eq[i] = Dsp::peaking(Rate, Dsp::EqFrequencies[i], 1.41, c.eq[i]);
+        break;
+    case Op::Correction:
+        m_correctionFilters = c.flag ? c.filters : 0;
+        m_correctionGain = Dsp::dbToGain(c.value);
+        m_correction = c.correction;
+        for (auto &channel : m_correctionState)
+            for (auto &b : channel)
+                b.reset();
         break;
     }
 }
@@ -271,6 +287,16 @@ void Engine::render(float *out, int frames) {
         m_volumeSmooth += (m_volume - m_volumeSmooth) * GainSmoothing;
 
         float l = mix[i * 2], r = mix[i * 2 + 1];
+        // Headphone correction first: it makes the headphones neutral, and
+        // the user's EQ is then a taste on top of neutral.
+        if (m_correctionFilters > 0) {
+            l *= m_correctionGain;
+            r *= m_correctionGain;
+            for (int b = 0; b < m_correctionFilters; ++b) {
+                l = m_correctionState[0][size_t(b)].process(m_correction[size_t(b)], l);
+                r = m_correctionState[1][size_t(b)].process(m_correction[size_t(b)], r);
+            }
+        }
         if (m_eqOn) {
             l *= m_preamp;
             r *= m_preamp;

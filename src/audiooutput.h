@@ -30,6 +30,9 @@ public:
 
 signals:
     void problemChanged();
+    // The output now playing, by its name ("WH-1000XM4", "Built-in Audio
+    // Analog Stereo"); for the headphone check.
+    void deviceChanged(const QString &name);
 
 private:
     void setProblem(const QString &problem);

@@ -144,5 +144,35 @@ Popup {
                 Accessible.name: qsTr("Even loudness")
             }
         }
+
+        // Headphone correction: found by the output's name, on by itself.
+        RowLayout {
+            Layout.fillWidth: true
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+                Text { text: qsTr("Headphone correction"); color: Style.text; font.pixelSize: Style.fontBody }
+                Text {
+                    Layout.fillWidth: true
+                    textFormat: Text.PlainText
+                    text: headphones.matched
+                          ? qsTr("%1, measured by %2. Makes them neutral; the equalizer above is then your taste on top.")
+                                .arg(headphones.model).arg(headphones.source)
+                          : qsTr("Nothing to correct on %1. Halo knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.")
+                                .arg(headphones.device.length > 0 ? headphones.device : qsTr("this output")).arg(headphones.known)
+                    color: Style.faint
+                    font.pixelSize: Style.fontSmall
+                    wrapMode: Text.Wrap
+                }
+            }
+            Switch {
+                visible: headphones.matched
+                checked: headphones.active
+                onToggled: headphones.setActive(checked)
+                Material.accent: Style.accent
+                focusPolicy: Qt.NoFocus
+                Accessible.name: qsTr("Headphone correction")
+            }
+        }
     }
 }
