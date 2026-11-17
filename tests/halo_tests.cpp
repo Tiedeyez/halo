@@ -84,11 +84,14 @@ void waitReady(Stream &s) {
 
 // The engine renders far faster than real time in a test, so short files
 // must be fully decoded first, or their end looks like a slow disk.
-void waitDecoded(Stream &s) {
+// Waits for ffmpeg to finish a test file. Generous, so a loaded machine
+// doesn't fail the test half-decoded; callers check it actually finished.
+bool waitDecoded(Stream &s) {
     QElapsedTimer t;
     t.start();
-    while (!s.decoded() && t.elapsed() < 5000)
+    while (!s.decoded() && t.elapsed() < 60000)
         QThread::msleep(5);
+    return s.decoded();
 }
 
 }
@@ -536,8 +539,8 @@ private slots:
         auto *sa = new Stream(a, 0), *sb = new Stream(b, 0);
         sa->start();
         sb->start();
-        waitDecoded(*sa);
-        waitDecoded(*sb);
+        QVERIFY(waitDecoded(*sa));
+        QVERIFY(waitDecoded(*sb));
         engine.setVolume(1.0f);
         engine.setPaused(false);
         engine.load(0, sa);
