@@ -20,13 +20,28 @@ AbstractButton {
     Accessible.name: tip
     Accessible.role: Accessible.Button
 
-    background: Rectangle {
-        radius: button.primary ? width / 2 : Style.small
-        color: button.primary ? Style.accent
-             : button.down ? Style.line
-             : button.hovered ? Style.hover : "transparent"
-        scale: button.primary && button.down ? 0.94 : 1
-        Behavior on scale { NumberAnimation { duration: 80 } }
+    background: Item {
+        // The main button is a pixel-art circle; it pushes in when pressed.
+        PixelCircle {
+            anchors.fill: parent
+            visible: button.primary
+            pixel: 4
+            color: button.hovered ? Qt.lighter(Style.accent, 1.12) : Style.accent
+            scale: button.down ? 0.92 : 1
+            Behavior on scale { NumberAnimation { duration: 80 } }
+        }
+        Rectangle {
+            anchors.fill: parent
+            visible: !button.primary
+            radius: Style.small
+            color: button.down ? Style.line : button.hovered ? Style.hover : "transparent"
+        }
+        // Pixel corner marks on the button under the pointer.
+        PixelBrackets {
+            shown: !button.primary && button.hovered && button.enabled
+            arm: 6
+            color: button.active ? Style.accent : Style.muted
+        }
     }
 
     contentItem: Item {
@@ -46,7 +61,6 @@ AbstractButton {
             anchors.bottomMargin: 4
             width: 4
             height: 4
-            radius: 2
             color: Style.accent
         }
     }

@@ -46,6 +46,7 @@ Rectangle {
         radius: Math.min(10, Style.radius)
         color: Style.raised
         border.color: Style.line
+        PixelBrackets { shown: true; arm: 16; thickness: 3 }
 
         Flickable {
             anchors.fill: parent

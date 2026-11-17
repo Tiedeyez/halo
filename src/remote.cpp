@@ -230,8 +230,16 @@ bool Remote::listen() {
     // Nobody listening: a socket file left behind by a crash is stale.
     QLocalServer::removeServer(socketName());
     m_server.setSocketOptions(QLocalServer::UserAccessOption);
-    if (!m_server.listen(socketName()))
-        return false;
+    if (!m_server.listen(socketName())) {
+        // Another Halo that started at the same moment won the socket.
+        if (running(500))
+            return false;
+        // No other Halo: the socket itself can't be made (a path over the
+        // 108-byte limit, a folder that isn't writable). Keep running and
+        // say so; quitting silently looked like Halo never opened.
+        m_error = tr("Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.")
+                      .arg(socketName(), m_server.errorString());
+    }
 
     auto *object = new QObject(this);
     m_root = new MprisRoot(object);

@@ -16,6 +16,12 @@
         <file alias="PixelWordmark.qml">PixelWordmark.qml</file>
         <file alias="PixelLoader.qml">PixelLoader.qml</file>
         <file alias="EmptyState.qml">EmptyState.qml</file>
+        <file alias="PixelField.qml">PixelField.qml</file>
+        <file alias="PixelBrackets.qml">PixelBrackets.qml</file>
+        <file alias="PixelCircle.qml">PixelCircle.qml</file>
+        <file alias="PixelRule.qml">PixelRule.qml</file>
+        <file alias="PixelEq.qml">PixelEq.qml</file>
+        <file alias="PixelScrollBar.qml">PixelScrollBar.qml</file>
         <file alias="LyricLine.qml">LyricLine.qml</file>
         <file alias="LyricsView.qml">LyricsView.qml</file>
         <file alias="AlbumGrid.qml">AlbumGrid.qml</file>

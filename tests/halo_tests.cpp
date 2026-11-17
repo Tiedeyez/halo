@@ -404,6 +404,24 @@ private slots:
             QCOMPARE(t.albumArtist, QString("Biggy Jiggy Mixtapes"));
         }
         {
+            // "01 - Lil Wayne - Intro Day 1" with Lil Wayne as the artist:
+            // nothing to split, and never "- Lil Wayne" as a performer.
+            Track t;
+            t.title = "01 - Lil Wayne - Intro Day 1";
+            t.artist = "Lil Wayne";
+            t.number = 1;
+            Library::splitCredit(t);
+            QCOMPARE(t.artist, QString("Lil Wayne"));
+            QCOMPARE(Library::cleanTitle(t.title, t.artist), QString("Intro Day 1"));
+            Track u;
+            u.title = "07 - Gudda Gudda - Wall";
+            u.artist = "DJ Host";
+            u.number = 7;
+            Library::splitCredit(u);
+            QCOMPARE(u.artist, QString("Gudda Gudda"));
+            QCOMPARE(u.title, QString("Wall"));
+        }
+        {
             // The number isn't this track's, so it's part of the name.
             Track t;
             t.title = "99 Problems - Remix";

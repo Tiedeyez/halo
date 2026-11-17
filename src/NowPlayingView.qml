@@ -33,6 +33,12 @@ Rectangle {
             GradientStop { position: 1; color: Style.window }
         }
     }
+    // The pixel field, its beat ring starting from the cover.
+    PixelField {
+        anchors.fill: parent
+        cell: 7
+        origin: Qt.point(width * (root.lyricsOn ? 0.2 : 0.32), height * 0.42)
+    }
 
     // ---- pieces ----
 

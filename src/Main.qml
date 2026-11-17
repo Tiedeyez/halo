@@ -125,9 +125,23 @@ ApplicationWindow {
     // Right-to-left languages mirror the window; the Translator sets the
     // application's layout direction.
     Item {
+        id: shell
         anchors.fill: parent
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
+
+        // The window materialises out of big pixels when it opens.
+        GlitchDriver { id: bootGlitch; duration: 900 }
+        layer.enabled: bootGlitch.active
+        layer.effect: GlitchEffect { amount: bootGlitch.amount; seed: bootGlitch.seed }
+        Timer { interval: 60; running: true; onTriggered: bootGlitch.kick(1) }
+
+        // The living pixel field behind the library; its beat ring starts
+        // at the cover in the bar.
+        PixelField {
+            anchors.fill: parent
+            origin: Qt.point(58, height - 52)
+        }
 
         ColumnLayout {
             anchors.fill: parent
@@ -281,23 +295,24 @@ ApplicationWindow {
             anchors.bottomMargin: 120
             width: toastText.implicitWidth + 32
             height: toastText.implicitHeight + 20
-            radius: Style.small
             color: Style.raised
-            border.color: Style.line
             opacity: 0
             visible: opacity > 0
-            Text {
+            PixelBrackets { shown: true; arm: 8 }
+            ScrambleText {
                 id: toastText
                 anchors.centerIn: parent
                 color: Style.text
+                font.family: Style.mono
                 font.pixelSize: Style.fontBody
+                duration: 300
             }
             Behavior on opacity { NumberAnimation { duration: 160 } }
             Timer { id: toastTimer; interval: 2200; onTriggered: toast.opacity = 0 }
             Connections {
                 target: player
                 function onMessage(text) {
-                    toastText.text = text
+                    toastText.target = text
                     toast.opacity = 1
                     toastTimer.restart()
                 }

@@ -20,6 +20,7 @@ Popup {
         color: Style.raised
         radius: Math.min(10, Style.radius)
         border.color: Style.line
+        PixelBrackets { shown: true; arm: 16; thickness: 3 }
     }
 
     contentItem: ColumnLayout {

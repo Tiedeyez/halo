@@ -127,6 +127,8 @@ public:
     // owns the socket.
     bool listen();
     QJsonObject handle(const QJsonObject &request);
+    // Why the control socket couldn't be opened, if it couldn't.
+    QString error() const { return m_error; }
     // Lets `halo lyrics` read and steer the lyrics; optional.
     void setLyrics(LyricsService *lyrics) { m_lyrics = lyrics; }
 
@@ -140,6 +142,7 @@ signals:
 private:
     Player *m_player;
     LyricsService *m_lyrics = nullptr;
+    QString m_error;
     QLocalServer m_server;
     MprisRoot *m_root = nullptr;
     MprisPlayer *m_mpris = nullptr;

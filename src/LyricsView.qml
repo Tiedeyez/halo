@@ -44,7 +44,7 @@ Item {
         highlightMoveVelocity: -1
         highlightFollowsCurrentItem: true
         highlight: Item {}
-        ScrollBar.vertical: ScrollBar { policy: root.plain ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff }
+        ScrollBar.vertical: PixelScrollBar { policy: root.plain ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff }
 
         delegate: MouseArea {
             id: row

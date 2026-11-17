@@ -20,53 +20,70 @@ Item {
     Accessible.name: qsTr("Position")
     Accessible.description: Style.clock(position) + " / " + Style.clock(duration)
 
-    Rectangle {
+    readonly property real shown: dragFraction >= 0 ? dragFraction : fraction
+    readonly property bool supported: GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
+
+    Item {
         id: track
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width
-        height: mouse.containsMouse || mouse.pressed ? 6 : 4
-        radius: height / 2
-        color: Style.line
+        height: mouse.containsMouse || mouse.pressed ? 8 : 6
         Behavior on height { NumberAnimation { duration: 80 } }
 
-        // Where the next song blends in.
-        Rectangle {
-            visible: bar.blendFrom >= 0 && bar.duration > 0
-            x: parent.width * Math.min(1, bar.blendFrom / Math.max(1, bar.duration))
-            width: parent.width - x
-            height: parent.height
-            radius: parent.radius
-            color: Qt.alpha(Style.accent, 0.28)
+        // Square cells (see shaders/pixelbar.frag): played, blend, rest.
+        ShaderEffect {
+            anchors.fill: parent
+            visible: bar.supported
+            property real fraction: bar.shown
+            property real blendFrom: bar.blendFrom >= 0 && bar.duration > 0 ? Math.min(1, bar.blendFrom / bar.duration) : -1
+            property real cell: 4
+            property real gap: 2
+            property size size: Qt.size(width, height)
+            property color played: Style.accent
+            property color rest: Style.line
+            property color blend: Qt.tint(Style.line, Qt.alpha(Style.accent, 0.45))
+            fragmentShader: "qrc:/shaders/pixelbar.frag.qsb"
         }
-
+        // The same without shaders (Qt's software renderer).
         Rectangle {
-            width: parent.width * (bar.dragFraction >= 0 ? bar.dragFraction : bar.fraction)
-            height: parent.height
-            radius: parent.radius
-            color: Style.accent
+            anchors.fill: parent
+            visible: !bar.supported
+            color: Style.line
+            Rectangle { width: parent.width * bar.shown; height: parent.height; color: Style.accent }
         }
 
         Repeater {
             model: bar.moments
             Rectangle {
                 required property var modelData
-                x: track.width * Math.min(1, modelData / Math.max(1, bar.duration)) - 1
+                x: Math.round(track.width * Math.min(1, modelData / Math.max(1, bar.duration)) - 1)
                 anchors.verticalCenter: parent.verticalCenter
                 width: 3
                 height: 14
-                radius: 1
                 color: Style.text
             }
         }
 
+        // The playhead: a terminal's block cursor, blinking while paused.
         Rectangle {
-            visible: mouse.containsMouse || mouse.pressed
-            x: track.width * (bar.dragFraction >= 0 ? bar.dragFraction : bar.fraction) - width / 2
+            id: head
+            readonly property bool big: mouse.containsMouse || mouse.pressed
+            x: Math.round(track.width * bar.shown - width / 2)
             anchors.verticalCenter: parent.verticalCenter
-            width: 14
-            height: 14
-            radius: 7
-            color: Style.text
+            width: big ? 8 : 4
+            height: big ? 18 : 12
+            color: big ? Style.text : Style.accentText
+            visible: bar.duration > 0
+            opacity: !player.playing && !big && Style.motion && blink.on ? 0.15 : 1
+            Timer {
+                id: blink
+                property bool on: false
+                interval: 530
+                repeat: true
+                running: !player.playing && bar.duration > 0 && Style.motion && bar.visible
+                onTriggered: on = !on
+                onRunningChanged: if (!running) on = false
+            }
         }
     }
 
@@ -77,16 +94,15 @@ Item {
         y: -height + 4
         width: hoverTime.implicitWidth + 12
         height: hoverTime.implicitHeight + 6
-        radius: Style.small
         color: Style.raised
-        border.color: Style.line
+        border.color: Style.accent
         Text {
             id: hoverTime
             anchors.centerIn: parent
             text: Style.clock(bar.duration * Math.max(0, Math.min(1, mouse.mouseX / bar.width)))
             color: Style.text
             font.pixelSize: Style.fontSmall
-            font.features: { "tnum": 1 }
+            font.family: Style.mono
         }
     }
 

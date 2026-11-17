@@ -206,5 +206,6 @@
   "not timed": "ikke tidssat",
   "song tags": "sangens tags",
   "timed by line": "tidssat pr. linje",
-  "timed by word": "tidssat pr. ord"
+  "timed by word": "tidssat pr. ord",
+  "Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.": "Halo kunne ikke åbne sin kontrol-socket %1 (%2), så `halo`-kommandoer fra en terminal når ikke dette vindue."
 }

@@ -271,7 +271,9 @@ QString Library::cleanTitle(const QString &title, const QString &artist) {
 // so the song becomes the title and the performer the artist; the host stays
 // as the album artist so the tape still groups and reads as theirs.
 void Library::splitCredit(Track &t) {
-    static const QRegularExpression credited("^\\s*(\\d{1,3})\\s+(\\S.*?)\\s+-\\s+(\\S.*)$");
+    // The number may be followed by punctuation ("01 - Artist - Song"); the
+    // performer starts with a letter or digit, never the separator.
+    static const QRegularExpression credited("^\\s*(\\d{1,3})\\s*[-._)]*\\s+([\\p{L}\\p{N}].*?)\\s+-\\s+(\\S.*)$");
     const auto m = credited.match(t.title);
     if (!m.hasMatch() || t.number <= 0 || m.captured(1).toInt() != t.number)
         return;

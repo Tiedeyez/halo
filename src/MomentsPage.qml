@@ -39,7 +39,7 @@ FocusScope {
             focus: true
             model: player.moments
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ScrollBar {}
+            ScrollBar.vertical: PixelScrollBar {}
             highlightMoveDuration: 0
             Keys.onReturnPressed: player.playMoment(currentIndex)
             Keys.onEnterPressed: player.playMoment(currentIndex)

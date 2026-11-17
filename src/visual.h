@@ -18,6 +18,10 @@ class Spectrum : public QObject {
     Q_OBJECT
     Q_PROPERTY(double pulse READ pulse NOTIFY updated)
     Q_PROPERTY(double level READ level NOTIFY updated)
+    // Lows, mids and highs, 0 to 1, for small meters (the playing row's).
+    Q_PROPERTY(double low READ low NOTIFY updated)
+    Q_PROPERTY(double mid READ mid NOTIFY updated)
+    Q_PROPERTY(double high READ high NOTIFY updated)
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 
 public:
@@ -28,6 +32,9 @@ public:
     const std::vector<float> &peaks() const { return m_peaks; }
     double pulse() const { return m_pulse; }
     double level() const { return m_level; }
+    double low() const { return average(0, 10); }
+    double mid() const { return average(10, 36); }
+    double high() const { return average(36, Bands); }
     bool active() const { return m_active; }
     void setActive(bool active);
 
@@ -41,6 +48,12 @@ signals:
 
 private:
     void tick();
+    double average(int from, int to) const {
+        double sum = 0;
+        for (int i = from; i < to && i < int(m_bands.size()); ++i)
+            sum += m_bands[size_t(i)];
+        return to > from ? sum / (to - from) : 0;
+    }
 
     Engine *m_engine;
     QTimer m_timer;

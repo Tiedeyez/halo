@@ -206,5 +206,6 @@
   "not timed": "",
   "song tags": "",
   "timed by line": "",
-  "timed by word": ""
+  "timed by word": "",
+  "Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.": ""
 }

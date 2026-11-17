@@ -56,7 +56,7 @@ FocusScope {
             keyNavigationWraps: false
             highlightFollowsCurrentItem: true
             currentIndex: 0
-            ScrollBar.vertical: ScrollBar {}
+            ScrollBar.vertical: PixelScrollBar {}
             Keys.onReturnPressed: root.openAlbum(albums.idAt(currentIndex))
             Keys.onEnterPressed: root.openAlbum(albums.idAt(currentIndex))
 
@@ -78,8 +78,13 @@ FocusScope {
                     anchors.margins: 6
                     radius: Style.small
                     color: hover.hovered || cell.current ? Style.raised : "transparent"
-                    border.color: cell.current ? Style.accent : "transparent"
-                    border.width: 2
+                    // Selection and hover as pixel corner marks, not a frame.
+                    PixelBrackets {
+                        shown: hover.hovered || cell.current
+                        color: cell.current ? Style.accent : Style.muted
+                        arm: 14
+                        thickness: cell.current ? 3 : 2
+                    }
                 }
 
                 ColumnLayout {
@@ -90,10 +95,22 @@ FocusScope {
                         Layout.fillWidth: true
                         Layout.preferredHeight: width
                         CoverArt {
+                            id: tile
                             anchors.fill: parent
                             albumId: cell.albumId
                             title: cell.title
                             size: 256
+                        }
+                        // Covers resolve out of big pixels as they come into
+                        // view, a few at a time, and twitch under the pointer.
+                        Timer {
+                            interval: 30 + (cell.index % Math.max(1, grid.columns)) * 45
+                            running: true
+                            onTriggered: tile.glitchNow(0.85)
+                        }
+                        Connections {
+                            target: hover
+                            function onHoveredChanged() { if (hover.hovered) tile.glitchNow(0.3) }
                         }
                         // Play straight from the grid.
                         IconButton {

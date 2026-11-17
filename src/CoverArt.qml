@@ -20,6 +20,7 @@ Item {
     layer.enabled: glitch.active
     layer.effect: GlitchEffect { amount: glitch.amount; seed: glitch.seed }
     onAlbumIdChanged: if (glitchOnChange && albumId.length) glitch.kick(1)
+    function glitchNow(strength) { glitch.kick(strength) }
 
     function hue(text) {
         let h = 0

@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
     AudioOutput audio(&player.engine());
     QObject::connect(&audio, &AudioOutput::problemChanged, &player, [&] { player.setAudioProblem(audio.problem()); });
     audio.start();
-    player.setAudioProblem(audio.problem());
+    player.setAudioProblem(audio.problem().isEmpty() ? remote.error() : audio.problem());
 
     if (QStandardPaths::findExecutable("ffmpeg").isEmpty())
         player.setAudioProblem(QCoreApplication::translate("main", "ffmpeg isn't installed. Install it with: omarchy-pkg-add ffmpeg"));

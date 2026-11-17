@@ -206,5 +206,6 @@
   "not timed": "sin tiempos",
   "song tags": "etiquetas de la canción",
   "timed by line": "sincronizada por línea",
-  "timed by word": "sincronizada por palabra"
+  "timed by word": "sincronizada por palabra",
+  "Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.": "Halo no pudo abrir su socket de control %1 (%2), así que los comandos `halo` desde una terminal no llegarán a esta ventana."
 }

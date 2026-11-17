@@ -43,7 +43,7 @@ RESOURCES += src/resources.qrc
 # always runs it) and packed into the binary through a generated resource file.
 QSB = $$[QT_HOST_BINS]/qsb
 !exists($$QSB): error("qsb is missing. Install it with: omarchy-pkg-add qt6-shadertools")
-SHADERS = glitch.frag
+SHADERS = glitch.frag pixelfield.frag pixelbar.frag
 SHADER_FILES =
 # Commas would split qmake function arguments, so the list lives in a variable.
 QSB_GLSL = "100 es,120,150"
@@ -56,4 +56,4 @@ for(shader, SHADERS) {
 }
 write_file($$OUT_PWD/shaders.qrc, $$list("<RCC>" "    <qresource prefix=\"/\">" $$SHADER_FILES "    </qresource>" "</RCC>"))
 RESOURCES += $$OUT_PWD/shaders.qrc
-DISTFILES += src/shaders/glitch.frag
+DISTFILES += src/shaders/glitch.frag src/shaders/pixelfield.frag src/shaders/pixelbar.frag

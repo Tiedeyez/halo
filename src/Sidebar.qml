@@ -14,7 +14,7 @@ Rectangle {
     color: Style.panel
     implicitWidth: 248
 
-    Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Style.line }
+    PixelRule { anchors.right: parent.right; vertical: true; height: parent.height }
 
     ColumnLayout {
         anchors.fill: parent
@@ -39,6 +39,21 @@ Rectangle {
             Material.roundedScale: Style.radius
             selectByMouse: true
             Accessible.name: qsTr("Search the library")
+            // A terminal's block cursor, blinking.
+            cursorDelegate: Rectangle {
+                width: 8
+                color: Style.accent
+                opacity: 0.85
+                visible: searchField.activeFocus
+                SequentialAnimation on opacity {
+                    running: searchField.activeFocus && Style.motion
+                    loops: Animation.Infinite
+                    NumberAnimation { to: 0; duration: 0 }
+                    PauseAnimation { duration: 530 }
+                    NumberAnimation { to: 0.85; duration: 0 }
+                    PauseAnimation { duration: 530 }
+                }
+            }
             Keys.onEscapePressed: { text = ""; focus = false }
             Keys.onDownPressed: root.picked(root.view === 3 || root.view === 4 ? 0 : root.view)
 
@@ -84,6 +99,7 @@ Rectangle {
                 background: Rectangle {
                     radius: Style.small
                     color: item.selected ? Style.raised : item.hovered ? Style.hover : "transparent"
+                    PixelBrackets { shown: item.hovered && !item.selected; arm: 6; color: Style.muted }
                     // The selected row's marker: three stacked pixels.
                     Column {
                         visible: item.selected
@@ -173,7 +189,7 @@ Rectangle {
             }
         }
 
-        Rectangle { Layout.fillWidth: true; Layout.topMargin: 8; height: 1; color: Style.line }
+        PixelRule { Layout.fillWidth: true; Layout.topMargin: 8 }
 
         Text {
             Layout.fillWidth: true

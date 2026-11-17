@@ -61,7 +61,7 @@ FocusScope {
             model: player.queue
             currentIndex: Math.max(0, player.currentIndex)
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ScrollBar {}
+            ScrollBar.vertical: PixelScrollBar {}
             highlightMoveDuration: 0
             Keys.onReturnPressed: player.playAt(currentIndex)
             Keys.onEnterPressed: player.playAt(currentIndex)
@@ -94,7 +94,15 @@ FocusScope {
                     anchors.rightMargin: 16
                     radius: Style.small
                     color: row.selected && view.activeFocus ? Style.raised : hover.hovered ? Style.hover : "transparent"
-                    border.color: row.current ? Qt.alpha(Style.accent, 0.6) : "transparent"
+                    // The song playing wears pixel brackets; hover gets a block cursor.
+                    PixelBrackets { shown: row.current; arm: 10 }
+                    Rectangle {
+                        visible: hover.hovered && !row.current
+                        width: 3
+                        height: parent.height - 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: Style.muted
+                    }
                 }
 
                 RowLayout {
@@ -102,8 +110,15 @@ FocusScope {
                     anchors.leftMargin: 28
                     anchors.rightMargin: 20
                     spacing: 14
+                    Item {
+                        Layout.preferredWidth: 28
+                        Layout.fillHeight: true
+                        visible: row.current
+                        PixelEq { anchors.centerIn: parent }
+                    }
                     Text {
                         Layout.preferredWidth: 28
+                        visible: !row.current
                         horizontalAlignment: Text.AlignHCenter
                         text: row.index + 1
                         color: row.index < player.currentIndex ? Style.line : Style.faint

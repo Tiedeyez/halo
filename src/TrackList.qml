@@ -41,7 +41,7 @@ FocusScope {
         model: root.model
         currentIndex: 0
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar {}
+        ScrollBar.vertical: PixelScrollBar {}
         header: root.header
         keyNavigationEnabled: true
         highlightMoveDuration: 0
@@ -71,6 +71,14 @@ FocusScope {
                 radius: Style.small
                 color: row.selected && view.activeFocus ? Style.raised : hover.hovered ? Style.hover : "transparent"
                 border.color: row.selected && view.activeFocus ? Style.line : "transparent"
+                // A block cursor at the row's edge, on hover and on the song playing.
+                Rectangle {
+                    visible: hover.hovered || row.current
+                    width: 3
+                    height: parent.height - 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: row.current ? Style.accent : Style.muted
+                }
             }
 
             RowLayout {
@@ -82,13 +90,10 @@ FocusScope {
                 Item {
                     Layout.preferredWidth: 28
                     Layout.fillHeight: true
-                    Glyph {
+                    // The song playing: a live pixel meter.
+                    PixelEq {
                         anchors.centerIn: parent
                         visible: row.current
-                        name: player.playing ? "song" : "pause"
-                        color: Style.accent
-                        width: 18
-                        height: 18
                     }
                     Text {
                         anchors.centerIn: parent
