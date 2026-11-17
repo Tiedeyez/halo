@@ -107,7 +107,10 @@ void Spectrum::tick() {
 
 HaloView::HaloView(QQuickItem *parent) : QQuickPaintedItem(parent) {
     setAntialiasing(true);
-    setRenderTarget(QQuickPaintedItem::FramebufferObject);
+    // Painted on the CPU into an image, then uploaded. Qt's OpenGL paint
+    // engine draws the large gradient glow so slowly on Intel's Mesa driver
+    // that the render thread fell behind and froze the window.
+    setRenderTarget(QQuickPaintedItem::Image);
 }
 
 void HaloView::setSpectrum(QObject *spectrum) {
