@@ -78,9 +78,15 @@ void Stream::run() {
     const QByteArray rate = QByteArray::number(SampleRate);
     // -ss before -i seeks by the container index, which for audio is exact on
     // current ffmpeg and starts instantly even deep into a long mix.
+    // Songs that aren't 48 kHz (most are 44.1) go through soxr at precision
+    // 28. ffmpeg's default resampler left an alias 45 dB under a 19 kHz tone
+    // and dropped 0.5 dB at 20 kHz; soxr puts the alias at -159 dB and stays
+    // flat (tools/audio-lab/resample.py). Arch's ffmpeg is built with soxr.
+    const QByteArray resample = "aresample=" + rate + ":resampler=soxr:precision=28";
     std::vector<const char *> argv{program.constData(), "-nostdin", "-hide_banner", "-v", "error",
                                    "-ss", start.constData(), "-i", file.constData(),
-                                   "-map", "0:a:0", "-vn", "-f", "f32le", "-ac", "2", "-ar", rate.constData(),
+                                   "-map", "0:a:0", "-vn", "-af", resample.constData(),
+                                   "-f", "f32le", "-ac", "2", "-ar", rate.constData(),
                                    "pipe:1", nullptr};
 
     posix_spawn_file_actions_t actions;
