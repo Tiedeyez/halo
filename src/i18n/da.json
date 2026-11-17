@@ -218,5 +218,10 @@
   "%1, measured by %2. Makes them neutral; the equalizer above is then your taste on top.": "%1, målt af %2. Gør dem neutrale; equalizeren ovenfor er så din smag oven på.",
   "Nothing to correct on %1. Halo knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.": "Intet at korrigere på %1. Halo kender %2 hovedtelefoner ved navn; Bluetooth- og USB-hovedtelefoner oplyser deres navn, dem i et minijackstik kan ikke skelnes.",
   "this output": "denne udgang",
-  "Tuned for %1 · E to change": "Indstillet til %1 · E for at ændre"
+  "Tuned for %1 · E to change": "Indstillet til %1 · E for at ændre",
+  "Lost & Found": "Glemt og fundet",
+  "Songs you played often and haven't heard in a while, new each day. Until there's enough history, songs in your library you've never played here.": "Sange du ofte har spillet og ikke hørt i et stykke tid, nye hver dag. Indtil der er nok historik: sange i dit bibliotek, du aldrig har spillet her.",
+  "Nothing lost yet": "Intet glemt endnu",
+  "Every song here has been played lately. Songs come back once you've played them a few times and then not for six weeks.": "Alle sange her er spillet for nylig. Sange kommer tilbage, når du har spillet dem nogle gange og så ikke i seks uger.",
+  "Albums, Songs, Queue, Moments, Most played, Lost & Found": "Album, Sange, Kø, Øjeblikke, Mest spillet, Glemt og fundet"
 }

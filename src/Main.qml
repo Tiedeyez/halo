@@ -28,7 +28,7 @@ ApplicationWindow {
 
     function show(v) {
         view = v
-        tracks.mode = v === 5 ? 2 : 0
+        tracks.mode = v === 5 ? 2 : v === 6 ? 3 : 0
         nowPlaying = false
         Qt.callLater(() => { if (pages.currentItem) pages.currentItem.forceActiveFocus() })
     }
@@ -80,6 +80,7 @@ ApplicationWindow {
     Shortcut { sequence: "3"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(3) }
     Shortcut { sequence: "4"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(4) }
     Shortcut { sequence: "5"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(5) }
+    Shortcut { sequence: "6"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(6) }
     Shortcut { sequence: "F"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.nowPlaying = !win.nowPlaying }
     // L opens the lyrics, in Now Playing; again hides them.
     Shortcut {
@@ -266,6 +267,62 @@ ApplicationWindow {
                                 showPlays: true
                                 model: win.view === 5 ? tracks : null
                                 onOpenAlbum: id => win.openAlbum(id)
+                            }
+                        }
+                    }
+                    // Lost & Found: what you loved and haven't heard lately.
+                    FocusScope {
+                        focus: win.view === 6
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: 0
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.margins: 24
+                                Layout.bottomMargin: 4
+                                ScrambleText {
+                                    target: qsTr("Lost & Found")
+                                    color: Style.text
+                                    font.pixelSize: Style.fontTitle
+                                    font.weight: Font.Bold
+                                }
+                                Item { Layout.fillWidth: true }
+                                Button {
+                                    text: qsTr("Play")
+                                    visible: win.view === 6 && tracks.count > 0
+                                    highlighted: true
+                                    Material.accent: Style.accent
+                                    Material.foreground: Style.onAccent
+                                    Material.roundedScale: Style.radius
+                                    implicitHeight: Style.target
+                                    onClicked: player.playPaths(tracks.paths(), 0)
+                                }
+                            }
+                            Text {
+                                Layout.leftMargin: 24
+                                Layout.rightMargin: 24
+                                Layout.bottomMargin: 12
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                text: qsTr("Songs you played often and haven't heard in a while, new each day. Until there's enough history, songs in your library you've never played here.")
+                                color: Style.faint
+                                font.pixelSize: Style.fontSmall
+                            }
+                            TrackList {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                focus: true
+                                visible: tracks.count > 0
+                                model: win.view === 6 ? tracks : null
+                                onOpenAlbum: id => win.openAlbum(id)
+                            }
+                            EmptyState {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                Layout.alignment: Qt.AlignTop
+                                visible: win.view === 6 && tracks.count === 0
+                                headline: qsTr("Nothing lost yet")
+                                body: qsTr("Every song here has been played lately. Songs come back once you've played them a few times and then not for six weeks.")
                             }
                         }
                     }

@@ -84,7 +84,8 @@ Rectangle {
                 { view: 2, glyph: "song", label: qsTr("Songs"), key: "2" },
                 { view: 3, glyph: "queue", label: qsTr("Queue"), key: "3" },
                 { view: 4, glyph: "moment", label: qsTr("Moments"), key: "4" },
-                { view: 5, glyph: "top", label: qsTr("Most played"), key: "5" }
+                { view: 5, glyph: "top", label: qsTr("Most played"), key: "5" },
+                { view: 6, glyph: "history", label: qsTr("Lost & Found"), key: "6" }
             ]
             delegate: AbstractButton {
                 id: item

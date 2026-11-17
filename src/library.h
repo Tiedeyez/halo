@@ -100,6 +100,17 @@ public:
     void recordPlay(const QString &path);
     int playCount(const QString &path) const { return m_plays.value(path); }
     qint64 lastPlayed(const QString &path) const { return m_lastPlayed.value(path); }
+
+    // Lost & Found: songs you loved and haven't heard in a while, picked
+    // fresh each day (the same all day). `now` in seconds since the epoch.
+    std::vector<int> lostAndFound(qint64 now, int count = 30) const;
+    // The rule itself, on plain data, for the tests: songs played at least
+    // twice and not in 45 days, the more plays and the longer away the
+    // likelier; when there aren't enough, songs never played here that have
+    // been in the library a month, then any never played, oldest first.
+    // Same artist never twice in a row.
+    static std::vector<int> pickLostAndFound(const std::vector<Track> &tracks, const QHash<QString, int> &plays,
+                                             const QHash<QString, qint64> &lastPlayed, qint64 now, int count);
     void flush();
 
 signals:
@@ -174,7 +185,7 @@ class TrackModel : public QAbstractListModel {
 public:
     enum Roles { PathRole = Qt::UserRole + 1, TitleRole, ArtistRole, AlbumRole, AlbumIdRole, DurationRole,
                  NumberRole, PlaysRole };
-    enum Mode { AllSongs, AlbumTracks, MostPlayed };
+    enum Mode { AllSongs, AlbumTracks, MostPlayed, LostAndFound };
     explicit TrackModel(Library *library, QObject *parent = nullptr);
 
     int rowCount(const QModelIndex & = {}) const override { return int(m_rows.size()); }

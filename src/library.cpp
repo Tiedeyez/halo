@@ -18,6 +18,9 @@
 #include <QThreadPool>
 #include <QtConcurrent>
 #include <algorithm>
+#include <QDateTime>
+#include <cmath>
+#include <random>
 
 #include <fileref.h>
 #include <tag.h>
@@ -565,6 +568,72 @@ void Library::recordPlay(const QString &path) {
     m_statsSave.start();
 }
 
+std::vector<int> Library::lostAndFound(qint64 now, int count) const {
+    return pickLostAndFound(m_tracks, m_plays, m_lastPlayed, now, count);
+}
+
+std::vector<int> Library::pickLostAndFound(const std::vector<Track> &tracks, const QHash<QString, int> &plays,
+                                           const QHash<QString, qint64> &lastPlayed, qint64 now, int count) {
+    constexpr qint64 Day = 86400;
+    // The same pick all day; a new one at midnight UTC.
+    std::mt19937 rng(quint32(now / Day) * 2654435761u);
+    struct Scored { int index; double score; };
+    std::vector<Scored> loved, unheard, fresh;
+    for (int i = 0; i < int(tracks.size()); ++i) {
+        const Track &t = tracks[size_t(i)];
+        const int n = plays.value(t.path);
+        const qint64 last = lastPlayed.value(t.path);
+        if (n >= 2 && last > 0 && now - last >= 45 * Day) {
+            const double away = double(now - last) / Day;
+            loved.push_back({i, n * std::log1p(away / 45.0)});
+        } else if (n == 0 && t.mtime > 0 && now - t.mtime / 1000 >= 30 * Day) {
+            unheard.push_back({i, 0});
+        } else if (n == 0) {
+            // A new library has no history yet: its unplayed songs, oldest
+            // first, so the page is never empty on day one.
+            fresh.push_back({i, double(t.mtime)});
+        }
+    }
+    // Weighted picks without replacement: the score raised to a random
+    // power (Efraimidis-Spirakis), so favourites come back more often but
+    // not always the same ones.
+    std::uniform_real_distribution<double> u(1e-9, 1.0);
+    for (Scored &s : loved)
+        s.score = std::pow(u(rng), 1.0 / std::max(0.01, s.score));
+    std::sort(loved.begin(), loved.end(), [](const Scored &a, const Scored &b) { return a.score > b.score; });
+    std::shuffle(unheard.begin(), unheard.end(), rng);
+
+    std::vector<int> picked;
+    for (const Scored &s : loved)
+        if (int(picked.size()) < count)
+            picked.push_back(s.index);
+    for (const Scored &s : unheard)
+        if (int(picked.size()) < count)
+            picked.push_back(s.index);
+    if (int(picked.size()) < count) {
+        std::shuffle(fresh.begin(), fresh.end(), rng);
+        std::stable_sort(fresh.begin(), fresh.end(), [](const Scored &a, const Scored &b) {
+            return qint64(a.score / 86400000) < qint64(b.score / 86400000);   // by day added
+        });
+        for (const Scored &s : fresh)
+            if (int(picked.size()) < count)
+                picked.push_back(s.index);
+    }
+
+    // Never the same artist twice in a row, where it can be helped.
+    auto artist = [&](int i) { const Track &t = tracks[size_t(i)]; return (t.artist.isEmpty() ? t.albumArtist : t.artist).toLower(); };
+    for (size_t i = 1; i < picked.size(); ++i) {
+        if (artist(picked[i]) != artist(picked[i - 1]))
+            continue;
+        for (size_t j = i + 1; j < picked.size(); ++j)
+            if (artist(picked[j]) != artist(picked[i - 1])) {
+                std::swap(picked[i], picked[j]);
+                break;
+            }
+    }
+    return picked;
+}
+
 void Library::loadStats() {
     QFile file(m_statsFile);
     if (!file.open(QIODevice::ReadOnly))
@@ -770,7 +839,11 @@ void TrackModel::rebuild() {
     m_rows.clear();
     const QStringList words = m_query.toLower().split(' ', Qt::SkipEmptyParts);
     const auto &tracks = m_library->tracks();
-    if (m_mode == AlbumTracks) {
+    if (m_mode == LostAndFound) {
+        for (int i : m_library->lostAndFound(QDateTime::currentSecsSinceEpoch()))
+            if (matches(tracks[size_t(i)], words))
+                m_rows.push_back(i);
+    } else if (m_mode == AlbumTracks) {
         if (const Album *a = m_library->album(m_albumId))
             for (int i : a->tracks)
                 if (matches(tracks[size_t(i)], words))

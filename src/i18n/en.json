@@ -218,5 +218,10 @@
   "%1, measured by %2. Makes them neutral; the equalizer above is then your taste on top.": "",
   "Nothing to correct on %1. Halo knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.": "",
   "this output": "",
-  "Tuned for %1 · E to change": ""
+  "Tuned for %1 · E to change": "",
+  "Lost & Found": "",
+  "Songs you played often and haven't heard in a while, new each day. Until there's enough history, songs in your library you've never played here.": "",
+  "Nothing lost yet": "",
+  "Every song here has been played lately. Songs come back once you've played them a few times and then not for six weeks.": "",
+  "Albums, Songs, Queue, Moments, Most played, Lost & Found": ""
 }

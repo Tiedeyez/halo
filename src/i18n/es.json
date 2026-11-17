@@ -218,5 +218,10 @@
   "%1, measured by %2. Makes them neutral; the equalizer above is then your taste on top.": "%1, medidos por %2. Los deja neutros; el ecualizador de arriba es tu gusto encima.",
   "Nothing to correct on %1. Halo knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.": "Nada que corregir en %1. Halo conoce %2 auriculares por su nombre; los Bluetooth y USB dicen su nombre, los de un conector de 3,5 mm no se pueden distinguir.",
   "this output": "esta salida",
-  "Tuned for %1 · E to change": "Ajustado para %1 · E para cambiar"
+  "Tuned for %1 · E to change": "Ajustado para %1 · E para cambiar",
+  "Lost & Found": "Objetos perdidos",
+  "Songs you played often and haven't heard in a while, new each day. Until there's enough history, songs in your library you've never played here.": "Canciones que escuchabas a menudo y no has oído en un tiempo, nuevas cada día. Hasta que haya suficiente historial, canciones de tu biblioteca que nunca has reproducido aquí.",
+  "Nothing lost yet": "Nada perdido todavía",
+  "Every song here has been played lately. Songs come back once you've played them a few times and then not for six weeks.": "Todas las canciones se han reproducido hace poco. Vuelven cuando las has escuchado varias veces y luego no durante seis semanas.",
+  "Albums, Songs, Queue, Moments, Most played, Lost & Found": "Álbumes, Canciones, Cola, Momentos, Más escuchadas, Objetos perdidos"
 }

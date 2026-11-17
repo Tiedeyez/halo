@@ -410,6 +410,59 @@ private slots:
         QVERIFY(all.match("Built-in Audio Analog Stereo") == nullptr);
     }
 
+    void lostAndFoundBringsBackFavourites() {
+        const qint64 day = 86400, now = 1800000000;
+        std::vector<Track> tracks;
+        QHash<QString, int> plays;
+        QHash<QString, qint64> last;
+        auto add = [&](const QString &artist, int n, qint64 daysAgo, qint64 addedDaysAgo = 400) {
+            Track t;
+            t.path = QString("/m/%1/%2").arg(artist).arg(tracks.size());
+            t.artist = artist;
+            t.mtime = (now - addedDaysAgo * day) * 1000;
+            if (n > 0) {
+                plays.insert(t.path, n);
+                last.insert(t.path, now - daysAgo * day);
+            }
+            tracks.push_back(t);
+        };
+        for (int i = 0; i < 6; ++i) add("A", 12, 120);   // loved, gone four months
+        for (int i = 0; i < 6; ++i) add("B", 5, 60);
+        for (int i = 0; i < 6; ++i) add("C", 30, 3);     // played this week: not lost
+        for (int i = 0; i < 6; ++i) add("D", 1, 200);    // heard once: not a favourite
+        for (int i = 0; i < 6; ++i) add("E", 0, 0, 90);  // never played, here three months
+        for (int i = 0; i < 6; ++i) add("F", 0, 0, 5);   // never played, but just added
+
+        const auto pick = Library::pickLostAndFound(tracks, plays, last, now, 16);
+        QCOMPARE(int(pick.size()), 16);
+        QSet<QString> artists;
+        for (int i : pick)
+            artists.insert(tracks[size_t(i)].artist);
+        // Favourites first, then the long-unheard; never this week's, a
+        // one-off or something just added.
+        QVERIFY(artists.contains("A") && artists.contains("B") && artists.contains("E"));
+        QVERIFY(!artists.contains("C") && !artists.contains("D") && !artists.contains("F"));
+        for (int k = 0; k < 12; ++k)
+            QVERIFY(tracks[size_t(pick[size_t(k)])].artist != "E");
+        // Asked for more than there is history for, it reaches the just
+        // added ones last, so a new library's page isn't empty.
+        const auto all = Library::pickLostAndFound(tracks, plays, last, now, 24);
+        QCOMPARE(int(all.size()), 24);
+        QSet<QString> late;
+        for (int i : all)
+            late.insert(tracks[size_t(i)].artist);
+        QVERIFY(late.contains("F") && !late.contains("C"));
+        // Spread out: never the same artist twice in a row while another is left.
+        int repeats = 0;
+        for (size_t k = 1; k < pick.size(); ++k)
+            repeats += tracks[size_t(pick[k])].artist == tracks[size_t(pick[k - 1])].artist;
+        QVERIFY2(repeats <= 4, qPrintable(QString::number(repeats)));
+        // The same all day, different another day.
+        QCOMPARE(Library::pickLostAndFound(tracks, plays, last, now + 3600, 16), pick);
+        QVERIFY(Library::pickLostAndFound(tracks, plays, last, now + 3 * day, 6) !=
+                Library::pickLostAndFound(tracks, plays, last, now, 6));
+    }
+
     void findsWhereTheMusicIs() {
         const int rate = Analysis::Rate;
         std::vector<float> s(size_t(rate) * 6, 0.0f);

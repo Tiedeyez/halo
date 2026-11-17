@@ -19,7 +19,7 @@ Rectangle {
         ["Shift+Enter", qsTr("Play the selected song next")],
         ["A", qsTr("Add the selected song to the queue")],
         ["/  Ctrl+F", qsTr("Search")],
-        ["1 2 3 4 5", qsTr("Albums, Songs, Queue, Moments, Most played")],
+        ["1 2 3 4 5 6", qsTr("Albums, Songs, Queue, Moments, Most played, Lost & Found")],
         ["F", qsTr("Now Playing, full window")],
         ["L", qsTr("Lyrics, live with the song")],
         [",  .", qsTr("Lyrics earlier or later (Shift: by half a second)")],

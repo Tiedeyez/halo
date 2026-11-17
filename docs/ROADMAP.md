@@ -54,6 +54,8 @@ must hold 60 fps on integrated graphics (Intel HD 520 is the floor).
 - [ ] AAA pass: 7:1 text contrast on every Omarchy theme (repair the
       palette where a theme falls short), 44 px targets, nothing
       clipped at 150 % text, every control named, motion reducible.
+      Known: highlighted (accent) buttons draw light text on a light accent
+      (Play, Turn on online lyrics); they need Style.onAccent text.
 - [ ] Every Omarchy theme checked on screen.
 - [ ] Neutral README, screenshots and reel with nothing personal and no
       commercial music (music for the public reel still to be decided).
