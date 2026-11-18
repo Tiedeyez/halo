@@ -91,11 +91,15 @@ void Pilot::step(double dt, double position, double pulse, double low, double mi
     // Each beat clicks the inner pattern round a notch.
     const bool beat = pulse > 0.5;
     if (beat && !m_beat) {
-        m_twistGoal += 0.10 + 0.22 * low;
+        m_twistGoal += 0.18 + 0.35 * low;
+        m_kick = 1;
         ++m_beats;
     }
     m_beat = pulse > 0.3 && (m_beat || beat);
-    m_twist = ease(m_twist, m_twistGoal, dt, 0.18);
+    m_twist = ease(m_twist, m_twistGoal, dt, 0.10);
+    // The kick: full the instant a beat lands, gone in about a third of a
+    // second, so the punch is sharp however soft the pulse rises.
+    m_kick *= std::exp(-dt / 0.11);
 
     double cx, cy;
     shapeAt(position, cx, cy);
@@ -106,7 +110,7 @@ void Pilot::step(double dt, double position, double pulse, double low, double mi
     m_cy = ease(m_cy, cy, dt, 0.4);
 
     // The beat punches the view in.
-    m_zoom = ease(m_zoom, m_song.zoom * (1 - 0.08 * pulse), dt, 0.05);
+    m_zoom = m_song.zoom * (1 - 0.22 * m_kick - 0.05 * pulse);
     // Around the colour wheel the short way.
     double dh = m_song.hue - m_hue;
     dh -= std::round(dh);

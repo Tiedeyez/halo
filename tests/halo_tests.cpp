@@ -435,6 +435,19 @@ private slots:
             twist = pilot.twist();
         }
         QCOMPARE(pilot.beats() - beats, 20);
+        // Each beat kicks: the view snaps in by a fifth, then springs back
+        // before the next.
+        Pilot punch;
+        punch.setSong(song, 120, 240, -10);
+        punch.step(1.0 / 60, 1, 0, 0, 0);
+        const double rest = punch.zoom();
+        punch.step(1.0 / 60, 1, 1.0, 0, 0);
+        QVERIFY2(punch.zoom() < rest * 0.8, qPrintable(QString("%1 vs %2").arg(punch.zoom()).arg(rest)));
+        QVERIFY(punch.kick() > 0.8);
+        for (int f = 0; f < 29; ++f)
+            punch.step(1.0 / 60, 1, 0, 0, 0);
+        QVERIFY(punch.kick() < 0.02);
+        QVERIFY(std::fabs(punch.zoom() - rest) < rest * 0.01);
         // A seek a minute on turns the short way and glides: no frame turns
         // more than a twentieth of a mirror.
         double spin = pilot.spin();

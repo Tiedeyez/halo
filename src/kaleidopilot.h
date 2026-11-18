@@ -13,8 +13,9 @@
 // the shape travels across the whole song, so a moment in a song always
 // looks the same; loudness sets the glow.
 //
-// From the music, live: each beat turns the inner pattern a notch (further
-// on heavy bass) and punches the view in; the mids wobble the shape.
+// From the music, live: each beat kicks: the view snaps in and springs
+// back, the inner pattern turns a notch (further on heavy bass), the whole
+// thing flashes and a shockwave rings out; the mids wobble the shape.
 //
 // Everything eases, so a seek or a new song glides; a new song's mirror
 // count crossfades in.
@@ -56,6 +57,7 @@ public:
     double zoom() const { return m_zoom; }
     double hue() const { return m_hue; }
     double glow() const { return m_glow; }
+    double kick() const { return m_kick; }   // 1 on a beat, falling fast
     int beats() const { return m_beats; }
 
     // Where the shape is meant to be at `position` (before easing).
@@ -69,6 +71,7 @@ private:
     double m_foldMix = 1;
     double m_spin = 0, m_twist = 0, m_twistGoal = 0;
     double m_cx = 0.65, m_cy = 0.5, m_zoom = 1.4, m_hue = 0, m_glow = 1;
+    double m_kick = 0;
     bool m_beat = false, m_started = false;
     int m_beats = 0;
 };
@@ -88,6 +91,7 @@ class KaleidoPilot : public QObject {
     Q_PROPERTY(double zoom READ zoom NOTIFY moved)
     Q_PROPERTY(double hue READ hue NOTIFY moved)
     Q_PROPERTY(double glow READ glow NOTIFY moved)
+    Q_PROPERTY(double kick READ kick NOTIFY moved)
 
 public:
     explicit KaleidoPilot(QObject *parent = nullptr) : QObject(parent) {}
@@ -113,6 +117,7 @@ public:
     double zoom() const { return m_pilot.zoom(); }
     double hue() const { return m_pilot.hue(); }
     double glow() const { return m_pilot.glow(); }
+    double kick() const { return m_pilot.kick(); }
 
 signals:
     void moved();

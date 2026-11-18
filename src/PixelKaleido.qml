@@ -56,7 +56,7 @@ Item {
         property size size: Qt.size(width, height)
         property vector4d fold: Qt.vector4d(pilot.folds, pilot.previousFolds, pilot.foldMix, pilot.spin)
         property vector4d shape: Qt.vector4d(pilot.cx, pilot.cy, pilot.ring, pilot.twist)
-        property vector4d view: Qt.vector4d(pilot.zoom, pilot.hue, pilot.glow, 0)
+        property vector4d view: Qt.vector4d(pilot.zoom, pilot.hue, pilot.glow, root.moving ? pilot.kick : 0)
         property color c0: Style.paletteColour(0)
         property color c1: Style.paletteColour(1)
         property color c2: Style.paletteColour(2)

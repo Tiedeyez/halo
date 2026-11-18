@@ -23,7 +23,7 @@ layout(std140, binding = 0) uniform buf {
     vec2 size;      // the grid, in pixels (one fragment each)
     vec4 fold;      // mirrors, previous mirrors, crossfade 0..1, spin
     vec4 shape;     // c.x, c.y, ring, twist
-    vec4 view;      // zoom, hue 0..1, glow, unused
+    vec4 view;      // zoom, hue 0..1, glow, kick (1 on a beat, falling fast)
     vec4 c0;        // accent
     vec4 c1;        // cyan
     vec4 c2;        // blue
@@ -63,7 +63,8 @@ vec3 seen(vec2 uv, float mirrors) {
     float body = clamp(exp(-nearest * 12.0) * 1.3, 0.0, 1.0);
     float lines = exp(-line * 30.0) * (0.7 + 0.6 * high);
     vec3 base = palette(view.y + total * 0.02 + nearest * 0.5);
-    float b = min(1.0, body * 0.85 + lines * 0.55) * view.z * (0.8 + 0.35 * pulse + 0.15 * level);
+    float kick = view.w;
+    float b = min(1.0, body * 0.85 + lines * (0.55 + 0.6 * kick)) * view.z * (0.75 + 0.15 * level + 0.25 * pulse + 0.7 * kick);
     vec3 colour = mix(window.rgb, base, clamp(b, 0.0, 1.0));
     return mix(colour, c4.rgb, clamp(lines * body * 0.5, 0.0, 1.0));
 }
@@ -78,6 +79,12 @@ void main() {
         return;
     }
     vec3 colour = seen(uv, fold.x);
+    // The shockwave: a bright ring thrown out from the middle on each beat,
+    // wobbling with the mirrors, fading as it goes.
+    float kick = view.w;
+    float wave = 0.30 + 0.62 * (1.0 - kick);
+    float edge = abs(r - wave - 0.02 * sin(atan(uv.y, uv.x) * fold.x));
+    colour = mix(colour, c4.rgb, clamp(kick * kick * smoothstep(0.06, 0.0, edge) * 0.9, 0.0, 1.0));
     // A new song's mirrors fade in over the last song's.
     if (fold.z < 1.0)
         colour = mix(seen(uv, fold.y), colour, smoothstep(0.0, 1.0, fold.z));
