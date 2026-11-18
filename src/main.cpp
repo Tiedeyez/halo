@@ -17,7 +17,7 @@
 
 #include "doctor.h"
 #include "headphones.h"
-#include "fractalpilot.h"
+#include "kaleidopilot.h"
 #include "pointer.h"
 #include "analysis.h"
 #include "audiooutput.h"
@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
 
     Spectrum spectrum(&player.engine());
     qmlRegisterType<HaloView>("Halo", 1, 0, "HaloView");
-    qmlRegisterType<FractalPilot>("Halo", 1, 0, "FractalPilot");
+    qmlRegisterType<KaleidoPilot>("Halo", 1, 0, "KaleidoPilot");
     qmlRegisterSingletonType(QUrl("qrc:/Style.qml"), "Halo", 1, 0, "Style");
     qmlRegisterUncreatableType<QueueModel>("Halo", 1, 0, "QueueModel", "from player");
     qmlRegisterUncreatableType<MomentModel>("Halo", 1, 0, "MomentModel", "from player");

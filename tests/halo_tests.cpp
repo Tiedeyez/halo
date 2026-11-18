@@ -30,7 +30,7 @@
 #include "lyrics.h"
 #include "doctor.h"
 #include "headphones.h"
-#include "fractalpilot.h"
+#include "kaleidopilot.h"
 #include "player.h"
 #include "remote.h"
 #include "ring.h"
@@ -387,43 +387,72 @@ private slots:
         QTRY_COMPARE(list->property("contentY").toDouble(), 100.0 * 40 - 300);
     }
 
-    void fractalKeepsEvolving() {
-        // Ten minutes of music at 60 frames a second, a hard beat twice a second.
-        Fractal::Pilot pilot(1234);
-        double journey = pilot.journey(), lowest = 1, highest = 0, biggestStep = 0;
-        int intricate = 0, looks = 0, fits = 0;
-        Fractal::Complex last = pilot.c();
-        for (int frame = 0; frame < 60 * 600; ++frame) {
-            const double pulse = (frame % 30) < 5 ? 1.0 : 0.0;
-            pilot.step(1.0 / 60, pulse, 0.5);
-            // Only ever forward around the edge.
-            QVERIFY(pilot.journey() > journey);
-            journey = pilot.journey();
-            // It glides: c never jumps between frames.
-            const Fractal::Complex c = pilot.c();
-            biggestStep = std::max(biggestStep, std::hypot(c.re - last.re, c.im - last.im));
-            last = c;
-            lowest = std::min(lowest, pilot.morph());
-            highest = std::max(highest, pilot.morph());
-            // Once a second: is c near the edge, where the sets are intricate?
-            // Its critical orbit escapes late, or stays while a nudge out
-            // escapes.
-            if (frame % 60 == 0) {
-                ++looks;
-                const int n = Fractal::criticalEscape(c.re, c.im, pilot.morph(), 400);
-                const double r = std::hypot(c.re, c.im);
-                const int out = Fractal::criticalEscape(c.re * (r + 0.05) / r, c.im * (r + 0.05) / r, pilot.morph(), 400);
-                intricate += n > 12 && (n < 400 || out < 400);
-                // The set fits its round window (allowing for the easing).
-                fits += Fractal::reach(c, pilot.morph()) <= pilot.zoom() * 0.5 * 1.08;
-            }
+    void kaleidoscopeComesFromTheFile() {
+        using namespace Kaleido;
+        const Song a = fromFile("/m/HCSM5/03.mp3", "3 Way", "Young Dolph", "HCSM5");
+        const Song again = fromFile("/m/HCSM5/03.mp3", "3 Way", "Young Dolph", "HCSM5");
+        QCOMPARE(a.folds, again.folds);
+        QCOMPARE(a.cx, again.cx);
+        QCOMPARE(a.hue, again.hue);
+        // Same album, same colours; another song, another shape.
+        const Song b = fromFile("/m/HCSM5/04.mp3", "Hustler Mentality", "Young Dolph", "HCSM5");
+        QCOMPARE(a.hue, b.hue);
+        QVERIFY(a.cx != b.cx || a.cy != b.cy);
+        // Across many songs: most mirror counts appear, every constant stays
+        // in the box that makes lace.
+        QSet<int> mirrors;
+        for (int i = 0; i < 200; ++i) {
+            const Song s = fromFile(QString("/m/%1.mp3").arg(i), QString("Song %1").arg(i), "Artist", "Album");
+            mirrors.insert(s.folds);
+            QVERIFY(s.folds >= 5 && s.folds <= 12);
+            QVERIFY(s.cx >= 0.52 && s.cx <= 0.82 && s.cy >= 0.32 && s.cy <= 0.62);
         }
-        QVERIFY2(biggestStep < 0.01, qPrintable(QString::number(biggestStep)));
-        QVERIFY2(lowest < 0.1 && highest > 0.9, qPrintable(QString("%1..%2").arg(lowest).arg(highest)));
-        QVERIFY2(intricate >= looks * 9 / 10, qPrintable(QString("%1 of %2").arg(intricate).arg(looks)));
-        QVERIFY2(fits >= looks * 9 / 10, qPrintable(QString("fits %1 of %2").arg(fits).arg(looks)));
-        // Around the edge more than once in ten minutes of music.
-        QVERIFY(pilot.journey() - Fractal::Pilot(1234).journey() > 6.3);
+        QVERIFY2(mirrors.size() >= 6, qPrintable(QString::number(mirrors.size())));
+    }
+
+    void kaleidoscopeTurnsWithTheBeat() {
+        using namespace Kaleido;
+        Pilot pilot;
+        Song song = fromFile("/m/a.mp3", "A", "B", "C");
+        pilot.setSong(song, 120, 240, -10);
+        const double wedge = 2 * Pi / song.folds;
+        // Settle, then 8 beats at 120 BPM (4 s) turn exactly one mirror.
+        double position = 10;
+        for (int f = 0; f < 120; ++f)
+            pilot.step(1.0 / 60, position += 1.0 / 60, 0, 0, 0);
+        const double before = pilot.spin();
+        for (int f = 0; f < 240; ++f)
+            pilot.step(1.0 / 60, position += 1.0 / 60, 0, 0, 0);
+        QVERIFY2(std::fabs(std::fabs(pilot.spin() - before) - wedge) < wedge * 0.03,
+                 qPrintable(QString("%1 vs %2").arg(std::fabs(pilot.spin() - before)).arg(wedge)));
+        // Every beat clicks the pattern on; it never turns back.
+        double twist = pilot.twist();
+        const int beats = pilot.beats();
+        for (int f = 0; f < 60 * 10; ++f) {
+            const double pulse = (f % 30) < 4 ? 1.0 : 0.0;
+            pilot.step(1.0 / 60, position += 1.0 / 60, pulse, 0.6, 0.4);
+            QVERIFY(pilot.twist() >= twist - 1e-12);
+            twist = pilot.twist();
+        }
+        QCOMPARE(pilot.beats() - beats, 20);
+        // A seek a minute on turns the short way and glides: no frame turns
+        // more than a twentieth of a mirror.
+        double spin = pilot.spin();
+        position += 60;
+        for (int f = 0; f < 120; ++f) {
+            pilot.step(1.0 / 60, position += 1.0 / 60, 0, 0, 0);
+            QVERIFY(std::fabs(pilot.spin() - spin) < wedge / 20);
+            spin = pilot.spin();
+        }
+        // A new song with other mirrors crossfades in over a second and a half.
+        Song other = song;
+        other.folds = song.folds == 6 ? 8 : 6;
+        pilot.setSong(other, 90, 200, -14);
+        QCOMPARE(pilot.foldMix(), 0.0);
+        QCOMPARE(pilot.previousFolds(), song.folds);
+        for (int f = 0; f < 100; ++f)
+            pilot.step(1.0 / 60, 1, 0, 0, 0);
+        QVERIFY(pilot.foldMix() > 0.9);
     }
 
     void headphoneNamesMatchOnlyExactly() {

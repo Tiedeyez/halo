@@ -64,7 +64,7 @@ Rectangle {
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
-        PixelFractal {
+        PixelKaleido {
             anchors.centerIn: parent
             width: stage.side
             height: stage.side
@@ -76,7 +76,7 @@ Rectangle {
         CoverArt {
             anchors.centerIn: parent
             glitchOnChange: true
-            // Smaller in the fractal, so the set has a wide ring to show.
+            // Smaller in the kaleidoscope, so it has a wide ring to show.
             width: stage.side * (player.visualStyle === 1 ? 0.78 : player.visualStyle === 2 ? 0.36 : 0.52)
             height: width
             albumId: player.albumId

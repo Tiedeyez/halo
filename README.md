@@ -31,11 +31,14 @@ checked against the source.
 - **The halo.** The visual is drawn from the song itself (Halo's own FFT of
   what it plays, not every sound on the machine) as a ring of square pixels
   around the cover in your theme's accent, torn sideways for a frame on hard
-  beats. V cycles to LED bars, then to the fractal: a Julia set in square
-  pixels, in your theme's colours with a pearl's sheen, that never stops
-  changing shape. Its formula morphs between the square and the cube while
-  an autopilot glides its constant around the edge of the set, where the
-  shapes are most intricate; the beat speeds it on and never turns it back.
+  beats. V cycles to LED bars, then to the kaleidoscope: a mirrored fractal
+  in square pixels that belongs to the song playing. The file decides it:
+  the song picks its mirrors (5 to 12) and shape, the album its colours (so
+  an album's songs belong together), the tempo its turn (one mirror every
+  eight beats, locked to the beat), the length a path the shape travels
+  across the song, the loudness its glow. Live, each beat clicks the inner
+  pattern round and punches the view in, the bass turns it further and the
+  mids make it wobble. A new song's mirrors crossfade in.
   Visuals crossfade as V switches them. C keeps any of them still.
 - **The window is water.** Behind everything lies a pond of square pixels
   with drifting caustics. Every beat drops a ripple (from the cover, or

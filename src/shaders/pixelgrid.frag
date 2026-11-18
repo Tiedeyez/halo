@@ -1,7 +1,7 @@
 #version 440
 
 // Enlarges a small texture into square screen pixels with a dark gap between
-// them, sampling each cell at its centre. Used by the fractal visual and
+// them, sampling each cell at its centre. Used by the kaleidoscope visual and
 // the water background, which compute one value per cell into a texture.
 
 layout(location = 0) in vec2 qt_TexCoord0;

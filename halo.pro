@@ -10,7 +10,7 @@ HEADERS += \
     src/pointer.h \
     src/doctor.h \
     src/headphones.h \
-    src/fractalpilot.h \
+    src/kaleidopilot.h \
     src/ring.h \
     src/dsp.h \
     src/stream.h \
@@ -29,7 +29,7 @@ HEADERS += \
 SOURCES += \
     src/doctor.cpp \
     src/headphones.cpp \
-    src/fractalpilot.cpp \
+    src/kaleidopilot.cpp \
     src/main.cpp \
     src/stream.cpp \
     src/engine.cpp \
@@ -50,7 +50,7 @@ RESOURCES += src/resources.qrc
 # always runs it) and packed into the binary through a generated resource file.
 QSB = $$[QT_HOST_BINS]/qsb
 !exists($$QSB): error("qsb is missing. Install it with: omarchy-pkg-add qt6-shadertools")
-SHADERS = glitch.frag pixelfield.frag pixelbar.frag fractal.frag pixelgrid.frag
+SHADERS = glitch.frag pixelfield.frag pixelbar.frag kaleido.frag pixelgrid.frag
 SHADER_FILES =
 # Commas would split qmake function arguments, so the list lives in a variable.
 QSB_GLSL = "100 es,120,150"
@@ -63,4 +63,4 @@ for(shader, SHADERS) {
 }
 write_file($$OUT_PWD/shaders.qrc, $$list("<RCC>" "    <qresource prefix=\"/\">" $$SHADER_FILES "    </qresource>" "</RCC>"))
 RESOURCES += $$OUT_PWD/shaders.qrc
-DISTFILES += src/shaders/glitch.frag src/shaders/pixelfield.frag src/shaders/pixelbar.frag src/shaders/fractal.frag src/shaders/pixelgrid.frag
+DISTFILES += src/shaders/glitch.frag src/shaders/pixelfield.frag src/shaders/pixelbar.frag src/shaders/kaleido.frag src/shaders/pixelgrid.frag

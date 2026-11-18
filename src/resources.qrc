@@ -17,7 +17,7 @@
         <file alias="PixelLoader.qml">PixelLoader.qml</file>
         <file alias="EmptyState.qml">EmptyState.qml</file>
         <file alias="PixelField.qml">PixelField.qml</file>
-        <file alias="PixelFractal.qml">PixelFractal.qml</file>
+        <file alias="PixelKaleido.qml">PixelKaleido.qml</file>
         <file alias="MotionClock.qml">MotionClock.qml</file>
         <file alias="SmoothWheel.qml">SmoothWheel.qml</file>
         <file alias="data/headphones.json">data/headphones.json</file>
