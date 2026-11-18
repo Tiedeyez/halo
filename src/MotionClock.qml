@@ -15,6 +15,7 @@ Item {
     property real pulse: 0
     property real level: 0
     property real low: 0
+    property real mid: 0
     property real high: 0
     signal ticked(real dt)
 
@@ -33,6 +34,7 @@ Item {
             clock.pulse = clock.ease(clock.pulse, spectrumSource.pulse, dt, 40, 9)
             clock.level = clock.ease(clock.level, spectrumSource.level, dt, 14, 5)
             clock.low = clock.ease(clock.low, spectrumSource.low, dt, 20, 6)
+            clock.mid = clock.ease(clock.mid, spectrumSource.mid, dt, 20, 6)
             clock.high = clock.ease(clock.high, spectrumSource.high, dt, 20, 6)
             clock.ticked(dt)
         }

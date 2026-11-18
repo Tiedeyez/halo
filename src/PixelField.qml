@@ -2,13 +2,15 @@ import QtQuick
 import QtQuick.Window
 import Halo
 
-// The window's background: pixelated water (see shaders/pixelfield.frag).
-// Drops ripple it: each beat (from the cover, `origin`, or somewhere on the
-// surface), every click anywhere in the window, and a soft wake behind the
-// pointer. It moves while music plays or ripples are still spreading, so a
+// The window's background: pixelated water and a second visualiser (see
+// shaders/pixelfield.frag). Every beat throws a hard drop from the cover
+// (`origin`) and another somewhere on the surface, the bass pumps rings out
+// of the cover, the mids wobble them; every click anywhere in the window
+// drops a ripple too, and the pointer leaves a soft wake. It moves while music plays or ripples are still spreading, so a
 // quiet Halo costs no frames, and calm (C) stills it. The brightest a pixel
 // gets is worked out from the theme's accent so the faintest text over it
-// still reads at 7:1 (WCAG AAA).
+// still reads at 7:1 (WCAG AAA); the ripples flash brighter (`flash`) as
+// they pass.
 Item {
     id: root
     property point origin: Qt.point(width * 0.1, height)
@@ -22,6 +24,8 @@ Item {
 
     // Highest mix of the accent into the window colour that keeps faint
     // text at 7:1 or better.
+    // How bright a passing ripple gets: plainly visible, a moment at a time.
+    property real flash: 0.42
     readonly property real strength: {
         let lo = 0, hi = 0.25
         for (let i = 0; i < 12; ++i) {
@@ -46,7 +50,7 @@ Item {
         d[nextDrop] = Qt.vector4d(x / cell, y / cell, clock.time, force)
         drops = d
         nextDrop = (nextDrop + 1) % 8
-        stillAt = clock.time + 9
+        stillAt = clock.time + 6
     }
 
     MotionClock {
@@ -55,16 +59,15 @@ Item {
         property bool wasBeat: false
         property real rainAt: 0
         onTicked: dt => {
-            // A beat drops from the cover, or every other one somewhere on
-            // the surface, harder on louder music.
-            const beat = clock.pulse > 0.55
+            // Every beat throws a hard drop from the cover and another
+            // somewhere on the surface, harder on louder, bassier music.
+            const beat = clock.pulse > 0.5
             if (beat && !wasBeat && player.playing) {
-                if (Math.random() < 0.5)
-                    root.drop(root.origin.x, root.origin.y, 0.55 + 0.6 * clock.level)
-                else
-                    root.drop(Math.random() * root.width, Math.random() * root.height, 0.35 + 0.4 * clock.level)
+                const force = 1.0 + 0.6 * clock.level + 0.6 * clock.low
+                root.drop(root.origin.x, root.origin.y, force)
+                root.drop(Math.random() * root.width, Math.random() * root.height, force * 0.7)
             }
-            wasBeat = clock.pulse > 0.35 && (wasBeat || beat)
+            wasBeat = clock.pulse > 0.3 && (wasBeat || beat)
             // Loud music rains a little between beats.
             if (player.playing && clock.time > rainAt && Math.random() < dt * 0.6 * clock.level) {
                 root.drop(Math.random() * root.width, Math.random() * root.height, 0.2)
@@ -101,9 +104,14 @@ Item {
         height: Math.max(1, Math.ceil(root.height / root.cell))
         property real time: clock.time
         property real level: Style.motion ? clock.level : 0
+        property real low: root.moving && player.playing ? clock.low : 0
+        property real mid: root.moving && player.playing ? clock.mid : 0
         property real strength: root.strength
+        property real flash: root.flash
         property size size: Qt.size(width, height)
+        property point origin: Qt.point(root.origin.x / root.cell, root.origin.y / root.cell)
         property color accent: Style.accent
+        property color shine: Style.paletteColour(4)
         property vector4d d0: root.drops[0]
         property vector4d d1: root.drops[1]
         property vector4d d2: root.drops[2]
