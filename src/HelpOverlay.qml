@@ -49,6 +49,8 @@ Rectangle {
         PixelBrackets { shown: true; arm: 16; thickness: 3 }
 
         Flickable {
+            id: sheetScroll
+            SmoothWheel { flickable: sheetScroll }
             anchors.fill: parent
             anchors.margins: 24
             contentHeight: sheet.implicitHeight

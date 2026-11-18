@@ -143,6 +143,7 @@ ApplicationWindow {
         PixelField {
             anchors.fill: parent
             origin: Qt.point(58, height - 52)
+            visible: nowPlayingView.opacity < 1
         }
 
         ColumnLayout {
@@ -188,15 +189,19 @@ ApplicationWindow {
                     search.Keys.onReturnPressed: { if (pages.currentItem) pages.currentItem.forceActiveFocus() }
                 }
 
-                GlitchDriver { id: pageGlitch; duration: 300 }
+                // A new page surfaces: it fades in while lifting into place.
+                ParallelAnimation {
+                    id: pageIn
+                    NumberAnimation { target: pages; property: "opacity"; from: 0; to: 1; duration: Style.smooth; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: pageLift; property: "y"; from: Style.motion ? 16 : 0; to: 0; duration: Style.gentle; easing.type: Easing.OutQuint }
+                }
                 StackLayout {
                     id: pages
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     currentIndex: win.view
-                    onCurrentIndexChanged: pageGlitch.kick(0.7)
-                    layer.enabled: pageGlitch.active
-                    layer.effect: GlitchEffect { amount: pageGlitch.amount; seed: pageGlitch.seed }
+                    onCurrentIndexChanged: if (Style.motion) pageIn.restart()
+                    transform: Translate { id: pageLift }
                     readonly property Item currentItem: children[currentIndex] || null
 
                     AlbumGrid {
@@ -412,6 +417,7 @@ ApplicationWindow {
                             }
                             ListView {
                                 id: findingsList
+                                SmoothWheel { flickable: findingsList }
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 visible: !doctor.scanning && doctor.findings.length > 0
@@ -503,10 +509,18 @@ ApplicationWindow {
             }
         }
 
+        // Now Playing rises over the library and settles back into it.
         NowPlayingView {
+            id: nowPlayingView
             anchors.fill: parent
             anchors.bottomMargin: 0
-            visible: win.nowPlaying
+            opacity: win.nowPlaying ? 1 : 0
+            visible: opacity > 0
+            enabled: win.nowPlaying
+            scale: Style.motion ? 0.96 + 0.04 * opacity : 1
+            Behavior on opacity {
+                NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic }
+            }
             onClosed: win.nowPlaying = false
         }
 
@@ -515,7 +529,8 @@ ApplicationWindow {
             id: toast
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 120
+            // Floats up a little as it appears.
+            anchors.bottomMargin: 108 + 12 * opacity
             width: toastText.implicitWidth + 32
             height: toastText.implicitHeight + 20
             color: Style.raised
@@ -530,7 +545,7 @@ ApplicationWindow {
                 font.pixelSize: Style.fontBody
                 duration: 300
             }
-            Behavior on opacity { NumberAnimation { duration: 160 } }
+            Behavior on opacity { NumberAnimation { duration: Style.smooth; easing.type: Easing.OutCubic } }
             Timer { id: toastTimer; interval: 2200; onTriggered: toast.opacity = 0 }
             function show(text) {
                 toastText.target = text
@@ -560,7 +575,13 @@ ApplicationWindow {
 
         HelpOverlay {
             anchors.fill: parent
-            visible: win.helpVisible
+            opacity: win.helpVisible ? 1 : 0
+            visible: opacity > 0
+            enabled: win.helpVisible
+            scale: Style.motion ? 0.98 + 0.02 * opacity : 1
+            Behavior on opacity {
+                NumberAnimation { duration: Style.motion ? Style.smooth : 0; easing.type: Easing.OutCubic }
+            }
             onClosed: win.helpVisible = false
         }
 

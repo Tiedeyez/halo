@@ -8,6 +8,6 @@ TEMPLATE = app
 INCLUDEPATH += ../src
 
 HEADERS += ../src/ring.h ../src/dsp.h ../src/stream.h ../src/engine.h ../src/analysis.h ../src/library.h \
-           ../src/player.h ../src/visual.h ../src/remote.h ../src/theme.h ../src/translator.h ../src/lyrics.h ../src/mandelpilot.h ../src/headphones.h ../src/doctor.h
+           ../src/player.h ../src/visual.h ../src/remote.h ../src/theme.h ../src/translator.h ../src/lyrics.h ../src/fractalpilot.h ../src/headphones.h ../src/doctor.h
 SOURCES += halo_tests.cpp ../src/stream.cpp ../src/engine.cpp ../src/analysis.cpp ../src/library.cpp \
-           ../src/player.cpp ../src/visual.cpp ../src/remote.cpp ../src/theme.cpp ../src/translator.cpp ../src/lyrics.cpp ../src/mandelpilot.cpp ../src/headphones.cpp ../src/doctor.cpp
+           ../src/player.cpp ../src/visual.cpp ../src/remote.cpp ../src/theme.cpp ../src/translator.cpp ../src/lyrics.cpp ../src/fractalpilot.cpp ../src/headphones.cpp ../src/doctor.cpp

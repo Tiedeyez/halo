@@ -12,15 +12,18 @@ Item {
     property real corner: Style.small
 
     readonly property bool hasImage: image.status === Image.Ready
-    // Tear the cover apart for a moment when it changes to another album,
-    // as the song changes. Off for grid tiles, which change while scrolling.
+    // When it changes to another album (as the song changes), the old cover
+    // stays underneath while the new one fades up over it. Off for grid
+    // tiles, which change while scrolling.
     property bool glitchOnChange: false
-
-    GlitchDriver { id: glitch; duration: 420 }
-    layer.enabled: glitch.active
-    layer.effect: GlitchEffect { amount: glitch.amount; seed: glitch.seed }
-    onAlbumIdChanged: if (glitchOnChange && albumId.length) glitch.kick(1)
-    function glitchNow(strength) { glitch.kick(strength) }
+    property url shownSource   // the last cover that finished fading up
+    onAlbumIdChanged: {
+        previous.source = glitchOnChange && Style.motion ? shownSource : ""
+        fadeIn.stop()
+        image.opacity = Style.motion ? 0 : 1
+        if (image.status === Image.Ready)
+            fadeIn.restart()
+    }
 
     function hue(text) {
         let h = 0
@@ -53,6 +56,16 @@ Item {
         }
     }
 
+    // The outgoing cover, held under the new one while it fades up.
+    Image {
+        id: previous
+        anchors.fill: parent
+        sourceSize: Qt.size(cover.size, cover.size)
+        cache: true
+        fillMode: Image.PreserveAspectCrop
+        visible: source.toString().length > 0 && image.opacity < 1
+    }
+    // Covers fade up when they've loaded instead of popping in.
     Image {
         id: image
         anchors.fill: parent
@@ -62,5 +75,20 @@ Item {
         cache: true
         fillMode: Image.PreserveAspectCrop
         visible: status === Image.Ready
+        opacity: Style.motion ? 0 : 1
+        onStatusChanged: if (status === Image.Ready) fadeIn.restart()
+        Component.onCompleted: if (status === Image.Ready) fadeIn.restart()
+        NumberAnimation {
+            id: fadeIn
+            target: image
+            property: "opacity"
+            to: 1
+            duration: Style.motion ? Style.gentle : 0
+            easing.type: Easing.OutCubic
+            onFinished: {
+                cover.shownSource = image.source
+                previous.source = ""
+            }
+        }
     }
 }

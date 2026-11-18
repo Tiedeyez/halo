@@ -1,4 +1,11 @@
 #include <QDir>
+#include <QColor>
+#include <QWheelEvent>
+#include <QQuickView>
+#include <QQmlPropertyMap>
+#include <QQmlEngine>
+#include <QQmlContext>
+#include <QQmlComponent>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QJsonArray>
@@ -23,7 +30,7 @@
 #include "lyrics.h"
 #include "doctor.h"
 #include "headphones.h"
-#include "mandelpilot.h"
+#include "fractalpilot.h"
 #include "player.h"
 #include "remote.h"
 #include "ring.h"
@@ -324,42 +331,99 @@ private slots:
         QVERIFY2(10 * std::log10(res / sig) < -80, qPrintable(QString::number(10 * std::log10(res / sig))));
     }
 
-    void mandelbrotOnlyDivesIn() {
-        // Ten minutes of music with a hard beat twice a second.
-        Mandel::Pilot pilot(1234);
-        double scale = pilot.current().scale;
-        int interesting = 0, looks = 0;
-        for (int frame = 0; frame < 30 * 600; ++frame) {
-            const double pulse = (frame % 15) < 3 ? 1.0 : 0.0;
-            pilot.step(1.0 / 30, pulse, 0.5);
-            // Never back out: the dive being shown only gets deeper (a new
-            // dive takes over through the dissolve, already well in).
-            if (pilot.reveal() == 0) {
-                QVERIFY2(pilot.current().scale <= scale || pilot.current().scale <= Mandel::Pilot::StartScale * std::exp(-2.0) + 1e-12,
-                         qPrintable(QString::number(frame)));
-                scale = pilot.current().scale;
-            }
-            // Never past where the GPU's floats run out.
-            QVERIFY(pilot.current().scale >= Mandel::Pilot::DeepestScale * 0.9);
-            // Once a second: is the middle of the view on the edge of the
-            // set, where the detail is (some points escape late, some
-            // never or early)?
-            if (frame % 30 == 0) {
-                const auto &v = pilot.current();
-                const int limit = 400;
-                int inside = 0, late = 0;
-                for (int j = -4; j <= 4; ++j)
-                    for (int i = -4; i <= 4; ++i) {
-                        const int n = Mandel::escape(v.x + i * v.scale * 0.05, v.y + j * v.scale * 0.05, limit);
-                        inside += n >= limit;
-                        late += n < limit && n > 30;
-                    }
+    void wheelGlidesAndTouchpadIsDirect() {
+        QQmlPropertyMap playerStub, themeStub;
+        playerStub.insert("calm", false);
+        themeStub.insert("accent", QColor("#7aa2f7"));
+        themeStub.insert("accentForeground", QColor("#000000"));
+        themeStub.insert("palette", QVariantList{});
+        themeStub.insert("radius", 4);
+        QQuickView view;
+        view.rootContext()->setContextProperty("player", &playerStub);
+        view.rootContext()->setContextProperty("theme", &themeStub);
+        static bool registered = false;
+        if (!registered) {
+            qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "Halo", 1, 0, "Style");
+            qmlRegisterType(QUrl::fromLocalFile(QFINDTESTDATA("../src/SmoothWheel.qml")), "Halo", 1, 0, "SmoothWheel");
+            registered = true;
+        }
+        QQmlComponent component(view.engine());
+        component.setData(R"(
+            import QtQuick
+            import Halo
+            ListView {
+                id: list
+                width: 300; height: 300
+                model: 100
+                delegate: Rectangle { width: 300; height: 40; color: "grey" }
+                SmoothWheel { flickable: list }
+            })", QUrl());
+        auto *list = qobject_cast<QQuickItem *>(component.create(view.rootContext()));
+        QVERIFY2(list, qPrintable(component.errorString()));
+        view.setContent(QUrl(), &component, list);
+        view.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&view));
+        auto wheel = [&](QPoint pixels, QPoint angle) {
+            QWheelEvent e(QPointF(150, 150), view.mapToGlobal(QPointF(150, 150)), pixels, angle, Qt::NoButton,
+                          Qt::NoModifier, Qt::NoScrollPhase, false);
+            QCoreApplication::sendEvent(&view, &e);
+        };
+        // A mouse notch glides there.
+        wheel({}, {0, -120});
+        QTest::qWait(60);
+        const double partway = list->property("contentY").toDouble();
+        QVERIFY2(partway > 0 && partway < 120, qPrintable(QString::number(partway)));
+        QTRY_COMPARE(list->property("contentY").toDouble(), 120.0);
+        // Two quick notches add up rather than restarting from where it is.
+        wheel({}, {0, -120});
+        wheel({}, {0, -120});
+        QTRY_COMPARE(list->property("contentY").toDouble(), 360.0);
+        // A touchpad moves at once, by its pixels.
+        wheel({0, -30}, {0, -24});
+        QCOMPARE(list->property("contentY").toDouble(), 390.0);
+        // Never past the end.
+        for (int i = 0; i < 60; ++i)
+            wheel({}, {0, -120});
+        QTRY_COMPARE(list->property("contentY").toDouble(), 100.0 * 40 - 300);
+    }
+
+    void fractalKeepsEvolving() {
+        // Ten minutes of music at 60 frames a second, a hard beat twice a second.
+        Fractal::Pilot pilot(1234);
+        double journey = pilot.journey(), lowest = 1, highest = 0, biggestStep = 0;
+        int intricate = 0, looks = 0, fits = 0;
+        Fractal::Complex last = pilot.c();
+        for (int frame = 0; frame < 60 * 600; ++frame) {
+            const double pulse = (frame % 30) < 5 ? 1.0 : 0.0;
+            pilot.step(1.0 / 60, pulse, 0.5);
+            // Only ever forward around the edge.
+            QVERIFY(pilot.journey() > journey);
+            journey = pilot.journey();
+            // It glides: c never jumps between frames.
+            const Fractal::Complex c = pilot.c();
+            biggestStep = std::max(biggestStep, std::hypot(c.re - last.re, c.im - last.im));
+            last = c;
+            lowest = std::min(lowest, pilot.morph());
+            highest = std::max(highest, pilot.morph());
+            // Once a second: is c near the edge, where the sets are intricate?
+            // Its critical orbit escapes late, or stays while a nudge out
+            // escapes.
+            if (frame % 60 == 0) {
                 ++looks;
-                interesting += inside < 81 && late > 0;
+                const int n = Fractal::criticalEscape(c.re, c.im, pilot.morph(), 400);
+                const double r = std::hypot(c.re, c.im);
+                const int out = Fractal::criticalEscape(c.re * (r + 0.05) / r, c.im * (r + 0.05) / r, pilot.morph(), 400);
+                intricate += n > 12 && (n < 400 || out < 400);
+                // The set fits its round window (allowing for the easing).
+                fits += Fractal::reach(c, pilot.morph()) <= pilot.zoom() * 0.5 * 1.08;
             }
         }
-        QVERIFY2(pilot.dives() >= 4, qPrintable(QString::number(pilot.dives())));
-        QVERIFY2(interesting >= looks * 9 / 10, qPrintable(QString("%1 of %2").arg(interesting).arg(looks)));
+        QVERIFY2(biggestStep < 0.01, qPrintable(QString::number(biggestStep)));
+        QVERIFY2(lowest < 0.1 && highest > 0.9, qPrintable(QString("%1..%2").arg(lowest).arg(highest)));
+        QVERIFY2(intricate >= looks * 9 / 10, qPrintable(QString("%1 of %2").arg(intricate).arg(looks)));
+        QVERIFY2(fits >= looks * 9 / 10, qPrintable(QString("fits %1 of %2").arg(fits).arg(looks)));
+        // Around the edge more than once in ten minutes of music.
+        QVERIFY(pilot.journey() - Fractal::Pilot(1234).journey() > 6.3);
     }
 
     void headphoneNamesMatchOnlyExactly() {

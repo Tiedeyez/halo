@@ -54,6 +54,21 @@ FocusScope {
 
         ListView {
             id: view
+            SmoothWheel { flickable: view }
+            add: Transition {
+                enabled: Style.motion
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.smooth; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "x"; from: 24; duration: Style.gentle; easing.type: Easing.OutQuint }
+            }
+            remove: Transition {
+                enabled: Style.motion
+                NumberAnimation { property: "opacity"; to: 0; duration: Style.quick; easing.type: Easing.InCubic }
+            }
+            displaced: Transition {
+                enabled: Style.motion
+                NumberAnimation { properties: "x,y"; duration: Style.smooth; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; to: 1; duration: Style.quick }
+            }
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
@@ -94,6 +109,7 @@ FocusScope {
                     anchors.rightMargin: 16
                     radius: Style.small
                     color: row.selected && view.activeFocus ? Style.raised : hover.hovered ? Style.hover : "transparent"
+                    Behavior on color { ColorAnimation { duration: Style.quick; easing.type: Easing.OutCubic } }
                     // The song playing wears pixel brackets; hover gets a block cursor.
                     PixelBrackets { shown: row.current; arm: 10 }
                     Rectangle {

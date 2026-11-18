@@ -27,14 +27,15 @@ AbstractButton {
             visible: button.primary
             pixel: 4
             color: button.hovered ? Qt.lighter(Style.accent, 1.12) : Style.accent
-            scale: button.down ? 0.92 : 1
-            Behavior on scale { NumberAnimation { duration: 80 } }
+            scale: button.down ? 0.92 : button.hovered ? 1.04 : 1
+            Behavior on scale { NumberAnimation { duration: Style.quick; easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
         }
         Rectangle {
             anchors.fill: parent
             visible: !button.primary
             radius: Style.small
             color: button.down ? Style.line : button.hovered ? Style.hover : "transparent"
+            Behavior on color { ColorAnimation { duration: Style.quick; easing.type: Easing.OutCubic } }
         }
         // Pixel corner marks on the button under the pointer.
         PixelBrackets {

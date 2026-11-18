@@ -31,11 +31,24 @@ checked against the source.
 - **The halo.** The visual is drawn from the song itself (Halo's own FFT of
   what it plays, not every sound on the machine) as a ring of square pixels
   around the cover in your theme's accent, torn sideways for a frame on hard
-  beats. V cycles to LED bars, then to the Mandelbrot: the set in square
-  pixels, in your theme's colours with a pearl's sheen, on an endless dive
-  that only goes in. An autopilot steers toward the set's edge on a random
-  path, the beat adds thrust, and when the GPU's precision runs out a pixel
-  dissolve hands over to a fresh dive. C keeps any of them still.
+  beats. V cycles to LED bars, then to the fractal: a Julia set in square
+  pixels, in your theme's colours with a pearl's sheen, that never stops
+  changing shape. Its formula morphs between the square and the cube while
+  an autopilot glides its constant around the edge of the set, where the
+  shapes are most intricate; the beat speeds it on and never turns it back.
+  Visuals crossfade as V switches them. C keeps any of them still.
+- **The window is water.** Behind everything lies a pond of square pixels
+  with drifting caustics. Every beat drops a ripple (from the cover, or
+  somewhere on the surface), every click anywhere in the window drops one
+  where you clicked, and the pointer leaves a soft wake. The rings spread,
+  cross and fade, and bend the stars and rain under them. It is kept dim
+  enough that the faintest text over it still reads at 7:1, it rests when
+  nothing is playing or rippling, and C stills it.
+- **Smooth motion.** Everything moves on the display's own frame clock with
+  eased curves: pages surface with a fade and a lift, Now Playing and the
+  shortcut sheet rise and settle, covers fade up as they load and crossfade
+  when the song changes, album tiles drift into place, queue rows slide, and
+  a mouse wheel glides (touchpads still move 1:1).
 - **Live lyrics.** Press L. Timed lyrics scroll with the song and fill in
   word by word in your accent, a block cursor riding the edge of the word
   being sung; each new line decrypts into place, and long breaks count down
@@ -47,8 +60,7 @@ checked against the source.
   what a lookup sends.
 - **Pixel glitch, Omarchy style.** Halo borrows the screensaver's look: a
   pixel wordmark, titles that decrypt into place through block shades, and a
-  short pixel-and-slice glitch when the song or the view changes. C (calm)
-  turns every bit of that motion off.
+  pixel-and-slice glitch as the window opens. C (calm) turns the motion off.
 - **DJ tapes read right.** When a tape tags the host as every track's artist
   and puts the credit in the title ("10 Mack Maine - Young Mulah Baby"), the
   performer becomes the artist and the host stays the album artist.

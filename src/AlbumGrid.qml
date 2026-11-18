@@ -44,6 +44,7 @@ FocusScope {
 
         GridView {
             id: grid
+            SmoothWheel { flickable: grid }
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.leftMargin: 16
@@ -70,6 +71,19 @@ FocusScope {
                 required property int tracks
                 width: grid.cellWidth
                 height: grid.cellHeight
+                // Tiles drift up into place as they come into view, a few
+                // at a time across each row.
+                opacity: 0
+                transform: Translate { id: rise; y: Style.motion ? 18 : 0 }
+                Component.onCompleted: arrive.start()
+                SequentialAnimation {
+                    id: arrive
+                    PauseAnimation { duration: Style.motion ? (cell.index % Math.max(1, grid.columns)) * 35 : 0 }
+                    ParallelAnimation {
+                        NumberAnimation { target: cell; property: "opacity"; to: 1; duration: Style.smooth; easing.type: Easing.OutCubic }
+                        NumberAnimation { target: rise; property: "y"; to: 0; duration: Style.gentle; easing.type: Easing.OutQuint }
+                    }
+                }
                 readonly property bool current: grid.currentIndex === index && grid.activeFocus
                 readonly property bool playingHere: player.albumId === albumId
 
@@ -78,6 +92,7 @@ FocusScope {
                     anchors.margins: 6
                     radius: Style.small
                     color: hover.hovered || cell.current ? Style.raised : "transparent"
+                    Behavior on color { ColorAnimation { duration: Style.quick; easing.type: Easing.OutCubic } }
                     // Selection and hover as pixel corner marks, not a frame.
                     PixelBrackets {
                         shown: hover.hovered || cell.current
@@ -94,23 +109,15 @@ FocusScope {
                     Item {
                         Layout.fillWidth: true
                         Layout.preferredHeight: width
+                        // The cover lifts a little under the pointer.
+                        scale: hover.hovered && Style.motion ? 1.035 : 1
+                        Behavior on scale { NumberAnimation { duration: Style.smooth; easing.type: Easing.OutCubic } }
                         CoverArt {
                             id: tile
                             anchors.fill: parent
                             albumId: cell.albumId
                             title: cell.title
                             size: 256
-                        }
-                        // Covers resolve out of big pixels as they come into
-                        // view, a few at a time, and twitch under the pointer.
-                        Timer {
-                            interval: 30 + (cell.index % Math.max(1, grid.columns)) * 45
-                            running: true
-                            onTriggered: tile.glitchNow(0.85)
-                        }
-                        Connections {
-                            target: hover
-                            function onHoveredChanged() { if (hover.hovered) tile.glitchNow(0.3) }
                         }
                         // Play straight from the grid.
                         IconButton {

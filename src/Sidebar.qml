@@ -101,6 +101,7 @@ Rectangle {
                 background: Rectangle {
                     radius: Style.small
                     color: item.selected ? Style.raised : item.hovered ? Style.hover : "transparent"
+                    Behavior on color { ColorAnimation { duration: Style.quick; easing.type: Easing.OutCubic } }
                     PixelBrackets { shown: item.hovered && !item.selected; arm: 6; color: Style.muted }
                     // The selected row's marker: three stacked pixels.
                     Column {
@@ -154,7 +155,7 @@ Rectangle {
                     Keycap {
                         label: item.modelData.key
                         opacity: item.hovered ? 1 : 0
-                        Behavior on opacity { NumberAnimation { duration: 120 } }
+                        Behavior on opacity { NumberAnimation { duration: Style.quick; easing.type: Easing.OutCubic } }
                     }
                 }
             }

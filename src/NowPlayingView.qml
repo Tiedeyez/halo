@@ -60,19 +60,23 @@ Rectangle {
             inner: 0.56
             calm: player.calm
             style: HaloView.Rays
-            visible: player.visualStyle === 0
+            opacity: player.visualStyle === 0 ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
-        PixelMandelbrot {
+        PixelFractal {
             anchors.centerIn: parent
             width: stage.side
             height: stage.side
             cell: Math.max(4, Math.round(stage.side / 90))
-            visible: player.visualStyle === 2
+            opacity: player.visualStyle === 2 ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
         CoverArt {
             anchors.centerIn: parent
             glitchOnChange: true
-            // Smaller in the Mandelbrot, so the set has a wide ring to show.
+            // Smaller in the fractal, so the set has a wide ring to show.
             width: stage.side * (player.visualStyle === 1 ? 0.78 : player.visualStyle === 2 ? 0.36 : 0.52)
             height: width
             albumId: player.albumId
@@ -89,7 +93,9 @@ Rectangle {
             color: Style.accent
             calm: player.calm
             style: HaloView.Bars
-            visible: player.visualStyle === 1
+            opacity: player.visualStyle === 1 ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
     }
 

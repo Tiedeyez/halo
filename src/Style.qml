@@ -31,6 +31,12 @@ QtObject {
     readonly property string noise: "█▓▒░#%&@$*+=<>/\\|"
     // Motion is reducible: Halo's calm setting (C) turns every glitch off.
     readonly property bool motion: !player.calm
+    // Durations (ms) for every eased change: hovers and presses, things
+    // that appear and move, big surfaces arriving. Eased out, so a change
+    // starts at once and settles softly.
+    readonly property int quick: 140
+    readonly property int smooth: 280
+    readonly property int gentle: 460
 
     readonly property int radius: theme.radius
     readonly property int small: Math.min(4, theme.radius)

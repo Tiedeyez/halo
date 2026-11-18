@@ -11,11 +11,14 @@
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QStandardPaths>
+#include <QQmlComponent>
 #include <QUrl>
+#include <cstdio>
 
 #include "doctor.h"
 #include "headphones.h"
-#include "mandelpilot.h"
+#include "fractalpilot.h"
+#include "pointer.h"
 #include "analysis.h"
 #include "audiooutput.h"
 #include "cli.h"
@@ -133,7 +136,7 @@ int main(int argc, char *argv[]) {
 
     Spectrum spectrum(&player.engine());
     qmlRegisterType<HaloView>("Halo", 1, 0, "HaloView");
-    qmlRegisterType<MandelPilot>("Halo", 1, 0, "MandelPilot");
+    qmlRegisterType<FractalPilot>("Halo", 1, 0, "FractalPilot");
     qmlRegisterSingletonType(QUrl("qrc:/Style.qml"), "Halo", 1, 0, "Style");
     qmlRegisterUncreatableType<QueueModel>("Halo", 1, 0, "QueueModel", "from player");
     qmlRegisterUncreatableType<MomentModel>("Halo", 1, 0, "MomentModel", "from player");
@@ -160,9 +163,15 @@ int main(int argc, char *argv[]) {
     context->setContextProperty("albums", &albums);
     context->setContextProperty("tracks", &tracks);
     context->setContextProperty("albumTracks", &albumTracks);
+    PointerWatch pointer;
+    context->setContextProperty("pointer", &pointer);
     engine.load(QUrl("qrc:/Main.qml"));
-    if (engine.rootObjects().isEmpty())
+    if (engine.rootObjects().isEmpty()) {
+        QQmlComponent check(&engine, QUrl("qrc:/Main.qml"));
+        fprintf(stderr, "halo: the interface didn't load:\n%s\n", qPrintable(check.errorString()));
         return 1;
+    }
+    engine.rootObjects().first()->installEventFilter(&pointer);
 
     // MPRIS Raise and a second launch bring the window forward. Wayland
     // doesn't let an app raise itself, so ask Hyprland when it's there.

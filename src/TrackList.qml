@@ -35,6 +35,7 @@ FocusScope {
 
     ListView {
         id: view
+        SmoothWheel { flickable: view }
         anchors.fill: parent
         clip: true
         focus: true
@@ -70,6 +71,7 @@ FocusScope {
                 anchors.rightMargin: 16
                 radius: Style.small
                 color: row.selected && view.activeFocus ? Style.raised : hover.hovered ? Style.hover : "transparent"
+                Behavior on color { ColorAnimation { duration: Style.quick; easing.type: Easing.OutCubic } }
                 border.color: row.selected && view.activeFocus ? Style.line : "transparent"
                 // A block cursor at the row's edge, on hover and on the song playing.
                 Rectangle {
