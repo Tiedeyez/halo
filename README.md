@@ -59,6 +59,13 @@ checked against the source.
 - **Lost & Found** (6). Songs you played often and haven't heard in six
   weeks or more, weighted toward the most loved and the longest gone, new
   each day. Until there's that much history, songs you've never played.
+- **Library Doctor** (7). Finds site names stamped into tags ("[DatPiff.com]"),
+  track numbers left in titles, missing titles, artists and albums, album
+  artists that disagree within an album, and the same song kept twice. Each
+  fix comes from the file's own tags, file name and folder, is shown as
+  before and after, and is written only when you press Fix. Every fix is
+  logged and U undoes it; a file that changed since the check is never
+  overwritten. Duplicates are only pointed out, never deleted.
 - **Headphone correction, by itself.** When the output changes, Halo looks
   its name up among 6,229 headphones measured by oratory1990, crinacle,
   Rtings and others (OPRA's dataset, which includes AutoEQ's) and, on an
@@ -106,7 +113,8 @@ Halo never changes, moves or deletes a music file.
 | Shift+Enter | Play the selected song next |
 | A | Add the selected song to the queue |
 | `/`, Ctrl+F | Search |
-| 1 to 6 | Albums, Songs, Queue, Moments, Most played, Lost & Found |
+| 1 to 7 | Albums, Songs, Queue, Moments, Most played, Lost & Found, Library Doctor |
+| U | Undo the last fix (in the Library Doctor) |
 | F | Now Playing, full window |
 | L | Lyrics, live with the song (opens Now Playing) |
 | `,`, `.` | Lyrics 0.1 s earlier or later for this song (with Shift: 0.5 s) |

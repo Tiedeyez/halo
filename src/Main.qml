@@ -81,6 +81,7 @@ ApplicationWindow {
     Shortcut { sequence: "4"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(4) }
     Shortcut { sequence: "5"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(5) }
     Shortcut { sequence: "6"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(6) }
+    Shortcut { sequence: "7"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(7) }
     Shortcut { sequence: "F"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.nowPlaying = !win.nowPlaying }
     // L opens the lyrics, in Now Playing; again hides them.
     Shortcut {
@@ -326,6 +327,171 @@ ApplicationWindow {
                             }
                         }
                     }
+                    // The Library Doctor (7): tag problems found on this
+                    // computer, fixed only when asked, every fix undoable.
+                    FocusScope {
+                        id: doctorPage
+                        focus: win.view === 7
+                        readonly property var labels: ({
+                            "watermark": qsTr("Site names in tags"),
+                            "numbered": qsTr("Track numbers or the artist in titles"),
+                            "notitle": qsTr("Missing titles"),
+                            "noartist": qsTr("Missing artists"),
+                            "noalbum": qsTr("Missing albums"),
+                            "albumartist": qsTr("Album artist differs within an album"),
+                            "duplicate": qsTr("The same song more than once")
+                        })
+                        readonly property var fields: ({
+                            "title": qsTr("Title"),
+                            "artist": qsTr("Artist"),
+                            "album": qsTr("Album"),
+                            "albumartist": qsTr("Album artist"),
+                            "comment": qsTr("Comment")
+                        })
+                        // "Folder/file.mp3": enough to tell copies apart.
+                        function shortPath(path) {
+                            const parts = path.split("/")
+                            return parts.slice(-2).join("/")
+                        }
+                        function countOf(kind) {
+                            let n = 0
+                            for (const f of doctor.findings) if (f.kind === kind) ++n
+                            return n
+                        }
+                        onVisibleChanged: if (visible && doctor.findings.length === 0 && !doctor.scanning) doctor.scan()
+                        Shortcut { sequence: "U"; enabled: win.view === 7 && win.free; onActivated: doctor.undoLast() }
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: 0
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.margins: 24
+                                Layout.bottomMargin: 4
+                                spacing: 10
+                                ScrambleText {
+                                    target: qsTr("Library Doctor")
+                                    color: Style.text
+                                    font.pixelSize: Style.fontTitle
+                                    font.weight: Font.Bold
+                                }
+                                Item { Layout.fillWidth: true }
+                                Button {
+                                    text: qsTr("Undo last fix (U)")
+                                    visible: doctor.undoable > 0
+                                    flat: true
+                                    Material.foreground: Style.accentText
+                                    implicitHeight: Style.target
+                                    onClicked: doctor.undoLast()
+                                }
+                                Button {
+                                    text: doctor.scanning ? qsTr("Checking…") : qsTr("Check again")
+                                    enabled: !doctor.scanning
+                                    flat: true
+                                    Material.foreground: Style.accentText
+                                    implicitHeight: Style.target
+                                    onClicked: doctor.scan()
+                                }
+                            }
+                            Text {
+                                Layout.leftMargin: 24
+                                Layout.rightMargin: 24
+                                Layout.bottomMargin: 12
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                text: qsTr("Checks your songs' tags on this computer and proposes fixes from the tags, file names and folders. Nothing is written until you say so, and every fix can be undone. Duplicates are only pointed out.")
+                                color: Style.faint
+                                font.pixelSize: Style.fontSmall
+                            }
+                            EmptyState {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                visible: doctor.scanning || doctor.findings.length === 0
+                                busy: doctor.scanning
+                                headline: doctor.scanning ? qsTr("Reading your tags") : qsTr("Nothing to fix")
+                                body: doctor.scanning ? qsTr("Every song's tags, in the background.") : qsTr("Every tag Halo can check looks right.")
+                            }
+                            ListView {
+                                id: findingsList
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                visible: !doctor.scanning && doctor.findings.length > 0
+                                clip: true
+                                model: doctor.findings
+                                section.property: "kind"
+                                section.delegate: RowLayout {
+                                    required property string section
+                                    width: findingsList.width
+                                    height: Style.target + 16
+                                    spacing: 10
+                                    Text {
+                                        Layout.leftMargin: 24
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                        text: (doctorPage.labels[section] || section) + "  ·  " + doctorPage.countOf(section)
+                                        color: Style.text
+                                        font.family: Style.mono
+                                        font.pixelSize: Style.fontBody
+                                        font.capitalization: Font.AllUppercase
+                                        font.letterSpacing: 1
+                                    }
+                                    Button {
+                                        Layout.rightMargin: 24
+                                        visible: section !== "duplicate"
+                                        text: qsTr("Fix all")
+                                        flat: true
+                                        Material.foreground: Style.accentText
+                                        implicitHeight: Style.target
+                                        onClicked: doctor.fixAll(section)
+                                    }
+                                }
+                                delegate: RowLayout {
+                                    required property var modelData
+                                    required property int index
+                                    width: findingsList.width
+                                    spacing: 12
+                                    ColumnLayout {
+                                        Layout.leftMargin: 24
+                                        Layout.fillWidth: true
+                                        Layout.topMargin: 6
+                                        Layout.bottomMargin: 6
+                                        spacing: 2
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: doctorPage.shortPath(modelData.path)
+                                            textFormat: Text.PlainText
+                                            elide: Text.ElideMiddle
+                                            color: Style.muted
+                                            font.family: Style.mono
+                                            font.pixelSize: Style.fontSmall
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            textFormat: Text.PlainText
+                                            wrapMode: Text.Wrap
+                                            color: Style.text
+                                            font.pixelSize: Style.fontBody
+                                            text: modelData.kind === "duplicate"
+                                                  ? qsTr("Also at: %1").arg(modelData.others.map(doctorPage.shortPath).join(", "))
+                                                  : modelData.field.length === 0
+                                                    ? qsTr("Nothing on this computer says what it should be.")
+                                                    : (doctorPage.fields[modelData.field] || modelData.field) + ":  " + (modelData.before.length ? modelData.before : qsTr("(empty)"))
+                                                      + "  →  " + (modelData.after.length ? modelData.after : qsTr("(empty)"))
+                                        }
+                                    }
+                                    Button {
+                                        Layout.rightMargin: 24
+                                        visible: modelData.fixable
+                                        text: qsTr("Fix")
+                                        flat: true
+                                        Material.foreground: Style.accentText
+                                        implicitHeight: Style.target
+                                        onClicked: doctor.fix(index)
+                                    }
+                                }
+                                ScrollBar.vertical: PixelScrollBar {}
+                            }
+                        }
+                    }
                 }
             }
 
@@ -373,6 +539,10 @@ ApplicationWindow {
             }
             Connections {
                 target: player
+                function onMessage(text) { toast.show(text) }
+            }
+            Connections {
+                target: doctor
                 function onMessage(text) { toast.show(text) }
             }
             // Say so when a correction starts on its own (E to turn it off).

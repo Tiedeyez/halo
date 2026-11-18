@@ -13,6 +13,7 @@
 #include <QStandardPaths>
 #include <QUrl>
 
+#include "doctor.h"
 #include "headphones.h"
 #include "mandelpilot.h"
 #include "analysis.h"
@@ -152,6 +153,8 @@ int main(int argc, char *argv[]) {
     context->setContextProperty("player", &player);
     context->setContextProperty("lyrics", &lyrics);
     context->setContextProperty("headphones", &headphones);
+    LibraryDoctor doctor(&library);
+    context->setContextProperty("doctor", &doctor);
     qmlRegisterUncreatableType<LyricsService>("Halo", 1, 0, "Lyrics", "from main");
     context->setContextProperty("spectrumSource", &spectrum);
     context->setContextProperty("albums", &albums);

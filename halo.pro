@@ -7,6 +7,7 @@ TARGET = halo
 TEMPLATE = app
 
 HEADERS += \
+    src/doctor.h \
     src/headphones.h \
     src/mandelpilot.h \
     src/ring.h \
@@ -25,6 +26,7 @@ HEADERS += \
     src/lyrics.h
 
 SOURCES += \
+    src/doctor.cpp \
     src/headphones.cpp \
     src/mandelpilot.cpp \
     src/main.cpp \

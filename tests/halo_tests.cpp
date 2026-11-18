@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QProcess>
 #include <QSet>
 #include <QSignalSpy>
 #include <QStandardPaths>
@@ -20,6 +21,7 @@
 #include "engine.h"
 #include "library.h"
 #include "lyrics.h"
+#include "doctor.h"
 #include "headphones.h"
 #include "mandelpilot.h"
 #include "player.h"
@@ -411,6 +413,106 @@ private slots:
         QVERIFY2(all.size() > 6000, qPrintable(QString::number(all.size())));
         QVERIFY(all.match("WH-1000XM4") != nullptr);
         QVERIFY(all.match("Built-in Audio Analog Stereo") == nullptr);
+    }
+
+    void doctorStripsWatermarks() {
+        QCOMPARE(Doctor::stripWatermark("Goin' In [MixFiend.com]"), QString("Goin' In"));
+        QCOMPARE(Doctor::stripWatermark("Hustler Mentality - DatPiff Exclusive"), QString("Hustler Mentality"));
+        QCOMPARE(Doctor::stripWatermark("LiveMixtapes.com | Young Dolph"), QString("Young Dolph"));
+        QCOMPARE(Doctor::stripWatermark("www.site.net"), QString());
+        // Ordinary names are left alone, dots and all.
+        QCOMPARE(Doctor::stripWatermark("Mr. Brightside"), QString("Mr. Brightside"));
+        QCOMPARE(Doctor::stripWatermark("21 Savage"), QString("21 Savage"));
+        QVERIFY(!Doctor::hasWatermark("Dr. Dre"));
+    }
+
+    void doctorProposesOneFixPerField() {
+        using namespace Doctor;
+        std::vector<File> files;
+        auto add = [&](const QString &path, Tags t) { files.push_back({path, t}); };
+        add("/m/HCSM5-2015/01_3_Way.mp3", {"01 3 Way [DatPiff.com]", "Young Dolph", "HCSM5", "Young Dolph", "", 1, 200});
+        add("/m/HCSM5-2015/02_Hustler.mp3", {"Hustler Mentality", "", "HCSM5", "Young Dolph", "", 2, 180});
+        add("/m/HCSM5-2015/03_Pull_Up.mp3", {"Pull Up", "Young Dolph", "", "Dolph", "", 3, 190});
+        add("/m/Other/Pull Up.mp3", {"Pull Up", "Young Dolph", "Other", "", "", 1, 191});
+        add("/m/Other/x.mp3", {"Clean", "Artist", "LiveMixtapes.com", "", "", 2, 100});
+        const auto found = diagnose(files);
+        QMultiHash<QString, QString> fields;
+        for (const Finding &f : found)
+            if (!f.field.isEmpty()) {
+                QVERIFY2(!fields.contains(f.path, f.field), qPrintable(f.path + " " + f.field));
+                fields.insert(f.path, f.field);
+            }
+        auto find = [&](Kind k, const QString &path) -> const Finding * {
+            for (const Finding &f : found)
+                if (f.kind == k && f.path == path)
+                    return &f;
+            return nullptr;
+        };
+        // Watermark and number go in one title fix.
+        const Finding *title = find(Kind::NumberedTitle, "/m/HCSM5-2015/01_3_Way.mp3");
+        QVERIFY(title);
+        QCOMPARE(title->after, QString("3 Way"));
+        QVERIFY(!find(Kind::Watermark, "/m/HCSM5-2015/01_3_Way.mp3"));
+        // Missing artist comes from the album artist.
+        QCOMPARE(find(Kind::MissingArtist, "/m/HCSM5-2015/02_Hustler.mp3")->after, QString("Young Dolph"));
+        // Missing album comes from the folder, scene year tidied.
+        QCOMPARE(find(Kind::MissingAlbum, "/m/HCSM5-2015/03_Pull_Up.mp3")->after, QString("HCSM5 (2015)"));
+        // The odd album artist out is brought in line.
+        QCOMPARE(find(Kind::MixedAlbumArtist, "/m/HCSM5-2015/03_Pull_Up.mp3")->after, QString("Young Dolph"));
+        // An album that is only a site's name is missing, not emptied.
+        const Finding *album = find(Kind::MissingAlbum, "/m/Other/x.mp3");
+        QVERIFY(album);
+        QCOMPARE(album->before, QString("LiveMixtapes.com"));
+        QCOMPARE(album->after, QString("Other"));
+        // The same song in two places, pointed out only.
+        const Finding *dup = find(Kind::Duplicate, "/m/HCSM5-2015/03_Pull_Up.mp3");
+        QVERIFY(dup);
+        QCOMPARE(dup->others, QStringList{"/m/Other/Pull Up.mp3"});
+        QVERIFY(dup->field.isEmpty());
+    }
+
+    void doctorFixesRealFilesAndUndoes() {
+        QTemporaryDir music, state;
+        const QString song = music.filePath("01_Song.mp3");
+        QProcess ff;
+        ff.start("ffmpeg", {"-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=12", "-metadata",
+                            "title=01 Song [DatPiff.com]", "-metadata", "artist=Tester", "-metadata", "album=Album",
+                            "-y", song});
+        QVERIFY(ff.waitForFinished(30000));
+        QCOMPARE(ff.exitCode(), 0);
+        Library library({music.path()}, state.filePath("cache"), state.filePath("state"));
+        library.rescan();
+        QTRY_COMPARE_WITH_TIMEOUT(int(library.tracks().size()), 1, 20000);
+        const QString log = state.filePath("doctor.json");
+        {
+            LibraryDoctor doctor(&library, log);
+            doctor.scan();
+            QTRY_VERIFY_WITH_TIMEOUT(!doctor.scanning(), 20000);
+            QCOMPARE(doctor.fixable(), 1);
+            QCOMPARE(doctor.findings().first().toMap().value("after").toString(), QString("Song"));
+            QVERIFY(doctor.fix(0));
+            Doctor::Tags t;
+            QVERIFY(Doctor::readTags(song, t));
+            QCOMPARE(t.title, QString("Song"));
+            QCOMPARE(t.artist, QString("Tester"));
+            QCOMPARE(doctor.undoable(), 1);
+        }
+        // The undo log survives a restart.
+        LibraryDoctor doctor(&library, log);
+        QCOMPARE(doctor.undoable(), 1);
+        QVERIFY(doctor.undoLast());
+        Doctor::Tags t;
+        QVERIFY(Doctor::readTags(song, t));
+        QCOMPARE(t.title, QString("01 Song [DatPiff.com]"));
+        // A file changed after the scan is never overwritten.
+        doctor.scan();
+        QTRY_VERIFY_WITH_TIMEOUT(!doctor.scanning(), 20000);
+        QVERIFY(Doctor::writeField(song, "title", "Edited by hand"));
+        QSignalSpy said(&doctor, &LibraryDoctor::message);
+        QVERIFY(!doctor.fix(0));
+        QCOMPARE(said.size(), 1);
+        QVERIFY(Doctor::readTags(song, t));
+        QCOMPARE(t.title, QString("Edited by hand"));
     }
 
     void lostAndFoundBringsBackFavourites() {
