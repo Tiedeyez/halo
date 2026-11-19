@@ -58,7 +58,6 @@ Rectangle {
         readonly property real haloSide: Math.min(focusH * 1.02, focusW * 1.05)
         readonly property real kaleidoSide: Math.max(focusW, focusH) * 1.12
         readonly property real vinylSide: Math.min(focusH * 1.08, focusW * 1.12)
-        readonly property real roundScale: Math.max(1, Math.ceil(haloSide / 960))
         Item {
             id: focusPoint
             x: stage.focusW * 0.5
@@ -66,17 +65,14 @@ Rectangle {
             width: 0
             height: 0
         }
-        HaloView {
+        // The halo: the ring of rays, drawn one cell per pixel like the
+        // others (68 x pixelDensity cells across).
+        PixelVisualView {
             anchors.centerIn: focusPoint
-            width: stage.haloSide / stage.roundScale
-            height: width
-            scale: stage.roundScale
-            transformOrigin: Item.Center
-            spectrum: spectrumSource
-            color: Style.accent
-            inner: 0.56
-            calm: player.calm
-            style: HaloView.Rays
+            width: stage.haloSide
+            height: stage.haloSide
+            cell: Math.max(3, Math.round(stage.haloSide / (68 * Style.pixelDensity)))
+            mode: PixelVisual.Ring
             opacity: player.visualStyle === 0 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
@@ -85,9 +81,9 @@ Rectangle {
             anchors.centerIn: focusPoint
             width: stage.kaleidoSide
             height: stage.kaleidoSide
-            // About 140 pixels across: fine enough for the fractal's detail
+            // About 140 x pixelDensity pixels across: fine enough for the fractal's detail
             // (four samples each), cheap enough for integrated graphics.
-            cell: Math.max(5, Math.round(stage.kaleidoSide / 140))
+            cell: Math.max(3, Math.round(stage.kaleidoSide / (140 * Style.pixelDensity)))
             opacity: player.visualStyle === 2 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
@@ -95,7 +91,7 @@ Rectangle {
         // The pixel visualisers: Skyline, Phosphor, Pulsar, Waterfall, Warp, Aurora.
         PixelVisualView {
             anchors.fill: parent
-            cell: Math.max(4, Math.ceil(Math.max(root.width, root.height) / 128))
+            cell: Math.max(3, Math.ceil(Math.max(root.width, root.height) / (128 * Style.pixelDensity)))
             mode: Math.max(0, player.visualStyle - 3)
             opacity: player.visualStyle >= 3 && player.visualStyle <= 8 ? 1 : 0
             visible: opacity > 0
@@ -105,7 +101,7 @@ Rectangle {
             anchors.centerIn: focusPoint
             width: stage.vinylSide
             height: stage.vinylSide
-            cell: Math.max(3, Math.round(stage.vinylSide / 130))
+            cell: Math.max(3, Math.round(stage.vinylSide / (130 * Style.pixelDensity)))
             opacity: player.visualStyle === 9 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }

@@ -34,6 +34,10 @@ QtObject {
     // Durations (ms) for every eased change: hovers and presses, things
     // that appear and move, big surfaces arriving. Eased out, so a change
     // starts at once and settles softly.
+    // How fine the pixel art is: 2 = twice the cells across (four times the
+    // pixels) of Halo's first visuals. Every visual and the water derive
+    // their cell size from it, so the look scales from a laptop to 4K.
+    readonly property real pixelDensity: 2
     readonly property int quick: 140
     readonly property int smooth: 280
     readonly property int gentle: 460

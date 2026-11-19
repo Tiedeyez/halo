@@ -17,8 +17,9 @@ constexpr float Bayer[4][4] = {{0 / 16.f, 8 / 16.f, 2 / 16.f, 10 / 16.f},
                                {15 / 16.f, 7 / 16.f, 13 / 16.f, 5 / 16.f}};
 
 QRgb mixRgb(QRgb a, QRgb b, double t) {
-    t = std::clamp(t, 0.0, 1.0);
-    const auto m = [t](int x, int y) { return int(std::lround(x + (y - x) * t)); };
+    // Integer maths in 1/256ths: called for nearly every pixel of every frame.
+    const int w = int(std::clamp(t, 0.0, 1.0) * 256.0 + 0.5);
+    const auto m = [w](int x, int y) { return (x * (256 - w) + y * w + 128) >> 8; };
     return qRgb(m(qRed(a), qRed(b)), m(qGreen(a), qGreen(b)), m(qBlue(a), qBlue(b)));
 }
 
@@ -32,6 +33,7 @@ PixelVisual::PixelVisual(QQuickItem *parent) : QQuickPaintedItem(parent) {
     m_capFall.assign(Spectrum::Bands, 0.0f);
     for (auto &c : m_palette)
         c = QColor("#FFD60A");
+    rebuildRamp();
     connect(this, &QQuickItem::widthChanged, this, [this] { ensureSize(); });
     connect(this, &QQuickItem::heightChanged, this, [this] { ensureSize(); });
 }
@@ -44,6 +46,7 @@ QString PixelVisual::modeName(int mode) {
     case Waterfall: return tr("Waterfall");
     case Warp: return tr("Warp");
     case Aurora: return tr("Aurora");
+    case Ring: return tr("Halo");
     default: return {};
     }
 }
@@ -78,6 +81,7 @@ void PixelVisual::setPalette(const QStringList &palette) {
     m_paletteNames = palette;
     for (size_t i = 0; i < m_palette.size(); ++i)
         m_palette[i] = QColor(palette.value(int(i), palette.value(0, "#FFD60A")));
+    rebuildRamp();
     emit changed();
     update();
 }
@@ -86,6 +90,7 @@ void PixelVisual::setWindow(const QColor &window) {
     if (window == m_window)
         return;
     m_window = window;
+    rebuildRamp();
     emit changed();
     update();
 }
@@ -119,24 +124,33 @@ float PixelVisual::band(double u) const {
     return float(b[size_t(i)] * (1 - f) + b[size_t(std::min(i + 1, Spectrum::Bands - 1))] * f);
 }
 
+// After dithering the ramp has only Steps + 1 shades, so they are blended
+// here once per palette instead of for every pixel of every frame.
+static constexpr int RampSteps = 9;
+
 QRgb PixelVisual::ramp(double t, int x, int y) const {
-    // Five stops from the theme: window, blue, magenta, accent, foreground.
-    static constexpr int Steps = 9;   // after dithering: few, crisp shades
     t = std::clamp(t, 0.0, 1.0);
-    const double q = t * Steps + Bayer[y & 3][x & 3] - 0.5;
-    t = std::clamp(std::floor(q + 0.5) / Steps, 0.0, 1.0);
-    const QRgb stops[5] = {m_window.rgb(), m_palette[2].rgb(), m_palette[3].rgb(), m_palette[0].rgb(),
-                           mixRgb(m_palette[0].rgb(), m_palette[5].rgb(), 0.65)};
-    const double s = t * 4;
-    const int i = std::min(3, int(s));
-    // The darkest stop stays close to the window so quiet parts recede.
-    const double f = s - i;
-    QRgb a = stops[i], b = stops[i + 1];
-    if (i == 0)
-        b = mixRgb(m_window.rgb(), stops[1], 0.55);
-    if (i == 1)
-        a = mixRgb(m_window.rgb(), stops[1], 0.55);
-    return mixRgb(a, b, f);
+    const double q = t * RampSteps + Bayer[y & 3][x & 3] - 0.5;
+    return m_rampLut[size_t(std::clamp(int(std::floor(q + 0.5)), 0, RampSteps))];
+}
+
+void PixelVisual::rebuildRamp() {
+    for (int k = 0; k <= RampSteps; ++k) {
+        // Five stops from the theme: window, blue, magenta, accent, foreground.
+        const double t = double(k) / RampSteps;
+        const QRgb stops[5] = {m_window.rgb(), m_palette[2].rgb(), m_palette[3].rgb(), m_palette[0].rgb(),
+                               mixRgb(m_palette[0].rgb(), m_palette[5].rgb(), 0.65)};
+        const double s = t * 4;
+        const int i = std::min(3, int(s));
+        // The darkest stop stays close to the window so quiet parts recede.
+        const double f = s - i;
+        QRgb a = stops[i], b = stops[i + 1];
+        if (i == 0)
+            b = mixRgb(m_window.rgb(), stops[1], 0.55);
+        if (i == 1)
+            a = mixRgb(m_window.rgb(), stops[1], 0.55);
+        m_rampLut[size_t(k)] = mixRgb(a, b, f);
+    }
 }
 
 QRgb PixelVisual::tint(QRgb base, double v, int x, int y) const {
@@ -171,6 +185,7 @@ void PixelVisual::step(double dt, double pulse, double level, double low, double
     case Waterfall: drawWaterfall(in); break;
     case Warp: drawWarp(in); break;
     case Aurora: drawAurora(in); break;
+    case Ring: drawRing(in); break;
     default: break;
     }
     update();
@@ -466,18 +481,25 @@ void PixelVisual::drawAurora(const In &in) {
             const double energy = band(std::fmod(drift * 0.7 + layer * 0.21, 1.0));
             const double reach = (0.18 + 0.55 * energy * (0.6 + 0.4 * fold)) * h;
             const double bottom = base + std::sin(drift * Tau * 2 + m_time) * h * 0.03;
-            for (int y = int(bottom - reach); y <= int(bottom); ++y) {
-                if (y < 0 || y >= h)
-                    continue;
-                const double t = (bottom - y) / std::max(1.0, reach);   // 0 at the lower edge
-                // Vertical rays: the curtain is made of fine folds of light.
-                const double rays = 0.55 + 0.45 * std::sin(x * 1.7 + layer * 2.0 + std::sin(m_time * 0.9 + x * 0.21) * 2.0);
-                double v = std::exp(-t * 2.2) * (0.35 + 0.65 * wave) * (0.5 + 0.5 * in.level) * rays;
+            // Vertical rays: the curtain is made of fine folds of light (per
+            // column, so worked out once here, not for every pixel).
+            const double rays = 0.55 + 0.45 * std::sin(x * 1.7 + layer * 2.0 + std::sin(m_time * 0.9 + x * 0.21) * 2.0);
+            const double column = (0.35 + 0.65 * wave) * (0.5 + 0.5 * in.level) * rays;
+            const double span = std::max(1.0, reach);
+            const int top = std::max(0, int(bottom - reach));
+            // exp(-2.2 t) stepped down the column by one multiply per pixel.
+            double falloff = std::exp(-2.2 * (bottom - top) / span);
+            const double stepUp = std::exp(2.2 / span);
+            for (int y = top; y <= int(bottom); ++y, falloff *= stepUp) {
+                if (y >= h)
+                    break;
+                const double t = (bottom - y) / span;   // 0 at the lower edge
+                double v = falloff * column;
                 v += (t < 0.08 ? 0.45 : 0) * (0.4 + 0.6 * m_flash);    // the bright lower hem
                 if (v < 0.1)
                     continue;
                 const QRgb hem = mixRgb(colours[layer], m_palette[5].rgb(), t < 0.08 ? 0.4 * m_flash : 0);
-                const QRgb now = m_image.pixel(x, y);
+                const QRgb now = reinterpret_cast<const QRgb *>(m_image.constScanLine(y))[x];
                 const QRgb c = tint(hem, std::min(1.0, v), x, y);
                 // Brighter curtain wins where they overlap.
                 plot(x, y, qAlpha(now) && qGray(now) > qGray(c) ? now : c);
@@ -489,7 +511,63 @@ void PixelVisual::drawAurora(const In &in) {
     for (int y = ground; y < h; ++y)
         for (int x = 0; x < w; ++x) {
             const int mirror = ground - (y - ground) * 2;
-            const QRgb above = mirror >= 0 ? m_image.pixel(x, mirror) : 0;
+            const QRgb above = mirror >= 0 ? reinterpret_cast<const QRgb *>(m_image.constScanLine(mirror))[x] : 0;
             plot(x, y, qAlpha(above) && (x + y) % 2 ? mixRgb(m_window.rgb(), above, 0.3) : m_window.rgb());
         }
+}
+
+// ---- Halo: the ring of rays around the cover, one cell per pixel. A cell
+// lights when its band reaches out that far; rays are mirrored left and
+// right with the lows at the top, so the ring reads as one shape. A soft
+// glow in the accent swells with the music, and on a hard beat a few rows
+// tear sideways for a frame. Drawn like the other pixel visuals (a small
+// image enlarged by the pixel grid), so it costs the same at any size.
+void PixelVisual::drawRing(const In &in) {
+    const int w = m_image.width(), h = m_image.height();
+    m_image.fill(Qt::transparent);
+    const double cx = w / 2.0, cy = h / 2.0;
+    const double outer = std::min(w, h) / 2.0;
+    const double inner = outer * 0.56;
+    const double span = outer - inner;
+    const int bands = Spectrum::Bands, rays = bands * 2;
+    const bool calm = in.dt == 0;
+    if (!calm)
+        m_rotation += (0.0006 + in.level * 0.004) * in.dt * 60;
+    const double r0 = inner + 1 + in.pulse * span * 0.05;
+    const bool tearing = in.pulse > 0.72;
+    const unsigned tearSeed = unsigned(m_rotation * 100000);
+    const QRgb accent = m_palette[0].rgb();
+    const double glowCore = std::clamp(0.08 + in.level * 0.35 + in.pulse * 0.2, 0.0, 0.55);
+    for (int y = 0; y < h; ++y) {
+        int shift = 0;
+        if (tearing) {
+            const unsigned hsh = (unsigned(y + 1000) * 2654435761u) ^ tearSeed;
+            if (hsh % 9 == 0)
+                shift = (hsh & 16) ? 1 : -1;
+        }
+        QRgb *row = reinterpret_cast<QRgb *>(m_image.scanLine(y));
+        for (int x = 0; x < w; ++x) {
+            const double dx = x + 0.5 - cx - shift, dy = y + 0.5 - cy;
+            const double r = std::sqrt(dx * dx + dy * dy);
+            if (r > outer || r < inner * 0.9)
+                continue;
+            double angle = std::atan2(dy, dx) + M_PI / 2 - m_rotation;
+            angle = std::fmod(angle + 4 * M_PI, 2 * M_PI);
+            const int i = std::clamp(int(angle / (2 * M_PI) * rays), 0, rays - 1);
+            const int b = i < bands ? i : rays - 1 - i;
+            const double v = calm ? 0.15 : band(double(b) / (bands - 1));
+            const double reach = r0 + 1 + v * (span - 2) * (0.75 + in.pulse * 0.25);
+            if (r >= r0 && r <= reach) {
+                // Brighter towards the cover, like light leaving it.
+                const double fade = 1.0 - (r - r0) / std::max(1.0, reach - r0) * 0.6;
+                row[x] = tint(accent, std::clamp(0.3 + v * 0.6 + fade * 0.4, 0.0, 1.0), x, y);
+            } else {
+                // The glow: dim and smooth (dithering a faint glow only
+                // makes a checkerboard), fading out to the rim.
+                const double g = glowCore * (1.0 - std::clamp((r - inner * 0.9) / (outer - inner * 0.9), 0.0, 1.0));
+                if (g > 0.03)
+                    row[x] = mixRgb(m_window.rgb(), accent, g);
+            }
+        }
+    }
 }

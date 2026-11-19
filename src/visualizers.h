@@ -31,7 +31,7 @@ class PixelVisual : public QQuickPaintedItem {
     Q_PROPERTY(QColor window READ window WRITE setWindow NOTIFY changed)
 
 public:
-    enum Mode { Skyline, Scope, Ridges, Waterfall, Warp, Aurora, Count };
+    enum Mode { Skyline, Scope, Ridges, Waterfall, Warp, Aurora, Ring, Count };
     Q_ENUM(Mode)
 
     explicit PixelVisual(QQuickItem *parent = nullptr);
@@ -74,6 +74,8 @@ private:
     void drawWaterfall(const In &in);
     void drawWarp(const In &in);
     void drawAurora(const In &in);
+    void drawRing(const In &in);
+    void rebuildRamp();                              // the ramp's few shades, once per palette
 
     Spectrum *m_spectrum = nullptr;
     int m_mode = Skyline;
@@ -90,6 +92,9 @@ private:
         float x, y, z, px, py;
     };
     std::vector<Star> m_stars;
+    // ramp() quantises to 10 shades; they are blended once, not per pixel.
+    std::array<QRgb, 10> m_rampLut{};
+    double m_rotation = 0;
     unsigned m_seed = 0x2545F491u;
     float random01();
 };

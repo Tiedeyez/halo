@@ -143,6 +143,7 @@ ApplicationWindow {
         // starts in the centre while smaller drops float elsewhere.
         PixelField {
             anchors.fill: parent
+            cell: Math.max(3, Math.round(6 / Style.pixelDensity))
             origin: Qt.point(width * 0.5, height * 0.5)
             visible: nowPlayingView.opacity < 1
         }
