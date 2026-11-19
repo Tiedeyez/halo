@@ -37,6 +37,8 @@ Control a running Halo:
   moment                       Save a moment at the current second
   blend|drift|shuffle|normalize <on|off>
   repeat <off|all|one>
+  visual [next|previous|name]  Switch the visual: halo, bars, kaleidoscope, skyline,
+                               phosphor, pulsar, waterfall, warp, aurora, hologram
   sleep <minutes|off>          Fade out and pause after N minutes
   lyrics [--json]              The current song's lyrics, the line being sung marked
   lyrics online <on|off>       Look lyrics up on lrclib.net (sends title, artist,
@@ -141,10 +143,14 @@ void printStatus(const QJsonObject &s) {
 
 int remote(const QString &command, const QStringList &args, bool json) {
     QJsonArray list;
+    // Paths go over as absolute paths, since Halo has its own cwd. Only for
+    // the commands that take files: `halo visual halo` run from a folder that
+    // holds something named "halo" must still mean the visual.
+    static const QStringList takesFiles{"add", "open", "playnext", "grab"};
     for (const QString &a : args) {
-        // Paths go over as absolute paths, since Halo has its own cwd.
         const QFileInfo info(a);
-        list.append(info.exists() ? info.absoluteFilePath() : a);
+        // grab names a file that doesn't exist yet, so it is always made absolute.
+        list.append(takesFiles.contains(command) && (info.exists() || command == "grab") ? info.absoluteFilePath() : a);
     }
     QJsonObject reply;
     if (!Remote::send({{"cmd", command}, {"args", list}}, &reply, 3000))
@@ -163,6 +169,10 @@ int remote(const QString &command, const QStringList &args, bool json) {
                   << (o.value("artist").toString().isEmpty() ? QString() : " - " + o.value("artist").toString())
                   << (o.value("drift").toBool() ? "  (drift)" : "") << "\n";
         }
+        return 0;
+    }
+    if (command == "visual") {
+        out() << "Visual: " << reply.value("visual").toString() << "\n";
         return 0;
     }
     if (command == "lyrics") {
@@ -296,7 +306,7 @@ namespace Cli {
 bool isCommand(const QStringList &arguments) {
     static const QStringList commands{"status", "play", "pause", "toggle", "next", "previous", "prev", "seek",
                                       "volume", "add", "playnext", "queue", "clear", "moment", "blend", "drift",
-                                      "shuffle", "normalize", "repeat", "sleep", "rescan", "scan", "analyze", "lyrics",
+                                      "shuffle", "normalize", "repeat", "sleep", "rescan", "scan", "analyze", "lyrics", "visual",
                                       "skill", "grab", "ui", "help", "-h", "--help", "-v", "--version"};
     return arguments.size() > 1 && commands.contains(arguments[1]);
 }

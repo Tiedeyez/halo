@@ -62,6 +62,7 @@ Item {
         property color c2: Style.paletteColour(2)
         property color c3: Style.paletteColour(3)
         property color c4: Style.paletteColour(4)
+        property color c5: Style.paletteColour(5)
         property color window: Style.window
         fragmentShader: "qrc:/shaders/kaleido.frag.qsb"
     }

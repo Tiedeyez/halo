@@ -426,6 +426,22 @@ QJsonObject Remote::handle(const QJsonObject &request) {
         emit grabRequested(args.first());
         return {{"ok", true}};
     }
+    if (cmd == "visual") {
+        static const QStringList names{"halo", "bars", "kaleidoscope", "skyline", "phosphor",
+                                       "pulsar", "waterfall", "warp", "aurora", "hologram"};
+        if (!args.isEmpty()) {
+            const QString v = args.first().toLower();
+            bool number = false;
+            const int n = v.toInt(&number);
+            const int index = v == "next" ? (m_player->visualStyle() + 1) % int(names.size())
+                            : v == "previous" ? (m_player->visualStyle() + int(names.size()) - 1) % int(names.size())
+                            : number ? n : int(names.indexOf(v));
+            if (index < 0 || index >= int(names.size()))
+                return {{"ok", false}, {"error", "visual takes next, previous, 0 to 9 or a name: " + names.join(", ")}};
+            m_player->setVisualStyle(index);
+        }
+        return {{"ok", true}, {"visual", names.value(m_player->visualStyle())}};
+    }
     if (cmd == "ui" && args.size() == 2) {
         emit uiRequested(args[0], args[1]);
         return {{"ok", true}};

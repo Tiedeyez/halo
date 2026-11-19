@@ -37,6 +37,7 @@
 #include "kaleidopilot.h"
 #include "player.h"
 #include "remote.h"
+#include "visualizers.h"
 #include "safety.h"
 #include "ring.h"
 #include "stream.h"
@@ -1052,6 +1053,47 @@ private slots:
         QCOMPARE(player.repeat(), int(Player::RepeatOne));
         QVERIFY(!remote.handle({{"cmd", "nonsense"}}).value("ok").toBool());
         QVERIFY(!remote.handle({{"cmd", "grab"}, {"args", QJsonArray{"/tmp/x.txt"}}}).value("ok").toBool());
+        // visual: by name, by number, next/previous wrapping, bad names refused.
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"hologram"}}}).value("visual").toString(), QString("hologram"));
+        QCOMPARE(player.visualStyle(), 9);
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("halo"));
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"previous"}}}).value("visual").toString(), QString("hologram"));
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"3"}}}).value("visual").toString(), QString("skyline"));
+        QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"10"}}}).value("ok").toBool());
+        QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"mandelbrot"}}}).value("ok").toBool());
+        QCOMPARE(remote.handle({{"cmd", "visual"}}).value("visual").toString(), QString("skyline"));
+    }
+
+    void pixelVisualsDrawOnlyTheThemesColours() {
+        // Every mode draws something at rest and on a beat, at the grid's
+        // size, and never a colour that isn't the window, the theme's
+        // palette or a blend between them (no stray white or black).
+        const QStringList palette{"#2d95dc", "#46ade6", "#2d7fe0", "#9d8cf0", "#6cc6ee", "#c3ecf8"};
+        for (int mode = 0; mode < PixelVisual::Count; ++mode) {
+            PixelVisual v;
+            v.setWidth(48);
+            v.setHeight(40);
+            v.setPalette(palette);
+            v.setWindow(QColor("#0a1430"));
+            v.setMode(mode);
+            for (int i = 0; i < 90; ++i)
+                v.step(1.0 / 60, i % 30 == 0 ? 1.0 : 0.2, 0.6, 0.7, 0.5, 0.4);
+            const QImage &f = v.frame();
+            QCOMPARE(f.size(), QSize(48, 40));
+            int lit = 0;
+            for (int y = 0; y < f.height(); ++y)
+                for (int x = 0; x < f.width(); ++x) {
+                    const QColor c = QColor::fromRgba(f.pixel(x, y));
+                    if (c.alpha() == 0)
+                        continue;
+                    ++lit;
+                    QVERIFY2(c.red() < 250 || c.green() < 250 || c.blue() < 250, qPrintable(PixelVisual::modeName(mode)));
+                }
+            // Waterfall is a spectrogram: with no spectrum attached it is
+            // silence, so dark is right.
+            if (mode != PixelVisual::Waterfall)
+                QVERIFY2(lit > 20, qPrintable(PixelVisual::modeName(mode) + " drew almost nothing"));
+        }
     }
 
     void themeAccentFallsBack() {

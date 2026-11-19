@@ -31,6 +31,7 @@
 #include "theme.h"
 #include "translator.h"
 #include "visual.h"
+#include "visualizers.h"
 
 static constexpr const char *Version = "0.1.0";
 
@@ -140,6 +141,7 @@ int main(int argc, char *argv[]) {
     Spectrum spectrum(&player.engine());
     qmlRegisterType<HaloView>("Halo", 1, 0, "HaloView");
     qmlRegisterType<KaleidoPilot>("Halo", 1, 0, "KaleidoPilot");
+    qmlRegisterType<PixelVisual>("Halo", 1, 0, "PixelVisual");
     qmlRegisterSingletonType(QUrl("qrc:/Style.qml"), "Halo", 1, 0, "Style");
     qmlRegisterUncreatableType<QueueModel>("Halo", 1, 0, "QueueModel", "from player");
     qmlRegisterUncreatableType<MomentModel>("Halo", 1, 0, "MomentModel", "from player");

@@ -30,6 +30,8 @@ public:
 
     const std::vector<float> &bands() const { return m_bands; }
     const std::vector<float> &peaks() const { return m_peaks; }
+    // The last 2048 samples the engine played, oldest first (for scopes).
+    const std::vector<float> &wave() const { return m_wave; }
     double pulse() const { return m_pulse; }
     double level() const { return m_level; }
     double low() const { return average(0, 10); }
@@ -37,6 +39,8 @@ public:
     double high() const { return average(36, Bands); }
     bool active() const { return m_active; }
     void setActive(bool active);
+    // The average of bands [from, to), for visuals drawn in QML shaders.
+    Q_INVOKABLE double bandAverage(int from, int to) const { return average(from, to); }
 
     // The pure part, for tests: magnitudes of 2048 samples at 48 kHz into
     // `Bands` log-spaced bands, 0 to 1.
@@ -58,7 +62,7 @@ private:
     Engine *m_engine;
     QTimer m_timer;
     bool m_active = false;
-    std::vector<float> m_history, m_read;
+    std::vector<float> m_history, m_read, m_wave;
     size_t m_historyPos = 0;
     std::vector<float> m_bands, m_peaks, m_peakVelocity;
     double m_pulse = 0, m_level = 0, m_bassAverage = 0;

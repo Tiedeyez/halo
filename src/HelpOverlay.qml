@@ -30,7 +30,7 @@ Rectangle {
         ["S  R", qsTr("Shuffle, repeat")],
         ["E", qsTr("Equalizer")],
         ["Z", qsTr("Sleep timer")],
-        ["V  C", qsTr("Switch the visual, calm the motion")],
+        ["V  ⇧V  C", qsTr("Next or previous visual (10), calm the motion")],
         ["Ctrl+Z  Ctrl+Shift+Z", qsTr("Undo and redo queue changes")],
         ["Ctrl+R", qsTr("Look for new music")],
         ["?", qsTr("Show or hide this sheet")],

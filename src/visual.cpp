@@ -67,10 +67,10 @@ void Spectrum::tick() {
             m_history[m_historyPos] = m_read[i];
             m_historyPos = (m_historyPos + 1) % Window;
         }
-    std::vector<float> ordered(Window);
+    m_wave.resize(Window);
     for (size_t i = 0; i < Window; ++i)
-        ordered[i] = m_history[(m_historyPos + i) % Window];
-    const auto fresh = analyse(ordered);
+        m_wave[i] = m_history[(m_historyPos + i) % Window];
+    const auto fresh = analyse(m_wave);
 
     double bass = 0, total = 0;
     for (int b = 0; b < Bands; ++b) {

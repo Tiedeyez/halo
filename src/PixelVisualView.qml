@@ -1,0 +1,59 @@
+import QtQuick
+import QtQuick.Window
+import Halo
+
+// One of the pixel visualisers (Skyline, Phosphor, Pulsar, Waterfall, Warp,
+// Aurora): PixelVisual (C++) draws it one pixel per cell, and the shared
+// pixel grid enlarges it into square screen pixels with gaps. It steps once
+// per screen refresh while music plays; calm (C) holds the last frame.
+Item {
+    id: root
+    property int mode: 0
+    property int cell: 6
+    readonly property bool supported: GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
+    readonly property bool moving: Style.motion && player.playing && visible
+                                   && root.Window.window && root.Window.window.visibility !== Window.Minimized
+
+    MotionClock {
+        id: clock
+        running: root.moving
+        onTicked: dt => art.step(dt, clock.pulse, clock.level, clock.low, clock.mid, clock.high)
+    }
+
+    PixelVisual {
+        id: art
+        width: Math.max(1, Math.ceil(root.width / root.cell))
+        height: Math.max(1, Math.ceil(root.height / root.cell))
+        mode: root.mode
+        spectrum: spectrumSource
+        window: Style.window
+        palette: [Style.paletteColour(0), Style.paletteColour(1), Style.paletteColour(2),
+                  Style.paletteColour(3), Style.paletteColour(4), Style.paletteColour(5)]
+        visible: !root.supported
+        scale: root.supported ? 1 : root.cell
+        transformOrigin: Item.TopLeft
+        // A first frame, so a held or paused visual isn't empty.
+        Component.onCompleted: step(0, 0, 0.3, 0.3, 0.3, 0.3)
+        onWidthChanged: if (!root.moving) step(0, 0, 0.3, 0.3, 0.3, 0.3)
+    }
+    ShaderEffectSource {
+        id: texture
+        sourceItem: art
+        hideSource: root.supported
+        smooth: false
+        visible: false
+        live: true
+        textureSize: Qt.size(art.width, art.height)
+    }
+    ShaderEffect {
+        width: art.width * root.cell
+        height: art.height * root.cell
+        anchors.centerIn: parent
+        visible: root.supported
+        property variant source: texture
+        property size cells: Qt.size(art.width, art.height)
+        property real cell: root.cell
+        property color gapColour: Qt.rgba(0, 0, 0, 0)
+        fragmentShader: "qrc:/shaders/pixelgrid.frag.qsb"
+    }
+}

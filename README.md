@@ -39,8 +39,18 @@ checked against the source.
   holds for eight bars, then morphs into a song-seeded design over the last
   bar. Each beat punches the view in, flashes its lines, and sends a
   shockwave out; it doesn't swap the design. A new song's mirrors crossfade
-  in.
-  Visuals crossfade as V switches them. C keeps any of them still.
+  in. Its layers take turns in the theme's accent, magenta and bright cyan,
+  anti-aliased four samples a pixel so the shapes stay crisp.
+  Then seven more, all in square pixels and your theme's colours: **Skyline**
+  (a mirrored spectrum over a rippling reflection, bass in the middle),
+  **Phosphor** (an oscilloscope trace with afterglow), **Pulsar** (stacked
+  ridge lines of the spectrum), **Waterfall** (a scrolling spectrogram),
+  **Warp** (flying through stars, faster as the music gets louder),
+  **Aurora** (curtains of light with rays) and **Hologram** (the record as
+  a pixelated light disc, the album cover its label, turning at 33 1/3 with
+  the tonearm following the song).
+  Visuals crossfade as V switches them, and the name shows for a moment.
+  C keeps any of them still. `halo visual <name>` switches from a terminal.
 - **The window is water.** Behind everything lies a pond of square pixels
   with drifting caustics. Every beat drops a main ripple from the centre and
   another floater somewhere on the surface. Every click anywhere in the
@@ -157,6 +167,7 @@ halo status                     # what is playing and the library scan; --json f
 halo add song.flac ; halo playnext ~/Music/Other
 halo next ; halo pause ; halo seek +30 ; halo volume 60
 halo blend on ; halo drift off ; halo repeat all ; halo sleep 30
+halo visual hologram            # switch the visual (next, previous, or one of the ten by name)
 halo lyrics                     # the words of the song playing, the sung line marked
 halo lyrics online on           # look lyrics up on lrclib.net (off by default)
 halo lyrics offset +0.3         # this song's lyrics 0.3 s earlier

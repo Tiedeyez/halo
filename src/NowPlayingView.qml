@@ -20,6 +20,8 @@ Rectangle {
                                      && lyrics.kind !== Lyrics.KindInstrumental
     readonly property bool showWords: lyricsOn && hasWords
     readonly property bool wide: width >= 1080 && height >= 560
+    readonly property var visualNames: [qsTr("HALO"), qsTr("BARS"), qsTr("KALEIDOSCOPE"), qsTr("SKYLINE"),
+        qsTr("PHOSPHOR"), qsTr("PULSAR"), qsTr("WATERFALL"), qsTr("WARP"), qsTr("AURORA"), qsTr("HOLOGRAM")]
     readonly property real gutter: Math.max(16, Math.min(48, Math.min(width, height) * 0.05))
 
     // The cover's colours wash the background, softly.
@@ -74,9 +76,59 @@ Rectangle {
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
+        // The pixel visualisers: Skyline, Phosphor, Pulsar, Waterfall, Warp, Aurora.
+        PixelVisualView {
+            anchors.centerIn: parent
+            width: stage.side
+            height: stage.side
+            cell: Math.max(4, Math.round(stage.side / 96))
+            mode: Math.max(0, player.visualStyle - 3)
+            opacity: player.visualStyle >= 3 && player.visualStyle <= 8 ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
+        }
+        HoloVinyl {
+            anchors.centerIn: parent
+            width: stage.side
+            height: stage.side
+            cell: Math.max(3, Math.round(stage.side / 120))
+            opacity: player.visualStyle === 9 ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
+        }
+        // The visual's name, for a moment after V switches to it.
+        ScrambleText {
+            id: visualName
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            target: root.visualNames[player.visualStyle] || ""
+            duration: 420
+            color: Style.text
+            font.family: Style.mono
+            font.pixelSize: Style.fontSmall
+            font.letterSpacing: 2
+            opacity: 0
+            Connections {
+                target: player
+                function onSettingsChanged() {
+                    if (visualName.shownStyle !== player.visualStyle) {
+                        visualName.shownStyle = player.visualStyle
+                        nameShow.restart()
+                    }
+                }
+            }
+            property int shownStyle: player.visualStyle
+            SequentialAnimation {
+                id: nameShow
+                NumberAnimation { target: visualName; property: "opacity"; to: 1; duration: Style.motion ? 120 : 0 }
+                PauseAnimation { duration: 1300 }
+                NumberAnimation { target: visualName; property: "opacity"; to: 0; duration: Style.motion ? 500 : 0 }
+            }
+        }
         CoverArt {
             anchors.centerIn: parent
             glitchOnChange: true
+            visible: player.visualStyle <= 2
             // Smaller in the kaleidoscope, so it has a wide ring to show.
             width: stage.side * (player.visualStyle === 1 ? 0.78 : player.visualStyle === 2 ? 0.36 : 0.52)
             height: width
