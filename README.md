@@ -35,16 +35,17 @@ checked against the source.
   in square pixels that belongs to the song playing. The file decides it:
   the song picks its mirrors (5 to 12) and shape, the album its colours (so
   an album's songs belong together), the tempo its turn (one mirror every
-  eight beats, locked to the beat), the length a path the shape travels
-  across the song, the loudness its glow. Live, each beat clicks the inner
-  pattern round and punches the view in, the bass turns it further and the
-  mids make it wobble. A new song's mirrors crossfade in.
+  eight beats, locked to the beat), and the loudness its glow. Its design
+  holds for eight bars, then morphs into a song-seeded design over the last
+  bar. Each beat punches the view in, flashes its lines, and sends a
+  shockwave out; it doesn't swap the design. A new song's mirrors crossfade
+  in.
   Visuals crossfade as V switches them. C keeps any of them still.
 - **The window is water.** Behind everything lies a pond of square pixels
-  with drifting caustics. Every beat drops a ripple (from the cover, or
-  somewhere on the surface), every click anywhere in the window drops one
-  where you clicked, and the pointer leaves a soft wake. The rings spread,
-  cross and fade, and bend the stars and rain under them. It is kept dim
+  with drifting caustics. Every beat drops a main ripple from the centre and
+  another floater somewhere on the surface. Every click anywhere in the
+  window drops one where you clicked, and the pointer leaves a soft wake.
+  The rings spread, cross and fade, and bend the stars and rain under them. It is kept dim
   enough that the faintest text over it still reads at 7:1, it rests when
   nothing is playing or rippling, and C stills it.
 - **Smooth motion.** Everything moves on the display's own frame clock with

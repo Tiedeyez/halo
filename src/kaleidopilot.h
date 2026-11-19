@@ -7,15 +7,18 @@
 // every song and turning in time with it.
 //
 // From the file: the song's identity (path, title, artist) picks the number
-// of mirrors and the fractal's shape; the album picks the colour family, so
-// an album's songs belong together; the tempo sets the turn, one mirror's
-// width every eight beats, locked to the beat; the length lays out a path
-// the shape travels across the whole song, so a moment in a song always
-// looks the same; loudness sets the glow.
+// of mirrors and a sequence of designs; the album picks the colour family,
+// so an album's songs belong together; the tempo sets the turn, one
+// mirror's width every eight beats, locked to the beat; loudness sets the
+// glow.
 //
-// From the music, live: each beat kicks: the view snaps in and springs
-// back, the inner pattern turns a notch (further on heavy bass), the whole
-// thing flashes and a shockwave rings out; the mids wobble the shape.
+// The design changes with the music's phrases, not its beats: it holds for
+// 32 beats (eight bars) and morphs into the next design over the phrase's
+// last four. Which design comes next is worked out from the song and the
+// phrase number, so a moment in a song always looks the same.
+//
+// The beat only pulses it: the view snaps in and springs back, it flashes,
+// and a shockwave rings out. The shape stays put.
 //
 // Everything eases, so a seek or a new song glides; a new song's mirror
 // count crossfades in.
@@ -32,7 +35,8 @@ struct Song {
     double hue = 0;                 // 0..1 around the theme's colours
     double direction = 1;           // which way it turns
     double zoom = 1.1;
-    double phaseX = 0, phaseY = 0;  // where on its path the shape starts
+    double twist = 0.6;             // the inner turn of the first design
+    quint64 seed = 0;               // picks every later design
 };
 
 // Everything that comes from the file alone.
@@ -41,6 +45,8 @@ Song fromFile(const QString &path, const QString &title, const QString &artist, 
 class Pilot {
 public:
     static constexpr int BeatsPerMirror = 8;
+    static constexpr int BeatsPerPhrase = 32;   // a design holds this long
+    static constexpr int BeatsToMorph = 4;      // ...then morphs over this many
 
     void setSong(const Song &song, double bpm, double duration, double loudness);
     // dt seconds; position in the song (s); pulse, low, mid 0..1.
@@ -60,8 +66,8 @@ public:
     double kick() const { return m_kick; }   // 1 on a beat, falling fast
     int beats() const { return m_beats; }
 
-    // Where the shape is meant to be at `position` (before easing).
-    void shapeAt(double position, double &cx, double &cy) const;
+    // The design meant for `position` (before easing).
+    void shapeAt(double position, double &cx, double &cy, double &twist) const;
     double spinAt(double position) const;
 
 private:
@@ -69,7 +75,7 @@ private:
     double m_bpm = 120, m_duration = 180, m_loudness = -14;
     int m_previousFolds = 6;
     double m_foldMix = 1;
-    double m_spin = 0, m_twist = 0, m_twistGoal = 0;
+    double m_spin = 0, m_twist = 0;
     double m_cx = 0.65, m_cy = 0.5, m_zoom = 1.4, m_hue = 0, m_glow = 1;
     double m_kick = 0;
     bool m_beat = false, m_started = false;

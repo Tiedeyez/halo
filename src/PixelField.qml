@@ -3,9 +3,9 @@ import QtQuick.Window
 import Halo
 
 // The window's background: pixelated water and a second visualiser (see
-// shaders/pixelfield.frag). Every beat throws a hard drop from the cover
-// (`origin`) and another somewhere on the surface, the bass pumps rings out
-// of the cover, the mids wobble them; every click anywhere in the window
+// shaders/pixelfield.frag). Every beat throws a hard drop from the centre
+// and another somewhere on the surface, the bass pumps rings out of the
+// centre, the mids wobble them; every click anywhere in the window
 // drops a ripple too, and the pointer leaves a soft wake. It moves while music plays or ripples are still spreading, so a
 // quiet Halo costs no frames, and calm (C) stills it. The brightest a pixel
 // gets is worked out from the theme's accent so the faintest text over it
@@ -13,7 +13,7 @@ import Halo
 // they pass.
 Item {
     id: root
-    property point origin: Qt.point(width * 0.1, height)
+    property point origin: Qt.point(width * 0.5, height * 0.5)
     property int cell: 6
     readonly property bool supported: GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property bool shown: visible && root.Window.window && root.Window.window.visibility !== Window.Minimized
@@ -59,12 +59,13 @@ Item {
         property bool wasBeat: false
         property real rainAt: 0
         onTicked: dt => {
-            // Every beat throws a hard drop from the cover and another
-            // somewhere on the surface, harder on louder, bassier music.
+            // Every beat throws the main drop from the centre and keeps a
+            // second floater somewhere on the surface, harder on louder,
+            // bassier music.
             const beat = clock.pulse > 0.5
             if (beat && !wasBeat && player.playing) {
                 const force = 1.0 + 0.6 * clock.level + 0.6 * clock.low
-                root.drop(root.origin.x, root.origin.y, force)
+                root.drop(root.width * 0.5, root.height * 0.5, force)
                 root.drop(Math.random() * root.width, Math.random() * root.height, force * 0.7)
             }
             wasBeat = clock.pulse > 0.3 && (wasBeat || beat)

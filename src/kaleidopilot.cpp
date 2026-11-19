@@ -36,8 +36,8 @@ Song fromFile(const QString &path, const QString &title, const QString &artist, 
     s.ring = 0.1 + 0.5 * unit(f, 40);
     s.direction = (f >> 1) & 1 ? 1 : -1;
     s.zoom = 0.95 + 0.3 * unit(f, 56);
-    s.phaseX = Tau * unit(f ^ 0x9e3779b97f4a7c15ULL, 4);
-    s.phaseY = Tau * unit(f ^ 0x9e3779b97f4a7c15ULL, 20);
+    s.seed = f ^ 0x9e3779b97f4a7c15ULL;
+    s.twist = 0.2 + 1.2 * unit(s.seed, 4);
     // The album alone picks the colours.
     s.hue = unit(fingerprint(album.isEmpty() ? path.section('/', 0, -2) : album), 16);
     return s;
@@ -56,17 +56,49 @@ void Pilot::setSong(const Song &song, double bpm, double duration, double loudne
         m_previousFolds = song.folds;
         m_cx = song.cx;
         m_cy = song.cy;
+        m_twist = song.twist;
         m_zoom = song.zoom;
         m_hue = song.hue;
         m_started = true;
     }
 }
 
-void Pilot::shapeAt(double position, double &cx, double &cy) const {
-    // A slow loop through the constant's neighbourhood across the song.
-    const double u = std::clamp(position / m_duration, 0.0, 1.0);
-    cx = m_song.cx + 0.07 * std::sin(Tau * u * 3 + m_song.phaseX);
-    cy = m_song.cy + 0.07 * std::sin(Tau * u * 2 + m_song.phaseY);
+namespace {
+// SplitMix64: a well-mixed number from the song's seed and a phrase number.
+quint64 mix(quint64 x) {
+    x += 0x9e3779b97f4a7c15ULL;
+    x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
+    return x ^ (x >> 31);
+}
+
+struct Design {
+    double cx, cy, twist;
+};
+
+// Phrase k's design: the song's own, nudged a step around its
+// neighbourhood. Kept in the box where the Kali set makes lace.
+Design design(const Song &song, qint64 k) {
+    if (k <= 0)
+        return {song.cx, song.cy, song.twist};
+    const quint64 r = mix(song.seed + quint64(k));
+    return {std::clamp(song.cx + 0.12 * (unit(r, 0) - 0.5), 0.52, 0.82),
+            std::clamp(song.cy + 0.12 * (unit(r, 16) - 0.5), 0.32, 0.62),
+            song.twist + 1.0 * (unit(r, 32) - 0.5)};
+}
+}
+
+void Pilot::shapeAt(double position, double &cx, double &cy, double &twist) const {
+    const double beats = std::max(0.0, position) * m_bpm / 60;
+    const qint64 k = qint64(std::floor(beats / BeatsPerPhrase));
+    const double into = beats - double(k) * BeatsPerPhrase;
+    // Held until the last few beats of the phrase, then eased into the next.
+    double t = std::clamp((into - (BeatsPerPhrase - BeatsToMorph)) / BeatsToMorph, 0.0, 1.0);
+    t = t * t * (3 - 2 * t);
+    const Design a = design(m_song, k), b = design(m_song, k + 1);
+    cx = a.cx + (b.cx - a.cx) * t;
+    cy = a.cy + (b.cy - a.cy) * t;
+    twist = a.twist + (b.twist - a.twist) * t;
 }
 
 double Pilot::spinAt(double position) const {
@@ -88,29 +120,27 @@ void Pilot::step(double dt, double position, double pulse, double low, double mi
     gap -= wedge * std::round(gap / wedge);
     m_spin += gap * (1 - std::exp(-dt / (std::fabs(gap) > 0.2 * wedge ? 0.35 : 0.05)));
 
-    // Each beat clicks the inner pattern round a notch.
+    // The beat only pulses it. The kick is full the instant a beat lands and
+    // gone in about a third of a second, so the punch is sharp however soft
+    // the pulse rises; heavy bass hits harder.
     const bool beat = pulse > 0.5;
+    m_kick *= std::exp(-dt / 0.11);
     if (beat && !m_beat) {
-        m_twistGoal += 0.18 + 0.35 * low;
-        m_kick = 1;
+        m_kick = 0.9 + 0.1 * low;
         ++m_beats;
     }
     m_beat = pulse > 0.3 && (m_beat || beat);
-    m_twist = ease(m_twist, m_twistGoal, dt, 0.10);
-    // The kick: full the instant a beat lands, gone in about a third of a
-    // second, so the punch is sharp however soft the pulse rises.
-    m_kick *= std::exp(-dt / 0.11);
 
-    double cx, cy;
-    shapeAt(position, cx, cy);
-    // The mids wobble it around its path.
-    cx += 0.012 * mid * std::sin(m_twist * 7.0);
-    cy += 0.012 * mid * std::cos(m_twist * 5.0);
-    m_cx = ease(m_cx, cx, dt, 0.4);
-    m_cy = ease(m_cy, cy, dt, 0.4);
+    // The design follows the phrase; a seek or a new song eases over.
+    double cx, cy, twist;
+    shapeAt(position, cx, cy, twist);
+    m_cx = ease(m_cx, cx, dt, 0.5);
+    m_cy = ease(m_cy, cy, dt, 0.5);
+    m_twist = ease(m_twist, twist, dt, 0.5);
+    (void)mid;
 
     // The beat punches the view in.
-    m_zoom = m_song.zoom * (1 - 0.22 * m_kick - 0.05 * pulse);
+    m_zoom = m_song.zoom * (1 - 0.22 * m_kick - 0.04 * pulse);
     // Around the colour wheel the short way.
     double dh = m_song.hue - m_hue;
     dh -= std::round(dh);

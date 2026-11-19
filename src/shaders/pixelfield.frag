@@ -2,8 +2,8 @@
 
 // Halo's window background: pixelated water, and a second visualiser. A field
 // of square pixels, mostly dark, crossed by drifting caustics, whose surface
-// ripples hard to the music: every beat throws a drop from the cover (and
-// more land elsewhere), the bass pumps rings out of the cover without pause,
+// ripples hard to the music: every beat throws a drop from the centre (and
+// more land elsewhere), the bass pumps rings out of the centre without pause,
 // the mids make every ring wobble, and clicks and the pointer's wake drop
 // ripples too. The rings spread, cross and fade, and bend the stars and rain
 // beneath them. Time held still (calm), it is a still pond.
@@ -24,12 +24,12 @@ layout(std140, binding = 0) uniform buf {
     float qt_Opacity;
     float time;      // seconds
     float level;     // 0..1, loudness: the swell under everything
-    float low;       // 0..1, bass: pumps rings out of the cover
+    float low;       // 0..1, bass: pumps rings out of the centre
     float mid;       // 0..1, mids: how much the rings wobble
     float strength;  // brightest the steady water gets, 0..1
     float flash;     // brightest a ripple gets, 0..1
     vec2 size;       // the grid, in cells
-    vec2 origin;     // the cover, in cells
+    vec2 origin;     // centre of the main rings, in cells
     vec4 accent;
     vec4 shine;      // a lighter colour for the brightest glints
     // Up to eight drops: x, y (cells), when (seconds of `time`), how hard.
@@ -74,7 +74,7 @@ float ripple(vec2 p, vec4 d) {
 float waves(vec2 p) {
     float h = ripple(p, d0) + ripple(p, d1) + ripple(p, d2) + ripple(p, d3)
             + ripple(p, d4) + ripple(p, d5) + ripple(p, d6) + ripple(p, d7);
-    // The bass pumps rings out of the cover all the time, wobbling too.
+    // The bass pumps rings out of the centre all the time, wobbling too.
     vec2 v = p - origin;
     float r = length(v);
     r += sin(atan(v.y, v.x) * 4.0 + time * 1.3) * (1.0 + 3.0 * mid);

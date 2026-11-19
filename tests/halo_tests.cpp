@@ -430,16 +430,47 @@ private slots:
             pilot.step(1.0 / 60, position += 1.0 / 60, 0, 0, 0);
         QVERIFY2(std::fabs(std::fabs(pilot.spin() - before) - wedge) < wedge * 0.03,
                  qPrintable(QString("%1 vs %2").arg(std::fabs(pilot.spin() - before)).arg(wedge)));
-        // Every beat clicks the pattern on; it never turns back.
-        double twist = pilot.twist();
-        const int beats = pilot.beats();
+        // The song's design is stable during a phrase, then morphs smoothly
+        // during its final four beats into a deterministic next design.
+        double cx0, cy0, twist0, cx, cy, twist;
+        pilot.shapeAt(1.0, cx0, cy0, twist0);
+        pilot.shapeAt(13.0, cx, cy, twist);
+        QCOMPARE(cx, cx0);
+        QCOMPARE(cy, cy0);
+        QCOMPARE(twist, twist0);
+        double cxAt28, cyAt28, twistAt28;
+        pilot.shapeAt(14.0, cxAt28, cyAt28, twistAt28); // 28 beats at 120 BPM
+        double cxAt30, cyAt30, twistAt30;
+        pilot.shapeAt(15.0, cxAt30, cyAt30, twistAt30);
+        QVERIFY(cxAt30 != cxAt28 || cyAt30 != cyAt28 || twistAt30 != twistAt28);
+        double cxAt32, cyAt32, twistAt32;
+        pilot.shapeAt(16.0, cxAt32, cyAt32, twistAt32);
+        QVERIFY(cxAt32 != cx0 || cyAt32 != cy0 || twistAt32 != twist0);
+        double cxAt44, cyAt44, twistAt44;
+        pilot.shapeAt(22.0, cxAt44, cyAt44, twistAt44);
+        QCOMPARE(cxAt44, cxAt32);
+        QCOMPARE(cyAt44, cyAt32);
+        QCOMPARE(twistAt44, twistAt32);
+        double cxRepeat, cyRepeat, twistRepeat;
+        pilot.shapeAt(16.0, cxRepeat, cyRepeat, twistRepeat);
+        QCOMPARE(cxRepeat, cxAt32);
+        QCOMPARE(cyRepeat, cyAt32);
+        QCOMPARE(twistRepeat, twistAt32);
+
+        // Beat pulses do not change the phrase design or its easing.
+        Pilot pulseFree, pulseDriven;
+        pulseFree.setSong(song, 120, 240, -10);
+        pulseDriven.setSong(song, 120, 240, -10);
         for (int f = 0; f < 60 * 10; ++f) {
             const double pulse = (f % 30) < 4 ? 1.0 : 0.0;
-            pilot.step(1.0 / 60, position += 1.0 / 60, pulse, 0.6, 0.4);
-            QVERIFY(pilot.twist() >= twist - 1e-12);
-            twist = pilot.twist();
+            const double at = f / 60.0;
+            pulseFree.step(1.0 / 60, at, 0, 0.6, 0.4);
+            pulseDriven.step(1.0 / 60, at, pulse, 0.6, 0.4);
+            QCOMPARE(pulseDriven.cx(), pulseFree.cx());
+            QCOMPARE(pulseDriven.cy(), pulseFree.cy());
+            QCOMPARE(pulseDriven.twist(), pulseFree.twist());
         }
-        QCOMPARE(pilot.beats() - beats, 20);
+        QCOMPARE(pulseDriven.beats(), 20);
         // Each beat kicks: the view snaps in by a fifth, then springs back
         // before the next.
         Pilot punch;

@@ -38,11 +38,12 @@ Rectangle {
             GradientStop { position: 1; color: Style.window }
         }
     }
-    // The pixel field, its beat ring starting from the cover.
+    // The pixel field's main beat rings stay centred; the smaller floaters
+    // still land across the surface.
     PixelField {
         anchors.fill: parent
         cell: 7
-        origin: Qt.point(width * (root.showWords ? 0.2 : 0.32), height * 0.42)
+        origin: Qt.point(width * 0.5, height * 0.5)
     }
 
     // ---- pieces ----

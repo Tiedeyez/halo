@@ -138,11 +138,11 @@ ApplicationWindow {
         layer.effect: GlitchEffect { amount: bootGlitch.amount; seed: bootGlitch.seed }
         Timer { interval: 60; running: true; onTriggered: bootGlitch.kick(1) }
 
-        // The living pixel field behind the library; its beat ring starts
-        // at the cover in the bar.
+        // The living pixel field behind the library; its main beat ring
+        // starts in the centre while smaller drops float elsewhere.
         PixelField {
             anchors.fill: parent
-            origin: Qt.point(58, height - 52)
+            origin: Qt.point(width * 0.5, height * 0.5)
             visible: nowPlayingView.opacity < 1
         }
 
