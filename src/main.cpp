@@ -26,6 +26,7 @@
 #include "lyrics.h"
 #include "player.h"
 #include "remote.h"
+#include "safety.h"
 #include "stream.h"
 #include "theme.h"
 #include "translator.h"
@@ -34,6 +35,8 @@
 static constexpr const char *Version = "0.1.0";
 
 int main(int argc, char *argv[]) {
+    // Before anything is written: Halo's files are private to you.
+    Safety::makePrivate(Safety::ownFolders());
     QStringList arguments;
     for (int i = 0; i < argc; ++i)
         arguments << QString::fromLocal8Bit(argv[i]);
@@ -131,7 +134,7 @@ int main(int argc, char *argv[]) {
     audio.start();
     player.setAudioProblem(audio.problem().isEmpty() ? remote.error() : audio.problem());
 
-    if (QStandardPaths::findExecutable("ffmpeg").isEmpty())
+    if (Safety::systemTool("ffmpeg").isEmpty())
         player.setAudioProblem(QCoreApplication::translate("main", "ffmpeg isn't installed. Install it with: omarchy-pkg-add ffmpeg"));
 
     Spectrum spectrum(&player.engine());
@@ -182,7 +185,7 @@ int main(int argc, char *argv[]) {
             window->requestActivate();
         }
         if (!qEnvironmentVariableIsEmpty("HYPRLAND_INSTANCE_SIGNATURE"))
-            QProcess::startDetached("hyprctl", {"dispatch", "hl.dsp.focus({ window = \"class:halo\" })"});
+            QProcess::startDetached(Safety::systemTool("hyprctl"), {"dispatch", "hl.dsp.focus({ window = \"class:halo\" })"});
     });
 
     QObject::connect(&remote, &Remote::grabRequested, &app, [&](const QString &path) {

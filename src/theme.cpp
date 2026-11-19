@@ -1,5 +1,6 @@
 // Theme watching follows Omacut (MIT, David Heinemeier Hansson).
 #include "theme.h"
+#include "safety.h"
 
 #include <QColor>
 #include <QDir>
@@ -25,7 +26,7 @@ Theme::Theme(const QString &directory, QObject *parent, const QString &hyprctl)
     // Without Hyprland the corners stay sharp, like Omarchy's default.
     m_hyprctl = !hyprctl.isEmpty() ? hyprctl
               : directory.isEmpty() && !qEnvironmentVariableIsEmpty("HYPRLAND_INSTANCE_SIGNATURE")
-                  ? QStandardPaths::findExecutable("hyprctl") : QString();
+                  ? Safety::systemTool("hyprctl") : QString();
     m_roundingTimeout.setSingleShot(true);
     m_roundingTimeout.setInterval(500);
     connect(&m_roundingTimeout, &QTimer::timeout, &m_roundingProcess, &QProcess::kill);

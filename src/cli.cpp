@@ -255,10 +255,24 @@ int skill(const QStringList &args) {
         out() << Skill;
         return 0;
     }
-    if (args != QStringList{"install"})
-        return fail("usage: halo skill [install]", false);
+    const bool force = args == QStringList{"install", "--force"};
+    if (args != QStringList{"install"} && !force)
+        return fail("usage: halo skill [install [--force]]", false);
     const QString home = QDir::homePath();
     const QString directory = home + "/.agents/skills/halo";
+    // Only replace a SKILL.md this command wrote (it starts with "name: halo");
+    // anything else there is someone else's, so it's left alone without --force.
+    {
+        QFile existing(directory + "/SKILL.md");
+        if (!force && existing.open(QIODevice::ReadOnly)) {
+            const QByteArray head = existing.read(256);
+            if (!head.startsWith("---\nname: halo\n"))
+                return fail(QString("%1 isn't Halo's; left it alone (halo skill install --force replaces it)")
+                                .arg(existing.fileName()), false);
+        }
+    }
+    if (QFileInfo(directory).isSymLink())
+        return fail(QString("%1 is a link; left it alone").arg(directory), false);
     QDir().mkpath(directory);
     QSaveFile file(directory + "/SKILL.md");
     const QByteArray bytes(Skill);

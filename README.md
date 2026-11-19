@@ -181,6 +181,23 @@ bin/install    # makepkg -fsi: installs halo, its icon and launcher entry
 ```
 
 After `bin/install`, Halo is in the app launcher (Super+Space).
+`bin/install` builds the package from this folder, then `makepkg -i` asks
+for your password once so pacman can install it.
+
+## Remove
+
+```sh
+sudo pacman -Rns halo                        # the app, its icon and launcher entry
+rm -rf ~/.local/state/halo ~/.cache/halo     # your queue, play history, lyrics and caches
+rm -rf ~/.config/halo                        # only if you made a folders file there
+rm -rf ~/.agents/skills/halo ~/.claude/skills/halo   # only if you ran `halo skill install`
+```
+
+Halo never edits your music files except through Library Doctor fixes you
+press (each one undoable while Halo is installed), and never changes Omarchy
+or Hyprland settings, so nothing else needs undoing. If you made Halo your
+default player for audio files, pick another in your file manager or remove
+the `halo.desktop` lines from `~/.config/mimeapps.list`.
 
 ## How it works
 

@@ -1,4 +1,5 @@
 #include "stream.h"
+#include "safety.h"
 
 #include <QCoreApplication>
 #include <QFile>
@@ -23,7 +24,7 @@ constexpr size_t RingFloats = size_t(Stream::SampleRate) * Stream::Channels * 6;
 
 Stream::Stream(const QString &path, double startSeconds, const QString &ffmpeg)
     : m_path(path), m_start(std::max(0.0, startSeconds)),
-      m_ffmpeg(ffmpeg.isEmpty() ? QStandardPaths::findExecutable("ffmpeg") : ffmpeg), m_ring(RingFloats) {}
+      m_ffmpeg(ffmpeg.isEmpty() ? Safety::systemTool("ffmpeg") : ffmpeg), m_ring(RingFloats) {}
 
 Stream::~Stream() {
     m_stop = true;
@@ -84,6 +85,9 @@ void Stream::run() {
     // flat (tools/audio-lab/resample.py). Arch's ffmpeg is built with soxr.
     const QByteArray resample = "aresample=" + rate + ":resampler=soxr:precision=28";
     std::vector<const char *> argv{program.constData(), "-nostdin", "-hide_banner", "-v", "error",
+                                   // A "song" that is really a playlist (HLS, concat) can't
+                                   // make ffmpeg reach the network: local files only.
+                                   "-protocol_whitelist", "file",
                                    "-ss", start.constData(), "-i", file.constData(),
                                    "-map", "0:a:0", "-vn", "-af", resample.constData(),
                                    "-f", "f32le", "-ac", "2", "-ar", rate.constData(),

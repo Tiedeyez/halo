@@ -1,4 +1,5 @@
 #include "lyrics.h"
+#include "safety.h"
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -441,6 +442,24 @@ QString readText(const QString &path) {
 
 }
 
+namespace {
+// Every LRCLIB request: redirects only within the same site, and a reply
+// larger than any lyrics could be is cut off, so a bad or hijacked server
+// can't make Halo hold an unbounded download.
+QNetworkReply *boundedGet(QNetworkAccessManager *network, QNetworkRequest request) {
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
+    request.setMaximumRedirectsAllowed(3);
+    QNetworkReply *reply = network->get(request);
+    QObject::connect(reply, &QNetworkReply::downloadProgress, reply, [reply](qint64 received, qint64 total) {
+        if (received > Safety::MaxLyricsReply || total > Safety::MaxLyricsReply) {
+            reply->setProperty("haloOversize", true);
+            reply->abort();
+        }
+    });
+    return reply;
+}
+}
+
 LyricsService::LyricsService(const QString &cacheDirectory, const QString &stateDirectory, QObject *parent)
     : QObject(parent),
       m_cacheDirectory(cacheDirectory.isEmpty()
@@ -648,6 +667,8 @@ void LyricsService::fetch() {
         return;
     }
 
+    if (!Safety::allowedEndpoint(m_endpoint))
+        return setStatus(Failed);   // https only (plain http just to this machine, for tests)
     // /api/get needs an artist; without one, search by title alone.
     if (LyricsQuery::mainArtist(m_query.artist).isEmpty())
         return fetchSearch();
@@ -664,12 +685,16 @@ void LyricsService::fetch() {
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::UserAgentHeader, UserAgent);
     request.setTransferTimeout(12000);
-    QNetworkReply *reply = m_network->get(request);
+    QNetworkReply *reply = boundedGet(m_network, request);
     m_reply = reply;
     const int generation = m_generation;
     connect(reply, &QNetworkReply::finished, this, [this, reply, generation] {
         reply->deleteLater();
-        if (generation != m_generation || reply->error() == QNetworkReply::OperationCanceledError)
+        if (generation != m_generation)
+            return;
+        if (reply->property("haloOversize").toBool())
+            return setStatus(Failed);
+        if (reply->error() == QNetworkReply::OperationCanceledError)
             return;
         const int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (code == 200) {
@@ -703,6 +728,8 @@ void LyricsService::fetchSearch() {
         m_status = Searching;
         emit changed();
     }
+    if (!Safety::allowedEndpoint(m_endpoint))
+        return setStatus(Failed);
     QUrl url(m_endpoint + "/api/search");
     QUrlQuery q;
     q.addQueryItem("track_name", LyricsQuery::cleanTitle(m_query.title));
@@ -713,12 +740,16 @@ void LyricsService::fetchSearch() {
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::UserAgentHeader, UserAgent);
     request.setTransferTimeout(12000);
-    QNetworkReply *reply = m_network->get(request);
+    QNetworkReply *reply = boundedGet(m_network, request);
     m_reply = reply;
     const int generation = m_generation;
     connect(reply, &QNetworkReply::finished, this, [this, reply, generation] {
         reply->deleteLater();
-        if (generation != m_generation || reply->error() == QNetworkReply::OperationCanceledError)
+        if (generation != m_generation)
+            return;
+        if (reply->property("haloOversize").toBool())
+            return setStatus(Failed);
+        if (reply->error() == QNetworkReply::OperationCanceledError)
             return;
         const int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (code != 200) {

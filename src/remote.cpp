@@ -1,4 +1,5 @@
 #include "remote.h"
+#include "safety.h"
 
 #include <QCoreApplication>
 #include <QDBusConnection>
@@ -177,8 +178,19 @@ Remote::Remote(Player *player, QObject *parent) : QObject(parent), m_player(play
         while (QLocalSocket *socket = m_server.nextPendingConnection()) {
             connect(socket, &QLocalSocket::disconnected, socket, &QObject::deleteLater);
             connect(socket, &QLocalSocket::readyRead, this, [this, socket] {
+                // One command is a short JSON line; a peer that sends more
+                // without a newline is cut off rather than buffered forever.
+                if (!socket->canReadLine() && socket->bytesAvailable() > Safety::MaxSocketLine) {
+                    socket->abort();
+                    return;
+                }
                 while (socket->canReadLine()) {
-                    const QJsonObject request = QJsonDocument::fromJson(socket->readLine()).object();
+                    const QByteArray line = socket->readLine(Safety::MaxSocketLine + 1);
+                    if (line.size() > Safety::MaxSocketLine) {
+                        socket->abort();
+                        return;
+                    }
+                    const QJsonObject request = QJsonDocument::fromJson(line).object();
                     socket->write(QJsonDocument(handle(request)).toJson(QJsonDocument::Compact) + "\n");
                     socket->flush();
                 }
@@ -194,11 +206,16 @@ Remote::~Remote() {
 QString Remote::socketName() {
     if (!qEnvironmentVariableIsEmpty("HALO_SOCKET"))
         return qEnvironmentVariable("HALO_SOCKET");
+    // Qt hands back a private (0700, yours) runtime folder or nothing. With
+    // nothing there is no socket: a fixed name in the shared /tmp could be
+    // taken by another account first.
     const QString runtime = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
-    return (runtime.isEmpty() ? QDir::tempPath() : runtime) + "/halo.sock";
+    return runtime.isEmpty() ? QString() : runtime + "/halo.sock";
 }
 
 bool Remote::send(const QJsonObject &request, QJsonObject *reply, int timeoutMs) {
+    if (socketName().isEmpty())
+        return false;
     QLocalSocket socket;
     socket.connectToServer(socketName());
     if (!socket.waitForConnected(timeoutMs))
@@ -218,6 +235,8 @@ bool Remote::running(int timeoutMs) {
     // thread is busy (starting a song, merging a scan), so this doesn't
     // mistake a slow Halo for none. Waiting for a reply to a ping did, and
     // the second launch then took the socket and played over the first.
+    if (socketName().isEmpty())
+        return false;
     QLocalSocket socket;
     socket.connectToServer(socketName());
     return socket.waitForConnected(timeoutMs);
@@ -228,9 +247,12 @@ bool Remote::listen() {
     if (running())
         return false;
     // Nobody listening: a socket file left behind by a crash is stale.
-    QLocalServer::removeServer(socketName());
+    if (!socketName().isEmpty())
+        QLocalServer::removeServer(socketName());
     m_server.setSocketOptions(QLocalServer::UserAccessOption);
-    if (!m_server.listen(socketName())) {
+    if (socketName().isEmpty()) {
+        m_error = tr("Halo has no private runtime folder (XDG_RUNTIME_DIR), so `halo` commands from a terminal won't reach this window.");
+    } else if (!m_server.listen(socketName())) {
         // Another Halo that started at the same moment won the socket.
         if (running(500))
             return false;

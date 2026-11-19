@@ -1,4 +1,5 @@
 #include "analysis.h"
+#include "safety.h"
 
 #include <QDir>
 #include <QFile>
@@ -241,7 +242,9 @@ TrackAnalysis analyze(const float *mono, size_t count, int rate) {
 // -v info is what lets ebur128 print its summary; -nostats keeps the
 // progress line out.
 QStringList ffmpegArguments(const QString &path) {
-    return {"-nostdin", "-hide_banner", "-nostats", "-v", "info", "-i", path, "-t", "480",
+    // -protocol_whitelist file: a "song" that is really a playlist (HLS,
+    // concat) can't make ffmpeg fetch anything from the network.
+    return {"-nostdin", "-hide_banner", "-nostats", "-v", "info", "-protocol_whitelist", "file", "-i", path, "-t", "480",
             "-filter_complex",
             QString("[0:a:0]asplit=2[m][a];[m]ebur128=peak=true:framelog=quiet,anullsink;"
                     "[a]aresample=%1,aformat=sample_fmts=flt:channel_layouts=mono[out]").arg(Rate),
@@ -277,7 +280,7 @@ bool parseEbur128(const QByteArray &log, double &lufs, double &truePeak) {
 }
 
 TrackAnalysis analyzeFile(const QString &path, QString *error) {
-    const QString ffmpeg = QStandardPaths::findExecutable("ffmpeg");
+    const QString ffmpeg = Safety::systemTool("ffmpeg");
     if (ffmpeg.isEmpty()) {
         if (error)
             *error = "ffmpeg isn't installed";
@@ -422,14 +425,14 @@ void Analyzer::next() {
     }
     if (path.isEmpty())
         return;
-    const QString ffmpeg = QStandardPaths::findExecutable("ffmpeg");
+    const QString ffmpeg = Safety::systemTool("ffmpeg");
     if (ffmpeg.isEmpty())
         return;
     m_running = path;
     m_buffer.clear();
     // The lowest CPU priority, so analysis never takes time from playback or
     // from anything else on the machine.
-    const QString nice = QStandardPaths::findExecutable("nice");
+    const QString nice = Safety::systemTool("nice");
     if (nice.isEmpty())
         m_process.start(ffmpeg, Analysis::ffmpegArguments(path));
     else

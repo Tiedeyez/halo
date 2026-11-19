@@ -29,11 +29,20 @@ program. It talks to PipeWire through Qt to play sound.
 | `~/.cache/halo/lyrics/*.json` | Lyrics found on lrclib.net, or a note that none were, one file per song | Only with online lyrics on, after a lookup |
 | `~/.local/state/halo/lyrics.json` | Whether online lyrics is on, whether lyrics are shown, and per-song timing nudges | When you change them |
 | `$XDG_RUNTIME_DIR/halo.sock` | The local socket the `halo` command talks to | While Halo runs |
-| `~/.agents/skills/halo/SKILL.md` and the link `~/.claude/skills/halo` | A skill for coding agents | Only when you run `halo skill install` |
+| `~/.agents/skills/halo/SKILL.md` and the link `~/.claude/skills/halo` | A skill for coding agents | Only when you run `halo skill install`. An existing `SKILL.md` that Halo didn't write, or a folder that is a link, is left alone unless you add `--force`; an existing `~/.claude/skills/halo` that isn't a link is never touched |
 | A `.png` path you name | A picture of the window | Only on the socket command `grab`, and never over an existing file |
 
 Every file is written beside its target and renamed into place, so a crash
 never leaves half a file.
+
+**Everything Halo writes is private to you.** Halo sets its file-creation
+mask to `077` first thing at start, so its folders are `0700` and its files
+`0600`, and other accounts on the computer can't read your queue, play
+history, lyrics or Library Doctor log. Halo's three folders
+(`~/.local/state/halo`, `~/.cache/halo`, `~/.config/halo`) are checked at each
+start, and anything an older build left readable is set back to `0700` /
+`0600`. Only your own regular files and folders are changed; symbolic links
+are never followed.
 
 **Halo never writes, moves or deletes a music file**, and never edits your
 Omarchy or Hyprland configuration.
@@ -63,6 +72,12 @@ It reads nothing else in your home folder.
 | `hyprctl -j getoption decoration:rounding` | Once a second while Halo is open, to match Hyprland's window corners |
 | `hyprctl dispatch` (focus Halo) | When a second `halo open` or an MPRIS Raise asks to bring the window forward |
 
+Each tool is run from `/usr/bin` (then `/bin`, `/usr/local/bin`), and from
+your `PATH` only when it isn't installed there, so an executable placed in a
+personal folder such as `~/.local/bin` can't stand in for `ffmpeg`. ffmpeg
+gets `-protocol_whitelist file` on every input, so a file that is really a
+playlist (HLS, concat) can't make it open a network connection.
+
 The uncomfortable part: the first time Halo sees a large library, it decodes
 every song once to analyse it. On a big library that is hours of background
 work at the lowest priority; it uses CPU (and battery) while it runs, and it
@@ -86,13 +101,21 @@ database, over HTTPS:
 
 The request carries the User-Agent `Halo/0.1.0 (Omarchy music player)` and
 nothing else about you: no file paths, no account, no identifier. LRCLIB
-sees your IP address, as any website would, and which songs you play. Each
+sees your IP address, as any website would, and which songs you play.
+Redirects are followed only within the same site, at most three, and a reply
+over 2 MiB is cut off and treated as a failed lookup. The lyrics address is
+https only (plain http is accepted just for a server on this computer, which
+the tests use). Each
 song is looked up once: the answer, or the fact that there was none, is
 cached (a miss is asked again after a week). When LRCLIB asks clients to
 slow down, Halo waits as long as it says. `halo lyrics online off` stops
 all of it; the cache stays until you delete `~/.cache/halo/lyrics`.
 
-Locally, Halo listens only on a socket that only your user can open, and it
+Locally, Halo listens only on a socket that only your user can open, in
+your private runtime folder (`$XDG_RUNTIME_DIR`). Without one, Halo opens no
+socket at all rather than fall back to the shared `/tmp`, and terminal
+commands say Halo isn't reachable. One command is at most 64 KiB; a
+connection that sends more without a newline is closed. and it
 registers `org.mpris.MediaPlayer2.halo` on your D-Bus session bus so media
 keys and bar widgets can control it.
 

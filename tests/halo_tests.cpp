@@ -1,4 +1,8 @@
 #include <QDir>
+#include <sys/stat.h>
+#include <QJsonDocument>
+#include <QLocalSocket>
+#include <QSaveFile>
 #include <QColor>
 #include <QWheelEvent>
 #include <QQuickView>
@@ -33,6 +37,7 @@
 #include "kaleidopilot.h"
 #include "player.h"
 #include "remote.h"
+#include "safety.h"
 #include "ring.h"
 #include "stream.h"
 #include "theme.h"
@@ -1272,6 +1277,148 @@ private slots:
         service.load(other, "C", "D", "", 100);
         QTest::qWait(300);
         QCOMPARE(lrclib.requests.size(), 1);
+    }
+
+    // ---- Safety (marketplace review pass, 2026-11-19) ----
+
+    void privateFilesAndFoldersOnly() {
+        QTemporaryDir root, outside;
+        const QString dir = root.filePath("halo");
+        QVERIFY(QDir().mkpath(dir + "/covers"));
+        chmod(QFile::encodeName(dir).constData(), 0755);
+        chmod(QFile::encodeName(dir + "/covers").constData(), 0755);
+        const QString state = dir + "/stats.json", cover = dir + "/covers/a.jpg";
+        const QString victim = outside.filePath("not-halos.txt");
+        for (const QString &f : {state, cover, victim}) {
+            QFile file(f);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("x");
+            file.close();
+            chmod(QFile::encodeName(f).constData(), 0644);
+        }
+        QVERIFY(QFile::link(victim, dir + "/link.json"));
+        const mode_t before = umask(022);
+        Safety::makePrivate({dir, root.filePath("missing")});
+        const auto mode = [](const QString &f) {
+            struct stat st {};
+            lstat(QFile::encodeName(f).constData(), &st);
+            return int(st.st_mode & 0777);
+        };
+        QCOMPARE(mode(dir), 0700);
+        QCOMPARE(mode(dir + "/covers"), 0700);
+        QCOMPARE(mode(state), 0600);
+        QCOMPARE(mode(cover), 0600);
+        QCOMPARE(mode(victim), 0644);   // a link's target is never touched
+        // New files are private from now on.
+        QSaveFile fresh(dir + "/state.json");
+        QVERIFY(fresh.open(QIODevice::WriteOnly));
+        fresh.write("{}");
+        QVERIFY(fresh.commit());
+        QCOMPARE(mode(dir + "/state.json"), 0600);
+        umask(before);
+    }
+
+    void systemToolsComeFromSystemFolders() {
+        if (!QFileInfo::exists("/usr/bin/ffmpeg"))
+            QSKIP("no /usr/bin/ffmpeg");
+        QTemporaryDir bin;
+        QFile fake(bin.filePath("ffmpeg"));
+        QVERIFY(fake.open(QIODevice::WriteOnly));
+        fake.write("#!/bin/sh\nexit 0\n");
+        fake.close();
+        fake.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        const QByteArray path = qgetenv("PATH");
+        qputenv("PATH", QFile::encodeName(bin.path()) + ":" + path);
+        QCOMPARE(QStandardPaths::findExecutable("ffmpeg"), fake.fileName());   // PATH would pick the fake
+        QCOMPARE(Safety::systemTool("ffmpeg"), QString("/usr/bin/ffmpeg"));
+        qputenv("PATH", path);
+    }
+
+    void lyricsEndpointMustBeHttps() {
+        QVERIFY(Safety::allowedEndpoint("https://lrclib.net"));
+        QVERIFY(Safety::allowedEndpoint("http://127.0.0.1:9"));
+        QVERIFY(Safety::allowedEndpoint("http://localhost:8080"));
+        QVERIFY(Safety::allowedEndpoint("http://[::1]:8080"));
+        QVERIFY(!Safety::allowedEndpoint("http://lrclib.net"));
+        QVERIFY(!Safety::allowedEndpoint("http://127.0.0.1.example.com"));
+        QVERIFY(!Safety::allowedEndpoint("ftp://lrclib.net"));
+        QVERIFY(!Safety::allowedEndpoint("https://user:pw@lrclib.net"));
+        QVERIFY(!Safety::allowedEndpoint("not a url"));
+
+        QTemporaryDir cache, state, music;
+        const QString song = music.filePath("a.mp3");
+        QFile(song).open(QIODevice::WriteOnly);
+        LyricsService service(cache.path(), state.path());
+        service.setEndpoint("http://example.invalid");
+        service.setOnline(true);
+        service.load(song, "Title", "Artist", "", 100);
+        QTRY_COMPARE(service.status(), int(LyricsService::Failed));
+        QVERIFY(QDir(cache.path()).entryList(QDir::Files | QDir::NoDotAndDotDot).isEmpty());
+    }
+
+    void lyricsOversizeReplyIsCutOff() {
+        FakeLrclib lrclib;
+        QByteArray huge(int(Safety::MaxLyricsReply) + 512 * 1024, 'x');
+        lrclib.replies["/api/get"] = {200, "{\"plainLyrics\":\"" + huge + "\"}", {}};
+        QTemporaryDir cache, state, music;
+        const QString song = music.filePath("a.mp3");
+        QFile(song).open(QIODevice::WriteOnly);
+        LyricsService service(cache.path(), state.path());
+        service.setEndpoint(lrclib.url());
+        service.setOnline(true);
+        service.load(song, "Title", "Artist", "", 100);
+        QTRY_COMPARE_WITH_TIMEOUT(service.status(), int(LyricsService::Failed), 10000);
+        QCOMPARE(lrclib.requests.size(), 1);   // failed, not retried as a search
+    }
+
+    void socketCutsOffOversizeCommands() {
+        QTemporaryDir run, music, cache, state;
+        const QByteArray old = qgetenv("HALO_SOCKET");
+        qputenv("HALO_SOCKET", QFile::encodeName(run.filePath("halo.sock")));
+        Library library({music.path()}, cache.path(), state.path());
+        Analyzer analyzer(cache.filePath("analysis.json"));
+        Player player(&library, &analyzer, state.path());
+        Remote remote(&player);
+        QVERIFY(remote.listen());
+        QLocalSocket flood;
+        flood.connectToServer(Remote::socketName());
+        QVERIFY(flood.waitForConnected(2000));
+        flood.write(QByteArray(int(Safety::MaxSocketLine) * 2, 'a'));   // no newline, ever
+        flood.flush();
+        QTRY_COMPARE_WITH_TIMEOUT(flood.state(), QLocalSocket::UnconnectedState, 5000);
+        // An ordinary command still works.
+        QLocalSocket client;
+        client.connectToServer(Remote::socketName());
+        QVERIFY(client.waitForConnected(2000));
+        client.write("{\"cmd\":\"ping\"}\n");
+        client.flush();
+        QTRY_VERIFY(client.canReadLine());
+        QVERIFY(QJsonDocument::fromJson(client.readLine()).object().value("ok").toBool());
+        if (old.isEmpty())
+            qunsetenv("HALO_SOCKET");
+        else
+            qputenv("HALO_SOCKET", old);
+    }
+
+    void ffmpegNeverFetchesFromANetwork() {
+        if (Safety::systemTool("ffmpeg").isEmpty())
+            QSKIP("no ffmpeg");
+        FakeLrclib server;   // any HTTP server on 127.0.0.1 will do
+        QTemporaryDir music;
+        // A "song" that is really an HLS playlist pointing at the network.
+        const QString evil = music.filePath("evil.mp3");
+        QFile f(evil);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("#EXTM3U\n#EXT-X-TARGETDURATION:10\n#EXTINF:10,\n" + server.url().toUtf8() +
+                "/segment.ts\n#EXT-X-ENDLIST\n");
+        f.close();
+        QString error;
+        Analysis::analyzeFile(evil, &error);
+        Stream stream(evil, 0, QString());
+        stream.start();
+        QTest::qWait(1500);
+        QVERIFY2(server.requests.isEmpty(), qPrintable(server.requests.join(", ")));
+        QVERIFY(Analysis::ffmpegArguments(evil).contains("-protocol_whitelist"));
     }
 };
 
