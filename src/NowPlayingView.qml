@@ -4,10 +4,10 @@ import QtQuick.Controls.Material
 import QtQuick.Layouts
 import Halo
 
-// The song, large, inside its halo; with L, its lyrics beside it. The layout
-// follows the window: a wide window puts the cover and controls on the left
-// and the lyrics on the right; a small one (a tiled window, a laptop half)
-// keeps a slim header so the lyrics get the room. F or Esc closes it.
+// Full-bleed song visual behind the song and lyrics. The layout follows the
+// window: a wide window puts the song on the left and the lyrics on the right;
+// a small one (a tiled window, a laptop half) keeps a slim header. F or Esc
+// closes it.
 Rectangle {
     id: root
     signal closed()
@@ -40,24 +40,38 @@ Rectangle {
             GradientStop { position: 1; color: Style.window }
         }
     }
-    // The pixel field's main beat rings stay centred; the smaller floaters
-    // still land across the surface.
-    PixelField {
-        anchors.fill: parent
-        cell: 7
-        origin: Qt.point(width * 0.5, height * 0.5)
-    }
-
     // ---- pieces ----
 
-    // The cover inside the halo (or above the bars).
+    // The active visual is the background. The pixel visuals fill the whole
+    // window; the round ones (halo, kaleidoscope, hologram) and the cover
+    // centre on the song's side of a wide window, left of the text column,
+    // and are sized from that area so they fill its height and bleed a
+    // little past it, rather than being centred on the window and half
+    // hidden under the text's shade.
     component Stage: Item {
         id: stage
-        readonly property real side: Math.min(width, height)
+        // The song's area: left of the text column in a wide window, the
+        // whole window otherwise.
+        readonly property real focusW: root.wide ? root.width * 0.62 : root.width
+        readonly property real focusH: root.height
+        readonly property real shortSide: Math.min(focusW, focusH)
+        readonly property real haloSide: Math.min(focusH * 1.02, focusW * 1.05)
+        readonly property real kaleidoSide: Math.max(focusW, focusH) * 1.12
+        readonly property real vinylSide: Math.min(focusH * 1.08, focusW * 1.12)
+        readonly property real roundScale: Math.max(1, Math.ceil(haloSide / 960))
+        Item {
+            id: focusPoint
+            x: stage.focusW * 0.5
+            y: stage.focusH * 0.5
+            width: 0
+            height: 0
+        }
         HaloView {
-            anchors.centerIn: parent
-            width: stage.side
-            height: stage.side
+            anchors.centerIn: focusPoint
+            width: stage.haloSide / stage.roundScale
+            height: width
+            scale: stage.roundScale
+            transformOrigin: Item.Center
             spectrum: spectrumSource
             color: Style.accent
             inner: 0.56
@@ -68,69 +82,42 @@ Rectangle {
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
         PixelKaleido {
-            anchors.centerIn: parent
-            width: stage.side
-            height: stage.side
-            cell: Math.max(4, Math.round(stage.side / 90))
+            anchors.centerIn: focusPoint
+            width: stage.kaleidoSide
+            height: stage.kaleidoSide
+            // About 140 pixels across: fine enough for the fractal's detail
+            // (four samples each), cheap enough for integrated graphics.
+            cell: Math.max(5, Math.round(stage.kaleidoSide / 140))
             opacity: player.visualStyle === 2 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
         // The pixel visualisers: Skyline, Phosphor, Pulsar, Waterfall, Warp, Aurora.
         PixelVisualView {
-            anchors.centerIn: parent
-            width: stage.side
-            height: stage.side
-            cell: Math.max(4, Math.round(stage.side / 96))
+            anchors.fill: parent
+            cell: Math.max(4, Math.ceil(Math.max(root.width, root.height) / 128))
             mode: Math.max(0, player.visualStyle - 3)
             opacity: player.visualStyle >= 3 && player.visualStyle <= 8 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
         HoloVinyl {
-            anchors.centerIn: parent
-            width: stage.side
-            height: stage.side
-            cell: Math.max(3, Math.round(stage.side / 120))
+            anchors.centerIn: focusPoint
+            width: stage.vinylSide
+            height: stage.vinylSide
+            cell: Math.max(3, Math.round(stage.vinylSide / 130))
             opacity: player.visualStyle === 9 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
-        // The visual's name, for a moment after V switches to it.
-        ScrambleText {
-            id: visualName
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            target: root.visualNames[player.visualStyle] || ""
-            duration: 420
-            color: Style.text
-            font.family: Style.mono
-            font.pixelSize: Style.fontSmall
-            font.letterSpacing: 2
-            opacity: 0
-            Connections {
-                target: player
-                function onSettingsChanged() {
-                    if (visualName.shownStyle !== player.visualStyle) {
-                        visualName.shownStyle = player.visualStyle
-                        nameShow.restart()
-                    }
-                }
-            }
-            property int shownStyle: player.visualStyle
-            SequentialAnimation {
-                id: nameShow
-                NumberAnimation { target: visualName; property: "opacity"; to: 1; duration: Style.motion ? 120 : 0 }
-                PauseAnimation { duration: 1300 }
-                NumberAnimation { target: visualName; property: "opacity"; to: 0; duration: Style.motion ? 500 : 0 }
-            }
-        }
         CoverArt {
-            anchors.centerIn: parent
+            anchors.centerIn: focusPoint
             glitchOnChange: true
             visible: player.visualStyle <= 2
-            // Smaller in the kaleidoscope, so it has a wide ring to show.
-            width: stage.side * (player.visualStyle === 1 ? 0.78 : player.visualStyle === 2 ? 0.36 : 0.52)
+            // Inside the halo's ring; small in the kaleidoscope so the
+            // fractal leads; a little larger over the bars.
+            width: player.visualStyle === 0 ? stage.haloSide * 0.46
+                 : player.visualStyle === 2 ? stage.shortSide * 0.28 : stage.shortSide * 0.40
             height: width
             albumId: player.albumId
             title: player.album
@@ -138,10 +125,9 @@ Rectangle {
             scale: player.calm || player.visualStyle !== 0 ? 1 : 1 + spectrumSource.pulse * 0.015
         }
         HaloView {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            width: stage.side * 0.78
-            height: Math.min(72, stage.side * 0.14)
+            anchors.centerIn: focusPoint
+            width: stage.focusW
+            height: Math.min(stage.focusH * 0.52, Math.max(72, stage.focusW * 0.2))
             spectrum: spectrumSource
             color: Style.accent
             calm: player.calm
@@ -149,6 +135,78 @@ Rectangle {
             opacity: player.visualStyle === 1 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
+        }
+    }
+
+    Stage { anchors.fill: parent }
+
+    // Keep the text column readable over any of the visual palettes. The
+    // brightest possible visual pixel is white; at 93% Style.window coverage
+    // even Style.faint remains above 7:1. The song layout fades into the
+    // text column; lyric layouts place text across the reading area.
+    Rectangle {
+        anchors.fill: parent
+        gradient: Gradient {
+            orientation: root.showWords ? Gradient.Vertical : Gradient.Horizontal
+            GradientStop {
+                position: 0
+                color: root.showWords ? Qt.alpha(Style.window, 0.93) : Qt.alpha(Style.window, 0)
+            }
+            GradientStop {
+                position: root.showWords ? 0.92 : 0.42
+                color: root.showWords ? Qt.alpha(Style.window, 0.93) : Qt.alpha(Style.window, 0)
+            }
+            // A long, eased ramp so the visual sinks under the text instead
+            // of stopping at a hard edge; full strength before the text.
+            GradientStop {
+                position: root.showWords ? 0.96 : 0.56
+                color: Qt.alpha(Style.window, root.showWords ? 0.93 : 0.55)
+            }
+            GradientStop {
+                position: root.showWords ? 1 : 0.66
+                color: Qt.alpha(Style.window, 0.93)
+            }
+            GradientStop { position: 1; color: Qt.alpha(Style.window, 0.95) }
+        }
+    }
+
+    // The visual's name, for a moment after V switches to it.
+    Rectangle {
+        anchors.centerIn: visualName
+        width: visualName.implicitWidth + 24
+        height: visualName.implicitHeight + 12
+        color: Qt.alpha(Style.window, 0.93)
+        opacity: visualName.opacity
+        z: 1
+    }
+    ScrambleText {
+        id: visualName
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: root.gutter * 0.65
+        z: 2
+        target: root.visualNames[player.visualStyle] || ""
+        duration: 420
+        color: Style.text
+        font.family: Style.mono
+        font.pixelSize: Style.fontSmall
+        font.letterSpacing: 2
+        opacity: 0
+        Connections {
+            target: player
+            function onSettingsChanged() {
+                if (visualName.shownStyle !== player.visualStyle) {
+                    visualName.shownStyle = player.visualStyle
+                    nameShow.restart()
+                }
+            }
+        }
+        property int shownStyle: player.visualStyle
+        SequentialAnimation {
+            id: nameShow
+            NumberAnimation { target: visualName; property: "opacity"; to: 1; duration: Style.motion ? 120 : 0 }
+            PauseAnimation { duration: 1300 }
+            NumberAnimation { target: visualName; property: "opacity"; to: 0; duration: Style.motion ? 500 : 0 }
         }
     }
 
@@ -324,7 +382,7 @@ Rectangle {
         id: songLayout
         RowLayout {
             spacing: root.gutter
-            Stage {
+            Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.preferredWidth: 3
@@ -391,11 +449,6 @@ Rectangle {
                 Layout.preferredWidth: 2
                 Layout.maximumWidth: 520
                 spacing: 10
-                Stage {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.minimumHeight: 160
-                }
                 Header {
                     Layout.fillWidth: true
                     titleSize: Style.fontTitle + 6
@@ -420,13 +473,6 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.rightMargin: 48 // clear of the close button
                 spacing: 14
-                // The cover and the visualiser stay in view, as large as the
-                // window allows while leaving the words most of the room.
-                Stage {
-                    readonly property real side: Math.max(120, Math.min(260, root.height * 0.30, root.width * 0.42))
-                    Layout.preferredWidth: side
-                    Layout.preferredHeight: side
-                }
                 Header {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignVCenter

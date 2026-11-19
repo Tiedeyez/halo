@@ -49,15 +49,21 @@ checked against the source.
   **Aurora** (curtains of light with rays) and **Hologram** (the record as
   a pixelated light disc, the album cover its label, turning at 33 1/3 with
   the tonearm following the song).
+  In Now Playing, the active visual fills the window behind the song and
+  lyrics; a soft window-colour scrim keeps the text at WCAG AAA contrast.
+  Halo, Bars, Kaleidoscope and Hologram grow beyond the window edges, while
+  the six other visuals use square pixels across the full window. Cover art
+  stays in the centre of Halo, Bars and Kaleidoscope, and on Hologram's label.
   Visuals crossfade as V switches them, and the name shows for a moment.
   C keeps any of them still. `halo visual <name>` switches from a terminal.
-- **The window is water.** Behind everything lies a pond of square pixels
+- **The library is water.** Behind the library views lies a pond of square pixels
   with drifting caustics. Every beat drops a main ripple from the centre and
   another floater somewhere on the surface. Every click anywhere in the
   window drops one where you clicked, and the pointer leaves a soft wake.
   The rings spread, cross and fade, and bend the stars and rain under them. It is kept dim
   enough that the faintest text over it still reads at 7:1, it rests when
-  nothing is playing or rippling, and C stills it.
+  nothing is playing or rippling, and C stills it. Now Playing gives that
+  background to the active music visual instead.
 - **Smooth motion.** Everything moves on the display's own frame clock with
   eased curves: pages surface with a fade and a lift, Now Playing and the
   shortcut sheet rise and settle, covers fade up as they load and crossfade
