@@ -2,7 +2,8 @@
 # rebuilt, changed and reviewed like the rest of the source.
 #
 #   blender -b -P turntable.py -- --out DIR [--preview] [--samples N] [--size PX]
-#   blender -b -P turntable.py -- --out DIR --layers [--frames N]   (the app's layers)
+#   blender -b -P turntable.py -- --out DIR --layers [--frames N]   (the Turntable visual's layers)
+#   blender -b -P turntable.py -- --out DIR --energy [--frames N]   (the Hologram visual's layers)
 #
 # An original design (not a copy of any real deck): a dark anodised plinth
 # with chamfered edges, a machined platter with strobe dots, a straight
@@ -607,7 +608,123 @@ def layers():
         json.dump(manifest, f, indent=1)
 
 
+def energy():
+    """The Hologram visual's layers: the same deck made of light. Every edge
+    the camera sees is a line of light (Freestyle), edges hidden behind are
+    fainter (an x-ray of the mechanism), and surfaces glow where they turn
+    away from the viewer (a fresnel rim), like a hologram's skin. Rendered
+    white on black; the app tints, animates and adds them. Passes:
+      lines (visible + hidden edges) and body (rim glow), for the deck, the
+      spindle and each tonearm frame. Frames go to OUT, named energy-*."""
+    import json
+    _, swing = build_scene()
+    scene = bpy.context.scene
+    vl = scene.view_layers[0]
+    arm = [swing] + [o for o in bpy.data.objects if o.parent == swing]
+    spindle = [o for o in bpy.data.objects if o.name.startswith("Spindle")]
+    moving = set(arm) | set(spindle)
+    deck = [o for o in bpy.data.objects if o.type in ("MESH", "FONT") and o not in moving]
+    # The record's own edge lines would be too many rings; the app draws
+    # its grooves as energy. Keep the record's rim and the label's edge.
+    for o in bpy.data.objects:
+        if o.type == "LIGHT":
+            o.hide_render = True
+    scene.world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0
+    scene.cycles.samples = 24
+    scene.view_settings.view_transform = "Standard"
+    scene.view_settings.look = "None"
+
+    holdout = bpy.data.materials.new("Holdout")
+    holdout.use_nodes = True
+    nt = holdout.node_tree
+    for n in list(nt.nodes):
+        nt.nodes.remove(n)
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    nt.links.new(nt.nodes.new("ShaderNodeHoldout").outputs[0], out.inputs["Surface"])
+
+    rim = bpy.data.materials.new("Rim")
+    rim.use_nodes = True
+    nt = rim.node_tree
+    for n in list(nt.nodes):
+        nt.nodes.remove(n)
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    lw = nt.nodes.new("ShaderNodeLayerWeight")
+    lw.inputs["Blend"].default_value = 0.5
+    pw = nt.nodes.new("ShaderNodeMath")
+    pw.operation = "POWER"
+    pw.inputs[1].default_value = 2.2
+    add = nt.nodes.new("ShaderNodeMath")
+    add.operation = "MULTIPLY_ADD"
+    add.inputs[1].default_value = 1.0
+    add.inputs[2].default_value = 0.035   # a faint skin, even facing the viewer
+    em = nt.nodes.new("ShaderNodeEmission")
+    nt.links.new(lw.outputs["Facing"], pw.inputs[0])
+    nt.links.new(pw.outputs[0], add.inputs[0])
+    nt.links.new(add.outputs[0], em.inputs["Strength"])
+    nt.links.new(em.outputs[0], out.inputs["Surface"])
+
+    fs = vl.freestyle_settings
+    fs.crease_angle = math.radians(140)
+    for ls in list(fs.linesets):
+        fs.linesets.remove(ls)
+    def lineset(name, visibility, thickness, alpha):
+        ls = fs.linesets.new(name)
+        ls.select_by_visibility = True
+        ls.visibility = visibility
+        ls.select_by_edge_types = True
+        ls.select_silhouette = True
+        ls.select_border = True
+        ls.select_crease = True
+        ls.linestyle.color = (1, 1, 1)
+        ls.linestyle.alpha = alpha
+        ls.linestyle.thickness = thickness * SIZE / 1536
+        return ls
+    lineset("Seen", "VISIBLE", 1.25, 1.0)
+    lineset("Hidden", "HIDDEN", 0.8, 0.22)
+
+    def show(objs, on):
+        for o in objs:
+            o.hide_render = not on
+
+    def passes(name):
+        scene.render.use_freestyle = True
+        vl.material_override = holdout
+        render(OUT + "/energy-%s-lines.png" % name)
+        scene.render.use_freestyle = False
+        vl.material_override = rim
+        render(OUT + "/energy-%s-body.png" % name)
+
+    show(arm + spindle, False)
+    passes("deck")
+    show(deck, False)
+    show(spindle, True)
+    passes("spindle")
+    show(spindle, False)
+    show(arm, True)
+    lead_in, run_out = stylus_angle(GROOVE_OUT), stylus_angle(GROOVE_IN)
+    count = int(arg("--frames", "36"))
+    headings = [REST + (run_out - REST) * k / (count - 1) for k in range(count)]
+    for k, h in enumerate(headings):
+        swing.rotation_euler = (0, 0, h)
+        passes("arm-%02d" % k)
+    show(deck, True)
+    H, Hi = label_mapping()
+    manifest = {
+        "size": SIZE, "headings": headings, "rest": REST, "leadIn": lead_in, "runOut": run_out,
+        "pivot": [PIVOT.x, PIVOT.y], "centre": [PLATTER_C.x, PLATTER_C.y],
+        "armLength": ARM_L, "grooveOut": GROOVE_OUT, "grooveIn": GROOVE_IN,
+        "recordRadius": RECORD_R / LABEL_R, "grooveOutLabel": GROOVE_OUT / LABEL_R,
+        "grooveInLabel": GROOVE_IN / LABEL_R,
+        "label": {"toImage": H, "fromImage": Hi},
+    }
+    with open(OUT + "/manifest.json", "w") as f:
+        json.dump(manifest, f, indent=1)
+
+
 def main():
+    if "--energy" in argv:
+        energy()
+        return
     if "--layers" in argv:
         layers()
         return

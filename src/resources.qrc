@@ -19,7 +19,7 @@
         <file alias="PixelField.qml">PixelField.qml</file>
         <file alias="PixelKaleido.qml">PixelKaleido.qml</file>
         <file alias="PixelVisualView.qml">PixelVisualView.qml</file>
-        <file alias="HoloVinyl.qml">HoloVinyl.qml</file>
+        <file alias="HologramVisual.qml">HologramVisual.qml</file>
         <file alias="PlaylistUi.qml">PlaylistUi.qml</file>
         <file alias="AddToPlaylistMenu.qml">AddToPlaylistMenu.qml</file>
         <file alias="PlaylistCover.qml">PlaylistCover.qml</file>

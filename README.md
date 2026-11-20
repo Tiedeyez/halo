@@ -46,9 +46,11 @@ checked against the source.
   **Phosphor** (an oscilloscope trace with afterglow), **Pulsar** (stacked
   ridge lines of the spectrum), **Waterfall** (a scrolling spectrogram),
   **Warp** (flying through stars, faster as the music gets louder),
-  **Aurora** (curtains of light with rays) and **Hologram** (the record as
-  a pixelated light disc, the album cover its label, turning at 33 1/3 with
-  the tonearm following the song).
+  **Aurora** (curtains of light with rays) and **Hologram** (the Turntable's
+  deck made of light and energy: every edge a line of light with faint
+  x-ray lines of the parts behind, the grooves carrying the spectrum, a
+  shockwave on each beat, the album cover turning on the label as light,
+  and the tonearm following the song).
   In Now Playing, the active visual fills the window behind the song and
   lyrics; a soft window-colour scrim keeps the text at WCAG AAA contrast.
   Halo, Bars, Kaleidoscope and Hologram grow beyond the window edges, while

@@ -57,7 +57,6 @@ Rectangle {
         readonly property real shortSide: Math.min(focusW, focusH)
         readonly property real haloSide: Math.min(focusH * 1.02, focusW * 1.05)
         readonly property real kaleidoSide: Math.max(focusW, focusH) * 1.12
-        readonly property real vinylSide: Math.min(focusH * 1.08, focusW * 1.12)
         Item {
             id: focusPoint
             x: stage.focusW * 0.5
@@ -97,11 +96,12 @@ Rectangle {
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
-        HoloVinyl {
+        // The hologram: the Turntable's deck made of light, the same square
+        // render, so the same size.
+        HologramVisual {
             anchors.centerIn: focusPoint
-            width: stage.vinylSide
-            height: stage.vinylSide
-            cell: Math.max(3, Math.round(stage.vinylSide / (130 * Style.pixelDensity)))
+            width: Math.min(stage.focusH * 1.2, stage.focusW * 1.15)
+            height: width
             opacity: player.visualStyle === 9 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
