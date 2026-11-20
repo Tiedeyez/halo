@@ -393,6 +393,94 @@ private slots:
         QTRY_COMPARE(list->property("contentY").toDouble(), 100.0 * 40 - 300);
     }
 
+    void siegeShootsTheWordsAndKeepsItsKeys() {
+        QTemporaryDir cache, state, music;
+        LyricsService lyricsService(cache.path(), state.path());
+        lyricsService.setEndpoint("http://127.0.0.1:9");
+        const QString song = music.filePath("song.mp3");
+        QFile(song).open(QIODevice::WriteOnly);
+        QFile lrc(music.filePath("song.lrc"));
+        QVERIFY(lrc.open(QIODevice::WriteOnly));
+        lrc.write("[00:02.00]WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW\n[00:04.00]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n"
+                  "[00:06.00]HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH\n[00:08.00]the end\n");
+        lrc.close();
+        lyricsService.load(song, "Song", "Artist", "", 60);
+        QCOMPARE(lyricsService.kind(), int(Lyrics::Synced));
+        lyricsService.follow(0);
+
+        QQmlPropertyMap playerStub, themeStub, spectrumStub, translatorStub;
+        playerStub.insert("calm", false);
+        playerStub.insert("playing", true);
+        playerStub.insert("bpm", 120.0);
+        themeStub.insert("accent", QColor("#7aa2f7"));
+        themeStub.insert("accentForeground", QColor("#000000"));
+        themeStub.insert("palette", QVariantList{});
+        themeStub.insert("radius", 4);
+        spectrumStub.insert("pulse", 0.0);
+        spectrumStub.insert("level", 0.0);
+        translatorStub.insert("language", "en");
+        QQuickView view;
+        view.rootContext()->setContextProperty("player", &playerStub);
+        view.rootContext()->setContextProperty("theme", &themeStub);
+        view.rootContext()->setContextProperty("spectrumSource", &spectrumStub);
+        view.rootContext()->setContextProperty("translator", &translatorStub);
+        view.rootContext()->setContextProperty("lyrics", &lyricsService);
+        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "Halo", 1, 0, "Style");
+        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Secrets.qml")), "Halo", 1, 0, "Secrets");
+        qmlRegisterType(QUrl::fromLocalFile(QFINDTESTDATA("../src/SiegeGame.qml")), "Halo", 1, 0, "SiegeGame");
+        qmlRegisterUncreatableType<LyricsService>("Halo", 1, 0, "Lyrics", "from main");
+        QQmlComponent component(view.engine());
+        component.setData(R"(
+            import QtQuick
+            import Halo
+            Item {
+                width: 640; height: 420
+                property bool spacePlayed: false
+                property alias game: game
+                Shortcut { sequence: "Space"; context: Qt.ApplicationShortcut; onActivated: parent.spacePlayed = true }
+                Component.onCompleted: Secrets.siege = true
+                SiegeGame { id: game; anchors.fill: parent }
+            })", QUrl());
+        auto *root = qobject_cast<QQuickItem *>(component.create(view.rootContext()));
+        QVERIFY2(root, qPrintable(component.errorString()));
+        view.setContent(QUrl(), &component, root);
+        view.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&view));
+        auto *game = root->property("game").value<QQuickItem *>();
+        QVERIFY(game);
+        QTRY_VERIFY(game->hasActiveFocus());
+        QCOMPARE(game->property("rows").toList().size(), 4);
+
+        // Past the intro, hold fire while the song moves on.
+        QElapsedTimer clock;
+        clock.start();
+        double t = 0;
+        auto play = [&](int ms) {
+            const qint64 until = clock.elapsed() + ms;
+            while (clock.elapsed() < until) {
+                QTest::qWait(16);
+                t += 0.016;
+                lyricsService.follow(t);
+            }
+        };
+        play(1700);
+        QTest::keyPress(&view, Qt::Key_Space);
+        play(1200);
+        QTest::keyRelease(&view, Qt::Key_Space);
+        QVERIFY2(game->property("score").toInt() >= 20, qPrintable(game->property("score").toString()));
+        QVERIFY2(game->property("combo").toInt() >= 2, qPrintable(game->property("combo").toString()));
+        // Space was the game's, not the player's.
+        QCOMPARE(root->property("spacePlayed").toBool(), false);
+        QVERIFY(game->property("multiplier").toInt() >= 1);
+
+        // Esc leaves.
+        QTest::keyClick(&view, Qt::Key_Escape);
+        QObject *secrets = view.engine()->singletonInstance<QObject *>("Halo", "Secrets");
+        QVERIFY(secrets);
+        QCOMPARE(secrets->property("siege").toBool(), false);
+        QVERIFY(secrets->property("best").toInt() >= game->property("score").toInt());
+    }
+
     void kaleidoscopeComesFromTheFile() {
         using namespace Kaleido;
         const Song a = fromFile("/m/HCSM5/03.mp3", "3 Way", "Young Dolph", "HCSM5");

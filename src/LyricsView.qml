@@ -20,6 +20,40 @@ Item {
     property bool browsing: false
     // The line being sung, sized to the room there is.
     readonly property int lineSize: Math.round(Math.max(20, Math.min(36, Math.min(height / 10, width / 18))))
+    // Siege, the lyrics game, has the view while it runs.
+    readonly property bool siege: Secrets.siege
+
+    // Up Up Down Down Left Right Left Right, with timed lyrics showing,
+    // starts Siege. Nothing on screen mentions it.
+    property var code: []
+    // A slider or text field with focus keeps its arrow keys.
+    readonly property bool arrowsFree: {
+        const f = Window.activeFocusItem
+        return !(f instanceof Slider || f instanceof TextInput || f instanceof TextEdit)
+    }
+    readonly property bool listening: visible && synced && !siege && arrowsFree
+    function press(key) {
+        const want = [Qt.Key_Up, Qt.Key_Up, Qt.Key_Down, Qt.Key_Down, Qt.Key_Left, Qt.Key_Right, Qt.Key_Left, Qt.Key_Right]
+        const now = Date.now()
+        code = code.filter(k => now - k.at < 3000).concat([{ key: key, at: now }]).slice(-want.length)
+        if (code.length === want.length && code.every((k, i) => k.key === want[i])) {
+            code = []
+            Secrets.siege = true
+        }
+    }
+    Shortcut { sequence: "Up"; enabled: root.listening; onActivated: root.press(Qt.Key_Up) }
+    Shortcut { sequence: "Down"; enabled: root.listening; onActivated: root.press(Qt.Key_Down) }
+    Shortcut { sequence: "Left"; enabled: root.listening; onActivated: root.press(Qt.Key_Left) }
+    Shortcut { sequence: "Right"; enabled: root.listening; onActivated: root.press(Qt.Key_Right) }
+
+    Loader {
+        id: siegeGame
+        anchors.fill: parent
+        anchors.bottomMargin: footer.visible ? footer.height + 4 : 0
+        z: 5
+        active: root.siege && root.visible
+        sourceComponent: SiegeGame {}
+    }
 
     Accessible.role: Accessible.Pane
     Accessible.name: qsTr("Lyrics")
@@ -28,7 +62,7 @@ Item {
         id: list
         anchors.fill: parent
         anchors.bottomMargin: footer.height + 8
-        visible: root.hasLines
+        visible: root.hasLines && !root.siege
         clip: true
         model: root.hasLines ? lyrics.lines : []
         spacing: root.synced ? 14 : 6
@@ -127,7 +161,7 @@ Item {
     // pulsing with the beat, the screensaver's blocks for a rest.
     Row {
         id: rest
-        visible: root.synced && lyrics.gap > 0 && !root.browsing
+        visible: root.synced && lyrics.gap > 0 && !root.browsing && !root.siege
         spacing: 8
         x: 8
         readonly property Item anchorItem: list.currentItem
@@ -155,7 +189,7 @@ Item {
         anchors.centerIn: parent
         anchors.verticalCenterOffset: -footer.height / 2
         width: Math.min(parent.width - 32, 460)
-        visible: !root.hasLines
+        visible: !root.hasLines && !root.siege
         spacing: 18
 
         EmptyState {

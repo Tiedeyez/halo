@@ -30,6 +30,8 @@
         <file alias="PixelScrollBar.qml">PixelScrollBar.qml</file>
         <file alias="LyricLine.qml">LyricLine.qml</file>
         <file alias="LyricsView.qml">LyricsView.qml</file>
+        <file alias="SiegeGame.qml">SiegeGame.qml</file>
+        <file alias="Secrets.qml">Secrets.qml</file>
         <file alias="AlbumGrid.qml">AlbumGrid.qml</file>
         <file alias="AlbumPage.qml">AlbumPage.qml</file>
         <file alias="TrackList.qml">TrackList.qml</file>

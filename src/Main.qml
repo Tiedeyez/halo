@@ -22,6 +22,12 @@ ApplicationWindow {
     // 0 albums, 1 one album, 2 songs, 3 queue, 4 moments, 5 most played
     property int view: 0
     property bool nowPlaying: false
+    // Leaving Now Playing or hiding the lyrics ends a game of Siege.
+    onNowPlayingChanged: if (!nowPlaying) Secrets.siege = false
+    Connections {
+        target: lyrics
+        function onShownChanged() { if (!lyrics.shown) Secrets.siege = false }
+    }
     property bool helpVisible: false
     readonly property bool typing: sidebar.search.activeFocus
     readonly property bool free: !typing && !helpVisible && !eq.visible

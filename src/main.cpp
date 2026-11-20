@@ -143,6 +143,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<KaleidoPilot>("Halo", 1, 0, "KaleidoPilot");
     qmlRegisterType<PixelVisual>("Halo", 1, 0, "PixelVisual");
     qmlRegisterSingletonType(QUrl("qrc:/Style.qml"), "Halo", 1, 0, "Style");
+    qmlRegisterSingletonType(QUrl("qrc:/Secrets.qml"), "Halo", 1, 0, "Secrets");
     qmlRegisterUncreatableType<QueueModel>("Halo", 1, 0, "QueueModel", "from player");
     qmlRegisterUncreatableType<MomentModel>("Halo", 1, 0, "MomentModel", "from player");
 
@@ -195,9 +196,14 @@ int main(int argc, char *argv[]) {
             window->grabWindow().save(path);
     });
     QObject::connect(&remote, &Remote::uiRequested, &app, [&](const QString &name, const QString &value) {
-        static const QStringList allowed{"view", "nowPlaying", "helpVisible", "width", "height"};
+        static const QStringList allowed{"view", "nowPlaying", "helpVisible", "width", "height", "siege"};
         if (!allowed.contains(name))
             return;
+        if (name == "siege") {
+            if (QObject *secrets = engine.singletonInstance<QObject *>("Halo", "Secrets"))
+                secrets->setProperty("siege", value == "true");
+            return;
+        }
         QObject *root = engine.rootObjects().first();
         if (name == "view")
             QMetaObject::invokeMethod(root, "show", Q_ARG(QVariant, value.toInt()));
