@@ -463,12 +463,20 @@ private slots:
                 lyricsService.follow(t);
             }
         };
+        QTest::mouseMove(&view, QPoint(320, 200)); // steer to the middle
         play(1700);
         QTest::keyPress(&view, Qt::Key_Space);
         play(1200);
         QTest::keyRelease(&view, Qt::Key_Space);
         QVERIFY2(game->property("score").toInt() >= 20, qPrintable(game->property("score").toString()));
-        QVERIFY2(game->property("combo").toInt() >= 2, qPrintable(game->property("combo").toString()));
+        // The letters shot are gone from the rows' text, gaps kept.
+        int holed = 0;
+        for (const QVariant &row : game->property("rows").toList()) {
+            const QVariantMap r = row.toMap();
+            QCOMPARE(r["shown"].toString().size(), r["text"].toString().size());
+            holed += r["shown"] != r["text"];
+        }
+        QVERIFY2(holed >= 2, qPrintable(QString::number(holed)));
         // Space was the game's, not the player's.
         QCOMPARE(root->property("spacePlayed").toBool(), false);
         QVERIFY(game->property("multiplier").toInt() >= 1);

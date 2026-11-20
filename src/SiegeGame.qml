@@ -41,8 +41,7 @@ Item {
     property real marchX: 0
     property real pps: 80
     property real fontPx: 24
-    property real charW: 14.4
-    property real measuredFor: 0
+    readonly property real charW: metrics.advanceWidth / 10
     property real shipX: -1
     property real targetX: -1
     property bool leftHeld: false
@@ -102,10 +101,16 @@ Item {
                     wordOf.push(-1)
                 }
             }
-            out.push({ text: text, start: l.start, chars: chars, wordOf: wordOf, words: words,
-                       alive: alive, total: alive, passed: l.start <= songTime() })
+            out.push({ index: out.length, text: text, shown: text, start: l.start, chars: chars,
+                       wordOf: wordOf, words: words, alive: alive, total: alive, passed: l.start <= songTime() })
         }
+        out.sort((a, b) => a.start - b.start)
+        out.forEach((r, i) => { r.index = i; r.push = 0 })
         rows = out
+        // Same number of lines as before: the items stay, so give them back
+        // their whole text.
+        for (let i = 0; i < rowItems.count; ++i)
+            if (rows[i]) rowItems.itemAt(i).shown = rows[i].shown
         layout()
     }
 
@@ -146,13 +151,38 @@ Item {
     // to come are whole again.
     function again() { start() }
 
-    function rowY(r) { return singY - (r.start - t) * pps }
+    // Where a row is by the clock alone: on the sing line when it is sung.
+    function timeY(r) { return singY - (r.start - t) * pps }
+    function rowY(r) { return timeY(r) - r.push }
+
+    // Lines sung close together would land on one another, so a row too
+    // near the one below is pushed up until there's room, then eases down
+    // as the row below is sung. The next row to be sung is never pushed,
+    // so it still reaches the line on time.
+    function stack(dt) {
+        const room = fontPx * 1.4
+        let below = Infinity
+        for (const r of rows) {
+            const y = timeY(r)
+            const want = r.passed ? 0 : Math.max(0, y - (below - room))
+            // Up at once (never overlap), down gently.
+            if (want >= r.push)
+                r.push = want
+            else
+                r.push += (want - r.push) * Math.min(1, dt * 10)
+            if (!r.passed)
+                below = y - r.push
+        }
+    }
+
     function rowX(r) { return (width - r.chars.length * charW) / 2 + marchX }
 
     function burst(x, y, n, color) {
         for (let i = 0; i < n; ++i) {
             const a = Math.random() * Math.PI * 2
             const v = 60 + Math.random() * 160
+            if (sparks.length >= 120)
+                sparks.shift()
             sparks.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60,
                           life: 0.45 + Math.random() * 0.35, color: color })
         }
@@ -161,6 +191,10 @@ Item {
     function kill(r, c, x, y) {
         r.chars[c] = false
         r.alive--
+        r.shown = r.shown.substring(0, c) + " " + r.shown.substring(c + 1)
+        const item = rowItems.itemAt(r.index)
+        if (item)
+            item.shown = r.shown
         combo++
         const m = multiplier
         score += 10 * m
@@ -233,8 +267,9 @@ Item {
             t = target
         else
             t += dt + (target - t) * Math.min(1, dt * 4)
+        stack(dt)
         if (!live) {
-            canvas.requestPaint()
+            place()
             return
         }
         intro = Math.max(0, intro - dt)
@@ -346,8 +381,8 @@ Item {
             f.y -= 34 * dt
             f.life -= dt
             return f.life > 0
-        })
-        canvas.requestPaint()
+        }).slice(-10)
+        place()
     }
 
     Connections {
@@ -364,102 +399,197 @@ Item {
         onTriggered: game.tick(frameTime)
     }
 
-    Canvas {
-        id: canvas
-        anchors.fill: parent
-        renderStrategy: Canvas.Cooperative
+    // Drawing: scene graph items the game moves each frame. A row's text is
+    // laid out again only when one of its letters is shot, so a frame is
+    // mostly moving things the GPU already has.
+    function pool(repeater, list, apply) {
+        for (let i = 0; i < repeater.count; ++i) {
+            const it = repeater.itemAt(i)
+            if (i < list.length) {
+                apply(it, list[i])
+                it.visible = true
+            } else if (it.visible) {
+                it.visible = false
+            }
+        }
+    }
 
+    function place() {
+        const pulse = Style.motion ? spectrumSource.pulse : 0
+        // Only the line being sung shows below the sing line; lines sung
+        // before it get out of its way.
+        let singing = -1
+        for (const r of rows)
+            if (r.passed) singing = r.index
+        let next = true
+        for (const r of rows) {
+            const it = rowItems.itemAt(r.index)
+            if (!it)
+                continue
+            const y = rowY(r)
+            // Fade out below the sing line, and under the score bar at the top.
+            const fade = (r.passed ? (r.index === singing ? clamp(1 - (y - singY) / Math.max(1, height - singY), 0, 1) : 0) : 1)
+                       * clamp((y - fontPx - 34) / (fontPx * 1.5), 0, 1)
+            if (y < -fontPx || y > height + fontPx || fade <= 0) {
+                if (it.visible) it.visible = false
+                if (!r.passed && r.alive > 0) next = false
+                continue
+            }
+            const isNext = !r.passed && r.alive > 0 && next
+            if (!r.passed && (r.alive > 0 || next)) next = false
+            it.visible = true
+            it.x = Math.round(rowX(r))
+            it.y = Math.round(y - it.textBase - (r.passed ? 0 : pulse * 3))
+            it.opacity = fade
+            it.passed = r.passed
+            it.next = isNext
+            it.hit = r.alive < r.total
+        }
+        pool(shots, bullets, (it, b) => { it.x = b.x - 1.5; it.y = b.y - 9 })
+        pool(bombItems, bombs, (it, m) => { it.x = m.x; it.y = m.y; it.flip = Math.floor(m.phase) % 2 === 1 })
+        pool(sparkItems, sparks, (it, p) => {
+            it.x = Math.round(p.x) - 1.5
+            it.y = Math.round(p.y) - 1.5
+            it.opacity = clamp(p.life * 2, 0, 1)
+            it.color = p.color
+        })
+        pool(floatItems, floats, (it, f) => {
+            it.x = f.x - it.width / 2
+            it.y = f.y - it.height
+            it.opacity = clamp(f.life * 2, 0, 1)
+            it.text = f.text
+        })
+        ship.visible = !over && (invuln <= 0 || Math.floor(clock * 14) % 2 === 0)
+        ship.x = Math.round(shipX - shipW / 2)
+        ship.y = Math.round(shipY - shipH / 2)
+        ship.hurt = invuln > 0
+    }
+
+    TextMetrics {
+        id: metrics
+        font.family: game.fontName
+        font.pixelSize: game.fontPx
+        font.bold: true
+        text: "MMMMMMMMMM"
+    }
+
+    // Where lines are sung: a dashed pixel rule, drawn once per size.
+    Canvas {
+        id: rule
+        x: 0
+        y: game.singY + 6
+        width: parent.width
+        height: 2
+        onWidthChanged: requestPaint()
         onPaint: {
             const ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
-            ctx.font = "bold " + game.fontPx + "px '" + game.fontName + "'"
-            ctx.textBaseline = "alphabetic"
-            if (game.measuredFor !== game.fontPx) {
-                game.charW = ctx.measureText("MMMMMMMMMM").width / 10
-                game.measuredFor = game.fontPx
-            }
-            const cw = game.charW
-            const singY = game.singY
-            const pulse = Style.motion ? spectrumSource.pulse : 0
-
-            // Where lines are sung: a dashed pixel rule.
             ctx.fillStyle = Style.line
             for (let x = 8; x < width - 8; x += 12)
-                ctx.fillRect(x, singY + 6, 6, 2)
+                ctx.fillRect(x, 0, 6, 2)
+        }
+    }
 
-            // The rows, nearest to be sung in the accent.
-            let next = true
-            for (const r of game.rows) {
-                const y = game.rowY(r)
-                if (y < -game.fontPx || y > height + game.fontPx)
-                    continue
-                const x0 = game.rowX(r)
-                const fade = r.passed ? game.clamp(1 - (y - singY) / Math.max(1, height - singY), 0, 1) : 1
-                if (fade <= 0)
-                    continue
-                // What was shot stays faintly, so the words can still be read.
-                if (r.alive < r.total || r.passed) {
-                    ctx.globalAlpha = 0.5 * fade
-                    ctx.fillStyle = Style.line
-                    ctx.fillText(r.text, x0, y)
+    // The rows, nearest to be sung in the accent. What was shot stays
+    // faintly, so the words can still be read.
+    Repeater {
+        id: rowItems
+        model: game.rows.length
+        Item {
+            id: rowItem
+            required property int index
+            property string shown: game.rows[index] ? game.rows[index].shown : ""
+            readonly property string full: game.rows[index] ? game.rows[index].text : ""
+            property bool passed: false
+            property bool next: false
+            property bool hit: false
+            readonly property real textBase: live.baselineOffset
+            visible: false
+            Text {
+                visible: rowItem.hit || rowItem.passed
+                text: rowItem.full
+                color: Style.line
+                opacity: 0.5
+                font: live.font
+                textFormat: Text.PlainText
+            }
+            Text {
+                id: live
+                text: rowItem.shown
+                color: rowItem.passed ? Style.faint : rowItem.next ? Style.accentText : Style.text
+                opacity: rowItem.passed ? 0.55 : 1
+                font.family: game.fontName
+                font.pixelSize: game.fontPx
+                font.bold: true
+                textFormat: Text.PlainText
+            }
+        }
+    }
+
+    Repeater {
+        id: shots
+        model: 3
+        Rectangle { visible: false; width: 3; height: 11; color: Style.accent }
+    }
+    Repeater {
+        id: bombItems
+        model: 6
+        Item {
+            id: bomb
+            property bool flip: false
+            visible: false
+            Repeater {
+                model: 3
+                Rectangle {
+                    required property int index
+                    x: -2 + ((index % 2 === 1) !== bomb.flip ? 2 : -2)
+                    y: -6 + index * 4
+                    width: 4
+                    height: 4
+                    color: Style.danger
                 }
-                if (r.alive > 0) {
-                    const isNext = !r.passed && next
-                    if (!r.passed) next = false
-                    ctx.globalAlpha = (r.passed ? 0.55 : 1) * fade
-                    ctx.fillStyle = r.passed ? Style.faint : isNext ? Style.accentText : Style.text
-                    const hop = !r.passed ? -pulse * 3 : 0
-                    let c = 0
-                    while (c < r.chars.length) {
-                        if (!r.chars[c]) { ++c; continue }
-                        let e = c
-                        while (e < r.chars.length && r.chars[e])
-                            ++e
-                        ctx.fillText(r.text.substring(c, e), x0 + c * cw, y + hop)
-                        c = e
-                    }
-                } else if (!r.passed) {
-                    next = false
-                }
             }
-            ctx.globalAlpha = 1
+        }
+    }
+    Repeater {
+        id: sparkItems
+        model: 120
+        Rectangle { visible: false; width: 3; height: 3 }
+    }
+    Repeater {
+        id: floatItems
+        model: 10
+        Text {
+            visible: false
+            color: Style.accentText
+            font.family: game.fontName
+            font.pixelSize: Math.max(12, Math.round(game.fontPx * 0.6))
+            font.bold: true
+        }
+    }
 
-            // Shots and bombs.
-            ctx.fillStyle = Style.accent
-            for (const b of game.bullets)
-                ctx.fillRect(b.x - 1.5, b.y - 9, 3, 11)
-            ctx.fillStyle = Style.danger
-            for (const m of game.bombs) {
-                const s = Math.floor(m.phase) % 2 ? 1 : -1
-                for (let k = 0; k < 3; ++k)
-                    ctx.fillRect(m.x - 2 + (k % 2 ? s : -s) * 2, m.y - 6 + k * 4, 4, 4)
-            }
-            for (const p of game.sparks) {
-                ctx.globalAlpha = game.clamp(p.life * 2, 0, 1)
-                ctx.fillStyle = p.color
-                ctx.fillRect(Math.round(p.x) - 1.5, Math.round(p.y) - 1.5, 3, 3)
-            }
-            ctx.globalAlpha = 1
-            ctx.font = "bold " + Math.max(12, Math.round(game.fontPx * 0.6)) + "px '" + game.fontName + "'"
-            ctx.textAlign = "center"
-            for (const f of game.floats) {
-                ctx.globalAlpha = game.clamp(f.life * 2, 0, 1)
-                ctx.fillStyle = Style.accentText
-                ctx.fillText(f.text, f.x, f.y)
-            }
-            ctx.textAlign = "start"
-            ctx.globalAlpha = 1
-
-            // The ship, blinking while it recovers from a hit.
-            if (!game.over && (game.invuln <= 0 || Math.floor(game.clock * 14) % 2 === 0)) {
-                const p = game.px
-                const left = Math.round(game.shipX - game.shipW / 2)
-                const top = Math.round(game.shipY - game.shipH / 2)
-                ctx.fillStyle = game.invuln > 0 ? Style.danger : Style.accent
+    // The ship, blinking while it recovers from a hit.
+    Item {
+        id: ship
+        property bool hurt: false
+        width: game.shipW
+        height: game.shipH
+        Repeater {
+            model: {
+                const cells = []
                 for (let j = 0; j < game.shipArt.length; ++j)
                     for (let i = 0; i < game.shipArt[j].length; ++i)
                         if (game.shipArt[j][i] === "#")
-                            ctx.fillRect(left + i * p, top + j * p, p, p)
+                            cells.push([i, j])
+                return cells
+            }
+            Rectangle {
+                required property var modelData
+                x: modelData[0] * game.px
+                y: modelData[1] * game.px
+                width: game.px
+                height: game.px
+                color: ship.hurt ? Style.danger : Style.accent
             }
         }
     }
