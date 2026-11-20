@@ -8,8 +8,10 @@ import Halo
 Rectangle {
     id: root
     property int view: 0
+    property string playlistId: ""
     property alias search: searchField
     signal picked(int view)
+    signal pickedPlaylist(string id)
 
     color: Style.panel
     implicitWidth: 248
@@ -161,12 +163,161 @@ Rectangle {
             }
         }
 
-        Item { Layout.fillHeight: true }
+        // ---- playlists: pinned first, then by name ----
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: 14
+            spacing: 4
+            HoverHandler { id: plHover }
+            Text {
+                Layout.fillWidth: true
+                Layout.leftMargin: 4
+                text: qsTr("Playlists")
+                color: Style.faint
+                font.pixelSize: Style.fontSmall
+                font.family: Style.mono
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: 1
+            }
+            Keycap {
+                label: "8"
+                opacity: plHover.hovered ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: Style.quick; easing.type: Easing.OutCubic } }
+            }
+            IconButton {
+                glyph: "add"
+                glyphSize: 18
+                implicitWidth: 32
+                implicitHeight: 32
+                tip: qsTr("New playlist (Ctrl+N)")
+                onClicked: newMenu.popup()
+                Menu {
+                    id: newMenu
+                    Material.roundedScale: Style.radius
+                    MenuItem { text: qsTr("New playlist…"); onTriggered: PlaylistUi.newPlaylist([]) }
+                    MenuItem { text: qsTr("New smart playlist…"); onTriggered: PlaylistUi.newSmart() }
+                    MenuItem {
+                        text: qsTr("Save the queue as a playlist…")
+                        enabled: player.queue.count > 0
+                        onTriggered: PlaylistUi.newPlaylist(player.queueList())
+                    }
+                }
+            }
+        }
 
-        // Up next, so a glance tells what Blend or Drift will do.
+        ListView {
+            id: playlistList
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.minimumHeight: 3 * 40
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            model: playlists.all
+            ScrollBar.vertical: PixelScrollBar {}
+            SmoothWheel { flickable: playlistList }
+            delegate: AbstractButton {
+                id: pl
+                required property var modelData
+                width: playlistList.width
+                implicitHeight: 40
+                hoverEnabled: true
+                focusPolicy: Qt.NoFocus
+                readonly property bool selected: root.view === 8 && root.playlistId === modelData.id
+                Accessible.name: modelData.name
+                onClicked: root.pickedPlaylist(modelData.id)
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: plMenu.popup()
+                }
+                background: Rectangle {
+                    radius: Style.small
+                    color: pl.selected ? Style.raised : pl.hovered ? Style.hover : "transparent"
+                    Behavior on color { ColorAnimation { duration: Style.quick; easing.type: Easing.OutCubic } }
+                    Column {
+                        visible: pl.selected
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
+                        Repeater { model: 3; Rectangle { width: 4; height: 5; color: Style.accent } }
+                    }
+                }
+                contentItem: RowLayout {
+                    spacing: 10
+                    Item { Layout.preferredWidth: 4 }
+                    Glyph {
+                        name: pl.modelData.smart ? "smart" : "playlist"
+                        color: pl.selected ? Style.accentText : Style.faint
+                        width: 18
+                        height: 18
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: pl.modelData.name
+                        color: pl.selected ? Style.text : Style.muted
+                        font.pixelSize: Style.fontBody
+                        font.weight: pl.selected ? Font.DemiBold : Font.Normal
+                        elide: Text.ElideRight
+                    }
+                    Glyph {
+                        visible: pl.modelData.pinned
+                        name: "pin"
+                        color: Style.faint
+                        width: 14
+                        height: 14
+                    }
+                    Text {
+                        text: pl.modelData.count
+                        color: Style.faint
+                        font.pixelSize: Style.fontSmall
+                        font.features: { "tnum": 1 }
+                    }
+                }
+                Menu {
+                    id: plMenu
+                    Material.roundedScale: Style.radius
+                    MenuItem {
+                        text: qsTr("Play")
+                        onTriggered: { player.shuffle = false; player.playPaths(playlists.paths(pl.modelData.id), 0) }
+                    }
+                    MenuItem {
+                        text: qsTr("Shuffle")
+                        onTriggered: { const p = playlists.paths(pl.modelData.id); player.shuffle = true; player.playPaths(p, Math.floor(Math.random() * p.length)) }
+                    }
+                    MenuItem { text: qsTr("Add to queue"); onTriggered: player.enqueue(playlists.paths(pl.modelData.id)) }
+                    MenuSeparator {}
+                    MenuItem { text: qsTr("Rename…"); onTriggered: PlaylistUi.rename(pl.modelData.id) }
+                    MenuItem {
+                        text: pl.modelData.smart ? qsTr("Edit rules…") : qsTr("Add the song playing")
+                        enabled: pl.modelData.smart || player.hasTrack
+                        onTriggered: pl.modelData.smart ? PlaylistUi.editRules(pl.modelData.id)
+                                                        : PlaylistUi.add(pl.modelData.id, pl.modelData.name, [player.currentPath])
+                    }
+                    MenuItem {
+                        text: pl.modelData.pinned ? qsTr("Unpin") : qsTr("Pin to the top")
+                        onTriggered: playlists.setPinned(pl.modelData.id, !pl.modelData.pinned)
+                    }
+                    MenuItem {
+                        text: qsTr("Delete")
+                        onTriggered: { const n = pl.modelData.name; const id = pl.modelData.id; if (playlists.remove(id)) PlaylistUi.deleted(id, n) }
+                    }
+                }
+            }
+            // No playlists yet: one line that says how to start.
+            Text {
+                anchors.fill: parent
+                anchors.leftMargin: 4
+                visible: playlistList.count === 0
+                text: qsTr("Right-click a song and choose Add to playlist, or press +.")
+                color: Style.faint
+                font.pixelSize: Style.fontSmall
+                wrapMode: Text.Wrap
+            }
+        }
+
+        // Up next, so a glance tells what Blend or Drift will do. On a short
+        // window the playlists need the room more.
         ColumnLayout {
             Layout.fillWidth: true
-            visible: player.nextTitle.length > 0
+            visible: player.nextTitle.length > 0 && root.height >= 940
             spacing: 2
             Text {
                 text: qsTr("Up next")

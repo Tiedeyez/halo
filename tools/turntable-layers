@@ -1,0 +1,81 @@
+#!/bin/sh
+# Packs the turntable layers rendered by art/turntable/turntable.py --layers
+# into the app's resources (src/turntable): WebP, scaled to SIZE, the
+# moving parts cropped to the area they ever cover.
+#
+#   tools/turntable-layers LAYERS_DIR [SIZE]
+#
+# Needs ImageMagick (magick) and python3.
+set -eu
+
+IN="${1:?usage: tools/turntable-layers LAYERS_DIR [SIZE]}"
+SIZE="${2:-1536}"
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+OUT="$ROOT/src/turntable"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+mkdir -p "$OUT"
+rm -f "$OUT"/*.webp "$OUT"/manifest.json "$OUT"/manifest.js "$OUT"/turntable.qrc
+
+# The deck, lamps off, alpha kept.
+magick "$IN/deck.png" -resize "${SIZE}x${SIZE}" -quality 90 -define webp:alpha-quality=100 "$OUT/deck.webp"
+
+# The lamps' light alone: lit minus unlit, as grey; the app tints it.
+magick \( "$IN/deck-lit.png" -alpha off \) \( "$IN/deck.png" -alpha off \) \
+    -compose MinusSrc -composite -colorspace Gray -resize "$((SIZE / 2))x$((SIZE / 2))" \
+    -quality 88 "$OUT/glow.webp"
+
+# Scale the moving parts first, then find the box each one ever covers.
+for f in "$IN"/spindle.png "$IN"/arm-*.png; do
+    magick "$f" -resize "${SIZE}x${SIZE}" "$WORK/$(basename "$f")"
+done
+
+box() { # prints x y w h of the non-transparent area of the given images
+    for f in "$@"; do
+        magick "$f" -alpha extract -threshold 4% -format "%@\n" info:
+    done | awk -F'[x+]' '
+        { x0 = $3; y0 = $4; x1 = $3 + $1; y1 = $4 + $2
+          if (NR == 1 || x0 < X0) X0 = x0; if (NR == 1 || y0 < Y0) Y0 = y0
+          if (NR == 1 || x1 > X1) X1 = x1; if (NR == 1 || y1 > Y1) Y1 = y1 }
+        END { pad = 4; X0 -= pad; Y0 -= pad; X1 += pad; Y1 += pad
+              if (X0 < 0) X0 = 0; if (Y0 < 0) Y0 = 0
+              print X0, Y0, X1 - X0, Y1 - Y0 }'
+}
+
+set -- $(box "$WORK"/arm-*.png)
+AX=$1 AY=$2 AW=$3 AH=$4
+for f in "$WORK"/arm-*.png; do
+    magick "$f" -crop "${AW}x${AH}+${AX}+${AY}" +repage -quality 88 -define webp:alpha-quality=90 \
+        "$OUT/$(basename "$f" .png).webp"
+done
+set -- $(box "$WORK/spindle.png")
+SX=$1 SY=$2 SW=$3 SH=$4
+magick "$WORK/spindle.png" -crop "${SW}x${SH}+${SX}+${SY}" +repage -quality 90 "$OUT/spindle.webp"
+
+python3 -I - "$IN/manifest.json" "$OUT/manifest.json" "$SIZE" "$AX" "$AY" "$AW" "$AH" "$SX" "$SY" "$SW" "$SH" <<'EOF'
+import json, sys
+src, dst, size, ax, ay, aw, ah, sx, sy, sw, sh = sys.argv[1:]
+m = json.load(open(src))
+m["image"] = int(size)
+m["frames"] = len(m["headings"])
+m["arm"] = {"x": int(ax), "y": int(ay), "w": int(aw), "h": int(ah)}
+m["spindle"] = {"x": int(sx), "y": int(sy), "w": int(sw), "h": int(sh)}
+json.dump(m, open(dst, "w"), indent=1)
+# The same, as a JavaScript library the QML imports.
+with open(dst[:-len("manifest.json")] + "manifest.js", "w") as f:
+    f.write(".pragma library\n// Written by tools/turntable-layers; see manifest.json.\nvar data = " + json.dumps(m) + ";\n")
+EOF
+
+# The resource file that puts them at qrc:/turntable/.
+{
+    echo '<RCC>'
+    echo '    <qresource prefix="/turntable">'
+    for f in "$OUT"/*.webp "$OUT"/manifest.json "$OUT"/manifest.js; do
+        echo "        <file alias=\"$(basename "$f")\">$(basename "$f")</file>"
+    done
+    echo '    </qresource>'
+    echo '</RCC>'
+} > "$OUT/turntable.qrc"
+
+du -ch "$OUT"/*.webp "$OUT"/manifest.js | tail -1

@@ -186,6 +186,13 @@ Rectangle {
             spacing: 2
             Item { Layout.fillWidth: true }
             IconButton {
+                glyph: "playlistAdd"
+                tip: qsTr("Add this song to a playlist")
+                enabled: player.hasTrack
+                onClicked: { nowMenu.paths = [player.currentPath]; nowMenu.popup() }
+                AddToPlaylistMenu { id: nowMenu }
+            }
+            IconButton {
                 glyph: "blend"
                 tip: player.blend ? qsTr("Blend is on: songs mix into each other (B)") : qsTr("Blend is off: gapless (B)")
                 active: player.blend

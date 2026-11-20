@@ -1,0 +1,45 @@
+<RCC>
+    <qresource prefix="/turntable">
+        <file alias="arm-00.webp">arm-00.webp</file>
+        <file alias="arm-01.webp">arm-01.webp</file>
+        <file alias="arm-02.webp">arm-02.webp</file>
+        <file alias="arm-03.webp">arm-03.webp</file>
+        <file alias="arm-04.webp">arm-04.webp</file>
+        <file alias="arm-05.webp">arm-05.webp</file>
+        <file alias="arm-06.webp">arm-06.webp</file>
+        <file alias="arm-07.webp">arm-07.webp</file>
+        <file alias="arm-08.webp">arm-08.webp</file>
+        <file alias="arm-09.webp">arm-09.webp</file>
+        <file alias="arm-10.webp">arm-10.webp</file>
+        <file alias="arm-11.webp">arm-11.webp</file>
+        <file alias="arm-12.webp">arm-12.webp</file>
+        <file alias="arm-13.webp">arm-13.webp</file>
+        <file alias="arm-14.webp">arm-14.webp</file>
+        <file alias="arm-15.webp">arm-15.webp</file>
+        <file alias="arm-16.webp">arm-16.webp</file>
+        <file alias="arm-17.webp">arm-17.webp</file>
+        <file alias="arm-18.webp">arm-18.webp</file>
+        <file alias="arm-19.webp">arm-19.webp</file>
+        <file alias="arm-20.webp">arm-20.webp</file>
+        <file alias="arm-21.webp">arm-21.webp</file>
+        <file alias="arm-22.webp">arm-22.webp</file>
+        <file alias="arm-23.webp">arm-23.webp</file>
+        <file alias="arm-24.webp">arm-24.webp</file>
+        <file alias="arm-25.webp">arm-25.webp</file>
+        <file alias="arm-26.webp">arm-26.webp</file>
+        <file alias="arm-27.webp">arm-27.webp</file>
+        <file alias="arm-28.webp">arm-28.webp</file>
+        <file alias="arm-29.webp">arm-29.webp</file>
+        <file alias="arm-30.webp">arm-30.webp</file>
+        <file alias="arm-31.webp">arm-31.webp</file>
+        <file alias="arm-32.webp">arm-32.webp</file>
+        <file alias="arm-33.webp">arm-33.webp</file>
+        <file alias="arm-34.webp">arm-34.webp</file>
+        <file alias="arm-35.webp">arm-35.webp</file>
+        <file alias="deck.webp">deck.webp</file>
+        <file alias="glow.webp">glow.webp</file>
+        <file alias="spindle.webp">spindle.webp</file>
+        <file alias="manifest.json">manifest.json</file>
+        <file alias="manifest.js">manifest.js</file>
+    </qresource>
+</RCC>

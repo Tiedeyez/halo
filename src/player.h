@@ -124,6 +124,7 @@ public:
     Library *library() const { return m_library; }
 
     const QStringList &queuePaths() const { return m_queue; }
+    Q_INVOKABLE QStringList queueList() const { return m_queue; }
     bool isDrift(int index) const { return m_driftPaths.contains(m_queue.value(index)); }
     const std::vector<Moment> &moments() const { return m_moments; }
 

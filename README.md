@@ -112,6 +112,22 @@ checked against the source.
 - **Equalizer.** Ten bands, a preamp and presets, with the limiter behind it.
 - **Sleep timer.** Fades out over fifteen seconds and pauses (Z).
 - **Most played.** Counted on this computer when you hear half a song.
+- **Playlists.** Make one from the sidebar's +, from any song's or album's
+  menu, or from the queue (Save as playlist). Reorder with Alt+Up/Down,
+  pin favourites to the top, and undo a delete. They are plain `.m3u8` files
+  in `~/.local/share/halo/playlists`, so other players read them too, and
+  `.m3u` files dropped in that folder show up in Halo. Songs that have moved
+  are kept and greyed out, not dropped.
+- **Smart playlists.** Rules over title, artist, album, genre, folder, year,
+  length, plays, when a song was added or last played, and the tempo and
+  loudness Halo measured: "faster than 118 BPM and played in the last 90
+  days". They keep up with the library, show a live count while you edit,
+  and start from templates (Heavy rotation, Recently added, Never played,
+  Up-tempo, Slow and quiet).
+- **Suggestions.** On a playlist, Suggest songs offers songs from your
+  library that would fit: close in tempo and loudness to songs already in it,
+  or by the same artists and genres. Worked out on this computer; nothing is
+  added until you say so.
 - **Every bar widget is a remote.** Halo speaks MPRIS, so media keys, the
   Omarchy bar, and the now-playing widgets on the plugin marketplace control
   it.
@@ -173,7 +189,7 @@ halo status                     # what is playing and the library scan; --json f
 halo add song.flac ; halo playnext ~/Music/Other
 halo next ; halo pause ; halo seek +30 ; halo volume 60
 halo blend on ; halo drift off ; halo repeat all ; halo sleep 30
-halo visual hologram            # switch the visual (next, previous, or one of the ten by name)
+halo visual hologram            # switch the visual (next, previous, or one of the eleven by name)
 halo lyrics                     # the words of the song playing, the sung line marked
 halo lyrics online on           # look lyrics up on lrclib.net (off by default)
 halo lyrics offset +0.3         # this song's lyrics 0.3 s earlier

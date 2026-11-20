@@ -19,8 +19,33 @@ ApplicationWindow {
     Material.roundedScale: Style.radius
     Material.background: Style.raised
 
-    // 0 albums, 1 one album, 2 songs, 3 queue, 4 moments, 5 most played
+    // 0 albums, 1 one album, 2 songs, 3 queue, 4 moments, 5 most played,
+    // 6 lost & found, 7 library doctor, 8 a playlist (playlistId)
     property int view: 0
+    property string playlistId: ""
+
+    function openPlaylist(id) {
+        playlistId = id
+        show(8)
+    }
+    function showPlaylists() { show(8) }
+    function openDialog(which) {
+        if (which === "smart") smartRules.openFor("")
+        else if (which === "edit" && playlistId.length) smartRules.openFor(playlistId)
+        else if (which === "new") newPlaylist([])
+        else if (which === "rename" && playlistId.length) PlaylistUi.rename(playlistId)
+    }
+    function newPlaylist(paths) {
+        namePrompt.ask(qsTr("New playlist"), qsTr("Create"), "", name => {
+            const id = playlists.create(name, paths || [])
+            if (!id.length)
+                return
+            if (paths && paths.length)
+                PlaylistUi.toast(qsTr("Added %n songs to %1", "", paths.length).arg(name))
+            else
+                win.openPlaylist(id)
+        })
+    }
     property bool nowPlaying: false
     // Leaving Now Playing or hiding the lyrics ends a game of Siege.
     onNowPlayingChanged: if (!nowPlaying) Secrets.siege = false
@@ -33,6 +58,11 @@ ApplicationWindow {
     readonly property bool free: !typing && !helpVisible && !eq.visible
 
     function show(v) {
+        // A playlist page with no playlist opens the first one.
+        if (v === 8 && (!playlistId.length || !playlists.info(playlistId).id)) {
+            const all = playlists.all
+            playlistId = all.length ? all[0].id : ""
+        }
         view = v
         tracks.mode = v === 5 ? 2 : v === 6 ? 3 : 0
         nowPlaying = false
@@ -88,6 +118,8 @@ ApplicationWindow {
     Shortcut { sequence: "5"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(5) }
     Shortcut { sequence: "6"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(6) }
     Shortcut { sequence: "7"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(7) }
+    Shortcut { sequence: "8"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.showPlaylists() }
+    Shortcut { sequence: "Ctrl+N"; context: Qt.ApplicationShortcut; enabled: !win.typing && !namePrompt.visible; onActivated: win.newPlaylist([]) }
     Shortcut { sequence: "F"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.nowPlaying = !win.nowPlaying }
     // L opens the lyrics, in Now Playing; again hides them.
     Shortcut {
@@ -112,8 +144,8 @@ ApplicationWindow {
     Shortcut { sequence: "R"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.cycleRepeat() }
     Shortcut { sequence: "E"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: eq.visible ? eq.close() : eq.open() }
     Shortcut { sequence: "Z"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.cycleSleep() }
-    Shortcut { sequence: "V"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.visualStyle = (player.visualStyle + 1) % 10 }
-    Shortcut { sequence: "Shift+V"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.visualStyle = (player.visualStyle + 9) % 10 }
+    Shortcut { sequence: "V"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.visualStyle = (player.visualStyle + 1) % 11 }
+    Shortcut { sequence: "Shift+V"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.visualStyle = (player.visualStyle + 10) % 11 }
     Shortcut { sequence: "C"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.calm = !player.calm }
     Shortcut { sequence: "Ctrl+R"; context: Qt.ApplicationShortcut; onActivated: library.rescan() }
     Shortcut { sequences: [StandardKey.Undo]; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: player.undo() }
@@ -186,7 +218,9 @@ ApplicationWindow {
                     id: sidebar
                     Layout.fillHeight: true
                     view: win.view
+                    playlistId: win.playlistId
                     onPicked: v => win.show(v)
+                    onPickedPlaylist: id => win.openPlaylist(id)
                     search.onTextChanged: {
                         albums.query = search.text
                         tracks.query = search.text
@@ -506,6 +540,11 @@ ApplicationWindow {
                             }
                         }
                     }
+                    PlaylistPage {
+                        focus: win.view === 8
+                        playlistId: win.playlistId
+                        onOpenAlbum: id => win.openAlbum(id)
+                    }
                 }
             }
 
@@ -568,6 +607,10 @@ ApplicationWindow {
                 target: doctor
                 function onMessage(text) { toast.show(text) }
             }
+            Connections {
+                target: PlaylistUi
+                function onToast(text) { toast.show(text) }
+            }
             // Say so when a correction starts on its own (E to turn it off).
             property string tunedFor: ""
             Connections {
@@ -605,6 +648,68 @@ ApplicationWindow {
     }
 
     EqPanel { id: eq }
+
+    // ---- playlists ----
+    NamePrompt { id: namePrompt }
+    SmartRulesDialog {
+        id: smartRules
+        onSaved: id => win.openPlaylist(id)
+    }
+    Connections {
+        target: PlaylistUi
+        function onNewPlaylist(paths) { win.newPlaylist(paths) }
+        function onNewSmart() { smartRules.openFor("") }
+        function onEditRules(id) { smartRules.openFor(id) }
+        function onOpen(id) { win.openPlaylist(id) }
+        function onRename(id) {
+            const info = playlists.info(id)
+            namePrompt.ask(qsTr("Rename playlist"), qsTr("Rename"), info.name, name => playlists.rename(id, name))
+        }
+        function onDeleted(id, name) {
+            undoDelete.name = name
+            undoDelete.shown = true
+            undoTimer.restart()
+            if (win.playlistId === id)
+                win.showPlaylists()
+        }
+    }
+    // A deleted playlist can come back for a few seconds (and later with
+    // `halo playlist restore`): its file waits in the folder's .trash.
+    Rectangle {
+        id: undoDelete
+        property string name
+        property bool shown: false
+        z: 50
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 120
+        width: undoRow.implicitWidth + 24
+        height: 52
+        radius: Style.radius
+        color: Style.raised
+        border.color: Style.line
+        opacity: shown ? 1 : 0
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: Style.smooth; easing.type: Easing.OutCubic } }
+        Timer { id: undoTimer; interval: 8000; onTriggered: undoDelete.shown = false }
+        RowLayout {
+            id: undoRow
+            anchors.centerIn: parent
+            spacing: 12
+            Text { text: qsTr("Deleted “%1”").arg(undoDelete.name); color: Style.text; font.pixelSize: Style.fontBody }
+            Button {
+                text: qsTr("Undo")
+                flat: true
+                Material.foreground: Style.accentText
+                onClicked: {
+                    undoDelete.shown = false
+                    const id = playlists.restoreLast()
+                    if (id.length)
+                        win.openPlaylist(id)
+                }
+            }
+        }
+    }
 
     Menu {
         id: sleepMenu

@@ -21,7 +21,7 @@ Rectangle {
     readonly property bool showWords: lyricsOn && hasWords
     readonly property bool wide: width >= 1080 && height >= 560
     readonly property var visualNames: [qsTr("HALO"), qsTr("BARS"), qsTr("KALEIDOSCOPE"), qsTr("SKYLINE"),
-        qsTr("PHOSPHOR"), qsTr("PULSAR"), qsTr("WATERFALL"), qsTr("WARP"), qsTr("AURORA"), qsTr("HOLOGRAM")]
+        qsTr("PHOSPHOR"), qsTr("PULSAR"), qsTr("WATERFALL"), qsTr("WARP"), qsTr("AURORA"), qsTr("HOLOGRAM"), qsTr("TURNTABLE")]
     readonly property real gutter: Math.max(16, Math.min(48, Math.min(width, height) * 0.05))
 
     // The cover's colours wash the background, softly.
@@ -43,7 +43,7 @@ Rectangle {
     // ---- pieces ----
 
     // The active visual is the background. The pixel visuals fill the whole
-    // window; the round ones (halo, kaleidoscope, hologram) and the cover
+    // window; the round ones (halo, kaleidoscope, hologram, turntable) and the cover
     // centre on the song's side of a wide window, left of the text column,
     // and are sized from that area so they fill its height and bleed a
     // little past it, rather than being centred on the window and half
@@ -103,6 +103,16 @@ Rectangle {
             height: stage.vinylSide
             cell: Math.max(3, Math.round(stage.vinylSide / (130 * Style.pixelDensity)))
             opacity: player.visualStyle === 9 ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
+        }
+        // The turntable: a square render with the deck across about 80% of
+        // it, so it is drawn a little larger than the round visuals.
+        TurntableVisual {
+            anchors.centerIn: focusPoint
+            width: Math.min(stage.focusH * 1.2, stage.focusW * 1.15)
+            height: width
+            opacity: player.visualStyle === 10 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }

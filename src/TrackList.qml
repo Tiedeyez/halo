@@ -5,7 +5,8 @@ import QtQuick.Layouts
 import Halo
 
 // A list of songs. Enter plays from the selected song on, A adds it to the
-// queue, Shift+Enter plays it next; right-click for the same.
+// queue, Shift+Enter plays it next; right-click for the same. In a playlist
+// you can edit, Delete removes the selected song and Alt+Up/Down moves it.
 FocusScope {
     id: root
     property var model
@@ -14,7 +15,26 @@ FocusScope {
     property bool showPlays: false
     property alias list: view
     property Component header: null
+    // Set on a playlist's page; `editable` for manual playlists.
+    property string playlistId: ""
+    property bool editable: false
     signal openAlbum(string albumId)
+
+    function removeSelected() {
+        if (!root.editable || view.currentIndex < 0)
+            return
+        const row = view.currentIndex
+        playlists.removeRows(root.playlistId, [row])
+        view.currentIndex = Math.min(row, view.count - 1)
+    }
+    function moveSelected(by) {
+        const from = view.currentIndex
+        const to = from + by
+        if (!root.editable || from < 0 || to < 0 || to >= view.count)
+            return
+        if (playlists.move(root.playlistId, from, to))
+            view.currentIndex = to
+    }
 
     function playFrom(row) {
         player.playPaths(model.paths(), row)
@@ -48,6 +68,14 @@ FocusScope {
         highlightMoveDuration: 0
         Keys.onReturnPressed: root.playFrom(currentIndex)
         Keys.onEnterPressed: root.playFrom(currentIndex)
+        Keys.onDeletePressed: root.removeSelected()
+        Keys.onPressed: e => {
+            if (!root.editable)
+                return
+            if (e.key === Qt.Key_Backspace) { root.removeSelected(); e.accepted = true }
+            else if (e.key === Qt.Key_Up && (e.modifiers & Qt.AltModifier)) { root.moveSelected(-1); e.accepted = true }
+            else if (e.key === Qt.Key_Down && (e.modifiers & Qt.AltModifier)) { root.moveSelected(1); e.accepted = true }
+        }
 
         delegate: Item {
             id: row
@@ -60,6 +88,10 @@ FocusScope {
             required property real duration
             required property int number
             required property int plays
+            // Only playlists have this role: a song whose file is gone.
+            required property var model
+            readonly property bool missing: model.missing === true
+            opacity: missing ? 0.45 : 1
             width: ListView.view.width
             height: 52
             readonly property bool current: player.currentPath === path
@@ -120,7 +152,7 @@ FocusScope {
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: Style.artistName(row.artist)
+                        text: row.missing ? qsTr("Missing: the file was moved or deleted") : Style.artistName(row.artist)
                         color: Style.muted
                         font.pixelSize: Style.fontSmall + 1
                         elide: Text.ElideRight
@@ -164,7 +196,7 @@ FocusScope {
             }
             TapHandler {
                 acceptedButtons: Qt.RightButton
-                onTapped: { view.currentIndex = row.index; menu.path = row.path; menu.albumId = row.albumId; menu.row = row.index; menu.popup() }
+                onTapped: { view.currentIndex = row.index; menu.path = row.path; menu.albumId = row.albumId; menu.row = row.index; addMenu.paths = [row.path]; menu.popup() }
             }
             Accessible.role: Accessible.ListItem
             Accessible.name: row.title + ", " + Style.artistName(row.artist)
@@ -180,6 +212,28 @@ FocusScope {
         MenuItem { text: qsTr("Play from here"); onTriggered: root.playFrom(menu.row) }
         MenuItem { text: qsTr("Play next"); onTriggered: player.playNext([menu.path]) }
         MenuItem { text: qsTr("Add to queue"); onTriggered: player.enqueue([menu.path]) }
-        MenuItem { text: qsTr("Go to album"); onTriggered: root.openAlbum(menu.albumId) }
+        AddToPlaylistMenu { id: addMenu }
+        MenuItem { text: qsTr("Go to album"); enabled: menu.albumId.length > 0; onTriggered: root.openAlbum(menu.albumId) }
+        MenuSeparator { visible: root.editable }
+        MenuItem {
+            text: qsTr("Move up (Alt+Up)")
+            visible: root.editable
+            height: visible ? implicitHeight : 0
+            enabled: menu.row > 0
+            onTriggered: { view.currentIndex = menu.row; root.moveSelected(-1) }
+        }
+        MenuItem {
+            text: qsTr("Move down (Alt+Down)")
+            visible: root.editable
+            height: visible ? implicitHeight : 0
+            enabled: menu.row < view.count - 1
+            onTriggered: { view.currentIndex = menu.row; root.moveSelected(1) }
+        }
+        MenuItem {
+            text: qsTr("Remove from this playlist (Delete)")
+            visible: root.editable
+            height: visible ? implicitHeight : 0
+            onTriggered: { view.currentIndex = menu.row; root.removeSelected() }
+        }
     }
 }

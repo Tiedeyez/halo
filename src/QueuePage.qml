@@ -31,6 +31,15 @@ FocusScope {
             }
             Item { Layout.fillWidth: true }
             Button {
+                text: qsTr("Save as playlist")
+                flat: true
+                enabled: player.queue.count > 0
+                focusPolicy: Qt.NoFocus
+                Material.foreground: Style.accentText
+                Material.roundedScale: Style.radius
+                onClicked: PlaylistUi.newPlaylist(player.queueList())
+            }
+            Button {
                 text: qsTr("Clear")
                 flat: true
                 enabled: player.queue.count > 1

@@ -25,7 +25,8 @@ HEADERS += \
     src/cli.h \
     src/theme.h \
     src/translator.h \
-    src/lyrics.h
+    src/lyrics.h \
+    src/playlists.h
 
 SOURCES += \
     src/doctor.cpp \
@@ -44,15 +45,18 @@ SOURCES += \
     src/cli.cpp \
     src/theme.cpp \
     src/translator.cpp \
-    src/lyrics.cpp
+    src/lyrics.cpp \
+    src/playlists.cpp
 
 RESOURCES += src/resources.qrc
+# The Turntable visual's layers (tools/turntable-layers writes them).
+RESOURCES += src/turntable/turntable.qrc
 
 # Shaders are compiled to Qt's portable .qsb form when qmake runs (bin/build
 # always runs it) and packed into the binary through a generated resource file.
 QSB = $$[QT_HOST_BINS]/qsb
 !exists($$QSB): error("qsb is missing. Install it with: omarchy-pkg-add qt6-shadertools")
-SHADERS = glitch.frag pixelfield.frag pixelbar.frag kaleido.frag pixelgrid.frag vinyl.frag
+SHADERS = glitch.frag pixelfield.frag pixelbar.frag kaleido.frag pixelgrid.frag vinyl.frag turntable.frag
 SHADER_FILES =
 # Commas would split qmake function arguments, so the list lives in a variable.
 QSB_GLSL = "100 es,120,150"
@@ -65,4 +69,4 @@ for(shader, SHADERS) {
 }
 write_file($$OUT_PWD/shaders.qrc, $$list("<RCC>" "    <qresource prefix=\"/\">" $$SHADER_FILES "    </qresource>" "</RCC>"))
 RESOURCES += $$OUT_PWD/shaders.qrc
-DISTFILES += src/shaders/glitch.frag src/shaders/pixelfield.frag src/shaders/pixelbar.frag src/shaders/kaleido.frag src/shaders/pixelgrid.frag src/shaders/vinyl.frag
+DISTFILES += src/shaders/glitch.frag src/shaders/pixelfield.frag src/shaders/pixelbar.frag src/shaders/kaleido.frag src/shaders/pixelgrid.frag src/shaders/vinyl.frag src/shaders/turntable.frag

@@ -3,6 +3,7 @@
 #include <QJsonDocument>
 #include <QLocalSocket>
 #include <QSaveFile>
+#include <QRegularExpression>
 #include <QColor>
 #include <QWheelEvent>
 #include <QQuickView>
@@ -36,6 +37,7 @@
 #include "headphones.h"
 #include "kaleidopilot.h"
 #include "player.h"
+#include "playlists.h"
 #include "remote.h"
 #include "visualizers.h"
 #include "safety.h"
@@ -1152,10 +1154,14 @@ private slots:
         // visual: by name, by number, next/previous wrapping, bad names refused.
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"hologram"}}}).value("visual").toString(), QString("hologram"));
         QCOMPARE(player.visualStyle(), 9);
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("turntable"));
+        QCOMPARE(player.visualStyle(), 10);
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("halo"));
-        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"previous"}}}).value("visual").toString(), QString("hologram"));
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"previous"}}}).value("visual").toString(), QString("turntable"));
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"3"}}}).value("visual").toString(), QString("skyline"));
-        QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"10"}}}).value("ok").toBool());
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"10"}}}).value("visual").toString(), QString("turntable"));
+        QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"11"}}}).value("ok").toBool());
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"3"}}}).value("visual").toString(), QString("skyline"));
         QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"mandelbrot"}}}).value("ok").toBool());
         QCOMPARE(remote.handle({{"cmd", "visual"}}).value("visual").toString(), QString("skyline"));
     }
@@ -1589,6 +1595,316 @@ private slots:
         QVERIFY2(server.requests.isEmpty(), qPrintable(server.requests.join(", ")));
         QVERIFY(Analysis::ffmpegArguments(evil).contains("-protocol_whitelist"));
     }
+    // ---- playlists ----
+
+    // A scanned library of `n` twelve-second tones, for the playlist tests.
+    static void scanTones(const QString &folder, Library &library, int n, QStringList &files) {
+        for (int i = 0; i < n; ++i) {
+            files << folder + QString("/%1.wav").arg(i);
+            writeWav(files.last(), std::vector<float>(48000 * 12, 0.05f));
+        }
+        library.rescan();
+        QTRY_COMPARE_WITH_TIMEOUT(library.trackCount(), n, 20000);
+    }
+
+    void playlistsPersistAsM3u8() {
+        QTemporaryDir music, cache, state, lists;
+        Library library({music.path()}, cache.path(), state.path());
+        QStringList files;
+        scanTones(music.path(), library, 4, files);
+        if (QTest::currentTestFailed()) return;
+        QString id;
+        {
+            Playlists playlists(&library, nullptr, lists.path());
+            id = playlists.create("Road Trip", {files[0], files[1], files[0]});
+            QCOMPARE(id, QString("road-trip"));
+            QCOMPARE(playlists.paths(id), (QStringList{files[0], files[1]})); // duplicates dropped on create
+            QCOMPARE(playlists.add(id, {files[1], files[2]}), 1);            // files[1] already there
+            QCOMPARE(playlists.add(id, {files[1]}, true), 1);                 // unless asked
+            QCOMPARE(playlists.paths(id), (QStringList{files[0], files[1], files[2], files[1]}));
+            QVERIFY(playlists.removeRows(id, {3, 3, 99}));
+            QVERIFY(playlists.move(id, 2, 0));
+            QVERIFY(!playlists.move(id, 0, 5));
+            QVERIFY(playlists.rename(id, "Night Drive"));
+            QVERIFY(playlists.setPinned(id, true));
+            QVERIFY(!playlists.rename(id, "  \n "));
+            QCOMPARE(playlists.add("nope", {files[3]}), 0);
+        }
+        Playlists again(&library, nullptr, lists.path());
+        QCOMPARE(again.count(), 1);
+        const Playlist *p = again.find(id);
+        QVERIFY(p);
+        QCOMPARE(p->name, QString("Night Drive"));
+        QVERIFY(p->pinned);
+        QCOMPARE(again.paths(id), (QStringList{files[2], files[0], files[1]}));
+        QCOMPARE(again.lookup("night DRIVE")->id, id);
+
+        QFile f(lists.filePath(id + ".m3u8"));
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        const QStringList lines = QString::fromUtf8(f.readAll()).split('\n', Qt::SkipEmptyParts);
+        QCOMPARE(lines.value(0), QString("#EXTM3U"));
+        QCOMPARE(lines.value(1), QString("#PLAYLIST:Night Drive"));
+        QVERIFY(lines.value(2).startsWith("#HALO:{"));
+        QCOMPARE(int(lines.filter(QRegularExpression("^#EXTINF:12,")).size()), 3);
+        const QStringList entries = lines.filter(QRegularExpression("^[^#]"));
+        QCOMPARE(entries, (QStringList{files[2], files[0], files[1]}));
+        for (const QString &e : entries)
+            QVERIFY(e.startsWith('/'));
+    }
+
+    void playlistM3uParsing() {
+        QByteArray data = "\xEF\xBB\xBF#EXTM3U\r\n#PLAYLIST:Mixed\r\n#EXTINF:100,A - B\r\nsub/song.mp3\r\n"
+                          "file:///music/My%20Song.flac\r\nhttp://radio.example/stream\r\n"
+                          "Albums\\Disc 1\\track.flac\r\n/abs/x.ogg\r\n\r\n# comment\r\n";
+        const Playlist p = Playlists::parseM3u(data, "/base/dir");
+        QCOMPARE(p.name, QString("Mixed"));
+        QCOMPARE(p.paths, (QStringList{"/base/dir/sub/song.mp3", "/music/My Song.flac",
+                                        "/base/dir/Albums/Disc 1/track.flac", "/abs/x.ogg"}));
+        QByteArray many;
+        for (int i = 0; i < Playlists::MaxEntries + 5; ++i)
+            many += "/m/" + QByteArray::number(i) + ".mp3\n";
+        QCOMPARE(int(Playlists::parseM3u(many, "/").paths.size()), Playlists::MaxEntries);
+    }
+
+    void smartPlaylistRules() {
+        auto track = [](const QString &title, const QString &artist, const QString &album, int year, int number,
+                        qint64 mtime, const QString &albumArtist = {}) {
+            Track t;
+            t.path = "/m/" + album + "/" + title + ".flac";
+            t.title = title;
+            t.artist = artist;
+            t.albumArtist = albumArtist;
+            t.album = album;
+            t.genre = artist == "Dilla" ? "Hip-Hop" : "Jazz";
+            t.year = year;
+            t.number = number;
+            t.duration = 180;
+            t.mtime = mtime;
+            return t;
+        };
+        const qint64 now = 1'800'000'000;
+        const qint64 day = 86400;
+        std::vector<Track> tracks{
+            track("Workinonit", "Dilla", "Donuts", 2006, 2, now - 2 * day),
+            track("Waves", "Dilla", "Donuts", 2006, 1, now - 400 * day),
+            track("So What", "Miles", "Kind of Blue", 1959, 1, now - 10 * day, "Miles Davis"),
+            track("Untitled", "Unknown", "Tape", 0, 1, now - 100 * day),
+        };
+        QHash<QString, TrackFacts> facts;
+        facts[tracks[0].path] = {5, now - day, 92, -9};
+        facts[tracks[1].path] = {1, now - 60 * day, 0, 0}; // not analysed
+        facts[tracks[2].path] = {9, 0, 136, -18};
+        auto factsOf = [&](const Track &t) { return facts.value(t.path); };
+        auto titles = [&](const QVariantMap &spec, qint64 at = 1'800'000'000) {
+            QStringList out;
+            for (int i : Playlists::evaluate(Playlists::fromSpec(spec), tracks, factsOf, at))
+                out << tracks[size_t(i)].title;
+            return out;
+        };
+        auto rule = [](const QString &f, const QString &op, const QString &v) {
+            return QVariantMap{{"field", f}, {"op", op}, {"value", v}};
+        };
+        auto spec = [](QVariantList rules, bool all = true, const QString &sort = "title", bool desc = false, int limit = 0) {
+            return QVariantMap{{"rules", rules}, {"matchAll", all}, {"sort", sort}, {"descending", desc}, {"limit", limit}};
+        };
+
+        QCOMPARE(titles(spec({rule("artist", "contains", "dil")})), (QStringList{"Waves", "Workinonit"}));
+        QCOMPARE(titles(spec({rule("artist", "notContains", "dil")})), (QStringList{"So What", "Untitled"}));
+        QCOMPARE(titles(spec({rule("artist", "is", "miles davis")})), QStringList{"So What"}); // album artist line
+        QCOMPARE(titles(spec({rule("artist", "isNot", "Miles")})), (QStringList{"Untitled", "Waves", "Workinonit"}));
+        QCOMPARE(titles(spec({rule("title", "startsWith", "w")})), (QStringList{"Waves", "Workinonit"}));
+        QCOMPARE(titles(spec({rule("genre", "is", "hip-hop")})), (QStringList{"Waves", "Workinonit"}));
+        // Unknown tempo matches no tempo rule, either way.
+        QCOMPARE(titles(spec({rule("bpm", "less", "200")})), (QStringList{"So What", "Workinonit"}));
+        QCOMPARE(titles(spec({rule("bpm", "isNot", "92")})), QStringList{"So What"});
+        QCOMPARE(titles(spec({rule("loudness", "greater", "-12")})), QStringList{"Workinonit"});
+        QCOMPARE(titles(spec({rule("plays", "greater", "3")})), (QStringList{"So What", "Workinonit"}));
+        QCOMPARE(titles(spec({rule("length", "is", "3")})).size(), 4);
+        // An unknown year is never "is", always "isNot".
+        QCOMPARE(titles(spec({rule("year", "less", "2000")})), QStringList{"So What"});
+        QCOMPARE(titles(spec({rule("year", "isNot", "2006")})), (QStringList{"So What", "Untitled"}));
+        QCOMPARE(titles(spec({rule("added", "inLast", "30")})), (QStringList{"So What", "Workinonit"}));
+        QCOMPARE(titles(spec({rule("added", "notInLast", "30")})), (QStringList{"Untitled", "Waves"}));
+        QCOMPARE(titles(spec({rule("played", "never", "")})), (QStringList{"So What", "Untitled"}));
+        QCOMPARE(titles(spec({rule("played", "inLast", "7")})), QStringList{"Workinonit"});
+        // All versus any.
+        QCOMPARE(titles(spec({rule("artist", "is", "Dilla"), rule("plays", "greater", "3")})), QStringList{"Workinonit"});
+        QCOMPARE(titles(spec({rule("artist", "is", "Unknown"), rule("plays", "greater", "8")}, false)),
+                 (QStringList{"So What", "Untitled"}));
+        // No rules: everything.
+        QCOMPARE(titles(spec({})).size(), 4);
+        // Sorting and limits; an album's songs keep album order on a tie.
+        QCOMPARE(titles(spec({}, true, "plays", true, 2)), (QStringList{"So What", "Workinonit"}));
+        QCOMPARE(titles(spec({rule("artist", "is", "Dilla")}, true, "album")), (QStringList{"Waves", "Workinonit"}));
+        QCOMPARE(titles(spec({}, true, "added", true)), (QStringList{"Workinonit", "So What", "Untitled", "Waves"}));
+
+        // Invalid rules are dropped; an unknown sort falls back.
+        const Playlist p = Playlists::fromSpec(spec({rule("artist", "greater", "1"), rule("bogus", "is", "x"),
+                                                     rule("added", "never", ""), rule("plays", "less", "2")},
+                                                    true, "nonsense"));
+        QCOMPARE(int(p.rules.size()), 1);
+        QCOMPARE(p.sort, QString("added"));
+        QCOMPARE(Playlists::fromSpec(Playlists::toSpec(p)).rules.size(), p.rules.size());
+
+        // Random: the same all day, different another day.
+        std::vector<Track> many;
+        for (int i = 0; i < 30; ++i)
+            many.push_back(track(QString("T%1").arg(i), "A", "B", 2000, i, now));
+        Playlist r = Playlists::fromSpec({{"sort", "random"}});
+        r.name = "Shuffle";
+        auto none = [](const Track &) { return TrackFacts{}; };
+        const auto morning = Playlists::evaluate(r, many, none, now - now % day + 3600);
+        const auto evening = Playlists::evaluate(r, many, none, now - now % day + 20 * 3600);
+        const auto tomorrow = Playlists::evaluate(r, many, none, now - now % day + day + 3600);
+        QCOMPARE(morning, evening);
+        QVERIFY(morning != tomorrow);
+        QCOMPARE(int(morning.size()), 30);
+    }
+
+    void playlistTrashAndNames() {
+        QTemporaryDir lists;
+        Playlists playlists(nullptr, nullptr, lists.path());
+        QCOMPARE(Playlists::cleanName("  Late\nNight\tMix\x01 "), QString("Late Night Mix"));
+        QCOMPARE(Playlists::cleanName(QString(500, 'x')).size(), Playlists::MaxNameLength);
+        QVERIFY(playlists.create(" \n ").isEmpty());
+        QCOMPARE(playlists.create("Road Trip"), QString("road-trip"));
+        QCOMPARE(playlists.create("Road Trip"), QString("road-trip-2"));
+        QCOMPARE(playlists.create("Café / Ñu!"), QString("cafe-nu"));
+        QCOMPARE(playlists.create("???"), QString("playlist"));
+        const QString smart = playlists.createSmart("Heavy rotation", {{"rules", QVariantList{QVariantMap{
+                                                                           {"field", "plays"}, {"op", "greater"}, {"value", "3"}}}}});
+        QCOMPARE(smart, QString("heavy-rotation"));
+        QVERIFY(QFileInfo::exists(lists.filePath("heavy-rotation.halo-smart")));
+        QCOMPARE(playlists.add(smart, {"/x.mp3"}), 0); // smart playlists fill themselves
+        QVERIFY(!playlists.setSpec("road-trip", {}));
+        QVERIFY(playlists.setSpec(smart, {{"matchAll", false}, {"rules", QVariantList{}}}));
+        QCOMPARE(playlists.find(smart)->name, QString("Heavy rotation")); // the name stays when not given
+        QCOMPARE(playlists.count(), 5);
+
+        // Delete to the trash, then back with the same id.
+        QVERIFY(playlists.remove("road-trip"));
+        QVERIFY(!QFileInfo::exists(lists.filePath("road-trip.m3u8")));
+        QVERIFY(QFileInfo::exists(lists.filePath(".trash/road-trip.m3u8")));
+        QVERIFY(playlists.canRestore());
+        QCOMPARE(playlists.restoreLast(), QString("road-trip"));
+        QVERIFY(playlists.find("road-trip"));
+        // The id was taken again meanwhile: the restored one gets a new id.
+        QVERIFY(playlists.remove("road-trip"));
+        QCOMPARE(playlists.create("Road Trip"), QString("road-trip"));
+        QCOMPARE(playlists.restoreLast(), QString("road-trip-3"));
+        QCOMPARE(playlists.find("road-trip-3")->name, QString("Road Trip"));
+        QVERIFY(playlists.restoreLast().isEmpty());
+        // A smart playlist survives the trash as smart.
+        QVERIFY(playlists.remove(smart));
+        QCOMPARE(playlists.restoreLast(), smart);
+        QVERIFY(playlists.find(smart)->smart);
+
+        // Duplicates are independent copies.
+        const QString copy = playlists.duplicate("road-trip");
+        QVERIFY(!copy.isEmpty() && copy != "road-trip");
+        QVERIFY(playlists.find(copy)->name.contains("Road Trip"));
+    }
+
+    void playlistFolderIgnoresLinksAndHugeFiles() {
+        QTemporaryDir lists, outside;
+        QFile real(outside.filePath("real.m3u8"));
+        QVERIFY(real.open(QIODevice::WriteOnly));
+        real.write("#EXTM3U\n/a.mp3\n");
+        real.close();
+        QVERIFY(QFile::link(real.fileName(), lists.filePath("link.m3u8")));
+        QFile big(lists.filePath("big.m3u8"));
+        QVERIFY(big.open(QIODevice::WriteOnly));
+        QVERIFY(big.resize(Playlists::MaxFileBytes + 1));
+        big.close();
+        QFile ok(lists.filePath("Fine_Name.m3u"));
+        QVERIFY(ok.open(QIODevice::WriteOnly));
+        ok.write("#EXTM3U\n/a.mp3\nb.mp3\n");
+        ok.close();
+        Playlists playlists(nullptr, nullptr, lists.path());
+        QCOMPARE(playlists.count(), 1);
+        const Playlist *p = playlists.find("Fine_Name");
+        QVERIFY(p);
+        QCOMPARE(p->name, QString("Fine Name"));
+        const QStringList paths = p->paths; // find() points into a list that create() can move
+        QCOMPARE(paths, (QStringList{"/a.mp3", lists.filePath("b.mp3")}));
+
+        // Export writes a readable file; import makes a new playlist of it.
+        const QString out = outside.filePath("out.m3u8");
+        QVERIFY(playlists.exportFile("Fine_Name", out));
+        const QString imported = playlists.importFile(out);
+        QCOMPARE(imported, QString("fine-name"));
+        QCOMPARE(playlists.paths(imported), paths);
+        QVERIFY(playlists.importFile(outside.filePath("missing.m3u8")).isEmpty());
+    }
+
+    void playlistSuggestions() {
+        QTemporaryDir music, cache, state, lists;
+        Library library({music.path()}, cache.path(), state.path());
+        QStringList files;
+        scanTones(music.path(), library, 3, files);
+        if (QTest::currentTestFailed()) return;
+        Playlists playlists(&library, nullptr, lists.path());
+        const QString empty = playlists.create("Empty");
+        QVERIFY(playlists.suggest(empty).isEmpty());
+        QVERIFY(playlists.suggest("nope").isEmpty());
+        const QString id = playlists.create("One", {files[0]});
+        QVERIFY(playlists.suggest(id, 0).isEmpty());
+        const QStringList s = playlists.suggest(id, 10);
+        QVERIFY(!s.contains(files[0]));
+        QCOMPARE(QSet<QString>(s.begin(), s.end()), (QSet<QString>{files[1], files[2]}));
+        QCOMPARE(playlists.previewCount({}), 3);
+    }
+
+    void remotePlaylistCommands() {
+        QTemporaryDir music, cache, state, lists;
+        Library library({music.path()}, cache.path(), state.path());
+        QStringList files;
+        scanTones(music.path(), library, 3, files);
+        if (QTest::currentTestFailed()) return;
+        Analyzer analyzer(cache.filePath("analysis.json"));
+        analyzer.setBackground(false);
+        Player player(&library, &analyzer, state.path());
+        Playlists playlists(&library, &analyzer, lists.path());
+        Remote remote(&player);
+        auto call = [&](QStringList args) {
+            QJsonArray a;
+            for (const QString &s : args)
+                a.append(s);
+            return remote.handle({{"cmd", "playlist"}, {"args", a}});
+        };
+        QVERIFY(!call({"list"}).value("ok").toBool()); // no playlists wired yet
+        remote.setPlaylists(&playlists);
+        QCOMPARE(call({"list"}).value("playlists").toArray().size(), 0);
+        QJsonObject r = call({"new", "Gym", files[0]});
+        QVERIFY(r.value("ok").toBool());
+        QCOMPARE(r.value("playlist").toObject().value("count").toInt(), 1);
+        r = call({"add", "gym", files[0], files[1]});
+        QCOMPARE(r.value("added").toInt(), 1);
+        QCOMPARE(r.value("skipped").toInt(), 1);
+        r = call({"show", "Gym"});
+        QCOMPARE(r.value("songs").toArray().size(), 2);
+        QCOMPARE(r.value("songs").toArray().at(1).toObject().value("path").toString(), files[1]);
+        QVERIFY(!call({"show", "nothing"}).value("ok").toBool());
+        QVERIFY(!call({"new", "  "}).value("ok").toBool());
+        QVERIFY(!call({"smart", "Bad", "plays sideways 3"}).value("ok").toBool());
+        QVERIFY(!call({"smart", "Bad", "plays"}).value("ok").toBool());
+        r = call({"smart", "Long ones", "length greater 0.1"});
+        QVERIFY(r.value("ok").toBool());
+        QCOMPARE(r.value("playlist").toObject().value("count").toInt(), 3);
+        QVERIFY(!call({"add", "Long ones", files[2]}).value("ok").toBool());
+        QVERIFY(call({"rename", "Gym", "Leg day"}).value("ok").toBool());
+        QVERIFY(call({"play", "Leg day"}).value("ok").toBool());
+        QCOMPARE(player.queuePaths(), (QStringList{files[0], files[1]}));
+        r = call({"save", "Queue copy"});
+        QCOMPARE(r.value("playlist").toObject().value("count").toInt(), 2);
+        QVERIFY(call({"delete", "Leg day"}).value("ok").toBool());
+        QCOMPARE(call({"list"}).value("playlists").toArray().size(), 2);
+        QVERIFY(call({"restore"}).value("ok").toBool());
+        QCOMPARE(call({"show", "Leg day"}).value("songs").toArray().size(), 2);
+        QVERIFY(!call({"frobnicate", "Leg day"}).value("ok").toBool());
+        player.flush();
+    }
+
 };
 
 QTEST_MAIN(HaloTests)

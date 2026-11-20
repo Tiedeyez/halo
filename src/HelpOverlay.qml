@@ -20,6 +20,8 @@ Rectangle {
         ["A", qsTr("Add the selected song to the queue")],
         ["/  Ctrl+F", qsTr("Search")],
         ["1 2 3 4 5 6 7", qsTr("Albums, Songs, Queue, Moments, Most played, Lost & Found, Library Doctor")],
+        ["8  Ctrl+N", qsTr("Playlists, new playlist")],
+        ["Alt+↑ ↓  Delete", qsTr("In a playlist: move or remove the selected song")],
         ["F", qsTr("Now Playing, full window")],
         ["L", qsTr("Lyrics, live with the song")],
         [",  .", qsTr("Lyrics earlier or later (Shift: by half a second)")],

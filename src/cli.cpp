@@ -38,7 +38,8 @@ Control a running Halo:
   blend|drift|shuffle|normalize <on|off>
   repeat <off|all|one>
   visual [next|previous|name]  Switch the visual: halo, bars, kaleidoscope, skyline,
-                               phosphor, pulsar, waterfall, warp, aurora, hologram
+                               phosphor, pulsar, waterfall, warp, aurora, hologram,
+                               turntable
   sleep <minutes|off>          Fade out and pause after N minutes
   lyrics [--json]              The current song's lyrics, the line being sung marked
   lyrics online <on|off>       Look lyrics up on lrclib.net (sends title, artist,
@@ -46,6 +47,24 @@ Control a running Halo:
   lyrics retry                 Look again, ignoring a cached miss
   lyrics offset <+N|-N|reset>  Show this song's lyrics N seconds earlier or later
   rescan                       Look for new music
+
+Playlists (files in ~/.local/share/halo/playlists, readable by any player):
+  playlist [list]              List playlists
+  playlist show <name>         The songs in a playlist
+  playlist new <name> [paths]  Make a playlist, with songs from files or folders
+  playlist save <name>         Save the queue as a playlist
+  playlist smart <name> [any] "<field> <op> <value>" ...
+                               A playlist that fills itself from rules; all must
+                               match unless "any". Fields: title artist album
+                               genre folder year length plays bpm loudness added
+                               played. Ops: contains notContains is isNot
+                               startsWith greater less inLast notInLast never
+  playlist add <name> <paths>  Add songs (ones already in it are skipped)
+  playlist addcurrent <name>   Add the song playing
+  playlist play|shuffle|queue <name>
+  playlist suggest <name> [N]  Songs that would fit, by tempo, loudness and taste
+  playlist rename <name> <new> | delete <name> | restore
+  playlist import <file.m3u8> | export <name> <file.m3u8>
 
 Commands that need no running Halo:
   scan [--json]                Scan the music folders and report what's there
@@ -61,7 +80,8 @@ const char *Skill = R"(---
 name: halo
 description: |
   Control Halo, the Omarchy music player, from the command line: what is
-  playing, play/pause/skip, queue songs or folders, set volume, Blend
+  playing, play/pause/skip, queue songs or folders, playlists (make, add to,
+  smart rules, suggestions), set volume, Blend
   (beat-aware crossfades), Drift (keeps playing similar music from the
   library), moments, the sleep timer, live lyrics, and track analysis
   (tempo, loudness). Use when asked to play, queue, pause or skip music,
@@ -85,7 +105,16 @@ halo analyze track.mp3 --json   # {"bpm":..,"lufs":..,"start":..,"end":..}
 halo scan --json                # library size, no window needed
 halo lyrics --json              # {"lyrics":{"status":"found","kind":"words","current":12,"lines":[..]}}
 halo lyrics offset +0.3         # this song's lyrics 0.3 s earlier (saved per song)
+halo playlist --json            # {"playlists":[{"id":..,"name":..,"count":..,"smart":..}]}
+halo playlist new "Road Trip" ~/Music/Album   # make one (folders become their songs)
+halo playlist addcurrent "Road Trip"          # add the song playing
+halo playlist smart "Fast" "bpm greater 118" "played inLast 90"
+halo playlist play "Road Trip" ; halo playlist suggest "Road Trip" 10
 ```
+
+Playlists are .m3u8 files (smart ones .halo-smart JSON) in
+~/.local/share/halo/playlists. Deleting moves the file to .trash there
+(`halo playlist restore` brings the last one back).
 
 Online lyrics (lrclib.net) is off unless the user turned it on; it sends the
 title, artist, album and length of each song played. Don't switch it on
@@ -152,6 +181,18 @@ int remote(const QString &command, const QStringList &args, bool json) {
         // grab names a file that doesn't exist yet, so it is always made absolute.
         list.append(takesFiles.contains(command) && (info.exists() || command == "grab") ? info.absoluteFilePath() : a);
     }
+    // `playlist`: the files after the subcommand and name, the file to
+    // import, and the file to export to, go over absolute.
+    if (command == "playlist" && !args.isEmpty()) {
+        const QString sub = args.first();
+        for (int i = 1; i < args.size(); ++i) {
+            const QFileInfo info(args[i]);
+            const bool file = (sub == "import" && i == 1) || (sub == "export" && i == 2) ||
+                              ((sub == "new" || sub == "add") && i >= 2 && info.exists());
+            if (file)
+                list[i] = info.absoluteFilePath();
+        }
+    }
     QJsonObject reply;
     if (!Remote::send({{"cmd", command}, {"args", list}}, &reply, 3000))
         return fail("Halo isn't running. Start it with `halo open`.", json);
@@ -168,6 +209,45 @@ int remote(const QString &command, const QStringList &args, bool json) {
                   << "  " << o.value("title").toString()
                   << (o.value("artist").toString().isEmpty() ? QString() : " - " + o.value("artist").toString())
                   << (o.value("drift").toBool() ? "  (drift)" : "") << "\n";
+        }
+        return 0;
+    }
+    if (command == "playlist") {
+        auto line = [](const QJsonObject &o) {
+            return o.value("name").toString() + (o.value("smart").toBool() ? "  (smart)" : "") + "  " +
+                   QString::number(o.value("count").toInt()) + (o.value("count").toInt() == 1 ? " song" : " songs");
+        };
+        auto printSongs = [](const QJsonArray &songs) {
+            int n = 0;
+            for (const auto &v : songs) {
+                const QJsonObject o = v.toObject();
+                out() << QString::number(++n).rightJustified(4) << "  " << o.value("title").toString()
+                      << (o.value("artist").toString().isEmpty() ? QString() : " - " + o.value("artist").toString())
+                      << (o.value("missing").toBool() ? "  (missing)" : "") << "\n";
+            }
+        };
+        if (reply.contains("playlists")) {
+            const QJsonArray all = reply.value("playlists").toArray();
+            if (all.isEmpty())
+                out() << "No playlists yet. Make one with: halo playlist new <name>\n";
+            for (const auto &v : all)
+                out() << (v.toObject().value("pinned").toBool() ? "* " : "  ") << line(v.toObject()) << "\n";
+        } else if (reply.contains("deleted")) {
+            out() << "Deleted. Bring it back with: halo playlist restore\n";
+        } else if (reply.contains("file")) {
+            out() << "Wrote " << reply.value("file").toString() << "\n";
+        } else if (reply.contains("added")) {
+            out() << "Added " << reply.value("added").toInt();
+            if (reply.value("skipped").toInt() > 0)
+                out() << " (" << reply.value("skipped").toInt() << " already in it)";
+            out() << ". " << line(reply.value("playlist").toObject()) << "\n";
+        } else if (reply.contains("songs") && !reply.contains("playlist")) {
+            printSongs(reply.value("songs").toArray());
+        } else if (reply.contains("playlist")) {
+            out() << line(reply.value("playlist").toObject()) << "\n";
+            printSongs(reply.value("songs").toArray());
+        } else if (reply.contains("status")) {
+            printStatus(reply.value("status").toObject());
         }
         return 0;
     }
@@ -306,7 +386,7 @@ namespace Cli {
 bool isCommand(const QStringList &arguments) {
     static const QStringList commands{"status", "play", "pause", "toggle", "next", "previous", "prev", "seek",
                                       "volume", "add", "playnext", "queue", "clear", "moment", "blend", "drift",
-                                      "shuffle", "normalize", "repeat", "sleep", "rescan", "scan", "analyze", "lyrics", "visual",
+                                      "shuffle", "normalize", "repeat", "sleep", "rescan", "scan", "analyze", "lyrics", "visual", "playlist",
                                       "skill", "grab", "ui", "help", "-h", "--help", "-v", "--version"};
     return arguments.size() > 1 && commands.contains(arguments[1]);
 }

@@ -88,7 +88,8 @@ inline void makePrivate(const QStringList &folders) {
 inline QStringList ownFolders() {
     return {QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/halo",
             QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/halo",
-            QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/halo"};
+            QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/halo",
+            QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/halo"};
 }
 
 // The lyrics endpoint: https anywhere, plain http only to this machine.

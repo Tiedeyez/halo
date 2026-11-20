@@ -101,6 +101,15 @@ FocusScope {
                             implicitHeight: 48
                             onClicked: player.enqueue(albumTracks.paths())
                         }
+                        Button {
+                            text: qsTr("Add to playlist")
+                            flat: true
+                            Material.roundedScale: Style.radius
+                            focusPolicy: Qt.NoFocus
+                            implicitHeight: 48
+                            onClicked: { albumMenu.paths = albumTracks.paths(); albumMenu.popup() }
+                            AddToPlaylistMenu { id: albumMenu }
+                        }
                     }
                 }
             }

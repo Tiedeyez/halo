@@ -444,7 +444,7 @@ void Player::setCalm(bool on) {
 void Player::setVisualStyle(int style) {
     if (style == m_visualStyle)
         return;
-    m_visualStyle = std::clamp(style, 0, 9);
+    m_visualStyle = std::clamp(style, 0, 10);
     emit settingsChanged();
     scheduleSave();
 }
@@ -1243,7 +1243,7 @@ void Player::restore() {
     m_repeat = std::clamp(settings.value("repeat").toInt(0), 0, 2);
     m_normalize = settings.value("normalize").toBool(true);
     m_calm = settings.value("calm").toBool(false);
-    m_visualStyle = std::clamp(settings.value("visual").toInt(0), 0, 9);
+    m_visualStyle = std::clamp(settings.value("visual").toInt(0), 0, 10);
     const QJsonObject eq = root.value("eq").toObject();
     m_eqEnabled = eq.value("enabled").toBool(false);
     const QJsonArray gains = eq.value("gains").toArray();

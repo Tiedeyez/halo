@@ -14,11 +14,13 @@
 #include <QThreadPool>
 #include <QUrl>
 #include <QtConcurrent>
+#include <algorithm>
 #include <cmath>
 
 #include "library.h"
 #include "lyrics.h"
 #include "player.h"
+#include "playlists.h"
 
 namespace {
 const char *Path = "/org/mpris/MediaPlayer2";
@@ -284,6 +286,8 @@ QJsonObject Remote::handle(const QJsonObject &request) {
 
     if (cmd == "ping")
         return {{"ok", true}};
+    if (cmd == "playlist")
+        return playlistCommand(args);
     if (cmd == "lyrics") {
         if (!m_lyrics)
             return {{"ok", false}, {"error", "lyrics aren't available"}};
@@ -428,7 +432,7 @@ QJsonObject Remote::handle(const QJsonObject &request) {
     }
     if (cmd == "visual") {
         static const QStringList names{"halo", "bars", "kaleidoscope", "skyline", "phosphor",
-                                       "pulsar", "waterfall", "warp", "aurora", "hologram"};
+                                       "pulsar", "waterfall", "warp", "aurora", "hologram", "turntable"};
         if (!args.isEmpty()) {
             const QString v = args.first().toLower();
             bool number = false;
@@ -451,4 +455,132 @@ QJsonObject Remote::handle(const QJsonObject &request) {
         return ok();
     }
     return {{"ok", false}, {"error", QString("unknown command %1").arg(cmd)}};
+}
+
+// `halo playlist ...`: the same playlists the window shows, by name or id.
+QJsonObject Remote::playlistCommand(const QStringList &args) {
+    if (!m_playlists)
+        return {{"ok", false}, {"error", "playlists aren't available"}};
+    const QString sub = args.value(0, "list");
+    auto fail = [](const QString &e) { return QJsonObject{{"ok", false}, {"error", e}}; };
+    auto found = [&](const QString &name) -> const Playlist * {
+        return name.isEmpty() ? nullptr : m_playlists->lookup(name);
+    };
+    auto songs = [&](const QStringList &paths) {
+        QJsonArray items;
+        for (const QString &p : paths) {
+            const Track *t = m_player->library()->track(p);
+            items.append(QJsonObject{{"path", p},
+                                     {"title", t ? t->title : Library::titleFromFileName(QFileInfo(p).fileName())},
+                                     {"artist", t ? t->artist : QString()},
+                                     {"missing", !t && !QFileInfo::exists(p)}});
+        }
+        return items;
+    };
+    auto summary = [&](const QString &id) { return QJsonObject::fromVariantMap(m_playlists->info(id)); };
+
+    if (sub == "list") {
+        QJsonArray items;
+        for (const QVariant &v : m_playlists->all())
+            items.append(QJsonObject::fromVariantMap(v.toMap()));
+        return {{"ok", true}, {"playlists", items}};
+    }
+    if (sub == "new" || sub == "save") {
+        const QString name = args.value(1);
+        if (Playlists::cleanName(name).isEmpty())
+            return fail("give the playlist a name");
+        const QStringList paths = sub == "save" ? m_player->queuePaths() : Library::expand(args.mid(2));
+        const QString id = m_playlists->create(name, paths);
+        if (id.isEmpty())
+            return fail("couldn't create the playlist");
+        return {{"ok", true}, {"playlist", summary(id)}};
+    }
+    if (sub == "smart") {
+        // halo playlist smart NAME [any] "plays greater 3" "added inLast 30" ...
+        const QString name = args.value(1);
+        if (Playlists::cleanName(name).isEmpty())
+            return fail("give the playlist a name");
+        QVariantList rules;
+        bool matchAll = true;
+        for (const QString &a : args.mid(2)) {
+            if (a == "any") {
+                matchAll = false;
+                continue;
+            }
+            const QStringList parts = a.split(' ', Qt::SkipEmptyParts);
+            if (parts.size() < 2)
+                return fail(QString("a rule is \"field op value\", not \"%1\"").arg(a));
+            rules << QVariantMap{{"field", parts[0]}, {"op", parts[1]}, {"value", parts.mid(2).join(' ')}};
+        }
+        const QVariantMap spec{{"matchAll", matchAll}, {"rules", rules}};
+        if (Playlists::fromSpec(spec).rules.size() != size_t(rules.size()))
+            return fail("a rule isn't understood; fields: title artist album genre folder year length plays bpm "
+                        "loudness added played; ops: contains notContains is isNot startsWith greater less inLast "
+                        "notInLast never");
+        const QString id = m_playlists->createSmart(name, spec);
+        if (id.isEmpty())
+            return fail("couldn't create the playlist");
+        return {{"ok", true}, {"playlist", summary(id)}};
+    }
+    if (sub == "restore") {
+        const QString id = m_playlists->restoreLast();
+        if (id.isEmpty())
+            return fail("nothing to restore");
+        return {{"ok", true}, {"playlist", summary(id)}};
+    }
+    if (sub == "import") {
+        const QString id = m_playlists->importFile(args.value(1));
+        if (id.isEmpty())
+            return fail("couldn't read that playlist file");
+        return {{"ok", true}, {"playlist", summary(id)}};
+    }
+
+    const Playlist *p = found(args.value(1));
+    if (!p)
+        return fail(args.value(1).isEmpty() ? "name a playlist" : QString("no playlist called \"%1\"").arg(args.value(1)));
+    const QString id = p->id;
+
+    if (sub == "show")
+        return {{"ok", true}, {"playlist", summary(id)}, {"songs", songs(m_playlists->paths(id))}};
+    if (sub == "play" || sub == "shuffle" || sub == "queue") {
+        const QStringList paths = m_playlists->paths(id);
+        if (paths.isEmpty())
+            return fail("the playlist is empty");
+        if (sub == "queue")
+            m_player->enqueue(paths);
+        else {
+            m_player->setShuffle(sub == "shuffle");
+            m_player->playPaths(paths, 0);
+        }
+        return {{"ok", true}, {"status", m_player->status()}};
+    }
+    if (sub == "add" || sub == "addcurrent") {
+        if (p->smart)
+            return fail("a smart playlist fills itself from its rules");
+        const QStringList paths = sub == "addcurrent" ? QStringList{m_player->currentPath()} : Library::expand(args.mid(2));
+        if (paths.isEmpty() || paths.first().isEmpty())
+            return fail(sub == "addcurrent" ? "nothing is playing" : "no audio files in what was given");
+        const int added = m_playlists->add(id, paths);
+        return {{"ok", true}, {"added", added}, {"skipped", int(paths.size()) - added}, {"playlist", summary(id)}};
+    }
+    if (sub == "rename") {
+        if (!m_playlists->rename(id, args.value(2)))
+            return fail("give the new name");
+        return {{"ok", true}, {"playlist", summary(id)}};
+    }
+    if (sub == "delete" || sub == "remove") {
+        if (!m_playlists->remove(id))
+            return fail("couldn't delete the playlist");
+        return {{"ok", true}, {"deleted", id}};
+    }
+    if (sub == "export") {
+        if (!m_playlists->exportFile(id, args.value(2)))
+            return fail("couldn't write that file");
+        return {{"ok", true}, {"file", args.value(2)}};
+    }
+    if (sub == "suggest") {
+        const int n = std::clamp(args.value(2, "10").toInt(), 1, 100);
+        return {{"ok", true}, {"songs", songs(m_playlists->suggest(id, n))}};
+    }
+    return fail(QString("unknown playlist command \"%1\"").arg(sub));
 }

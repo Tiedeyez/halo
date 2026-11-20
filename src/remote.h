@@ -108,6 +108,7 @@ private:
 
 // The MPRIS service and the local socket the `halo` command talks to.
 class LyricsService;
+class Playlists;
 
 class Remote : public QObject {
     Q_OBJECT
@@ -131,6 +132,7 @@ public:
     QString error() const { return m_error; }
     // Lets `halo lyrics` read and steer the lyrics; optional.
     void setLyrics(LyricsService *lyrics) { m_lyrics = lyrics; }
+    void setPlaylists(Playlists *playlists) { m_playlists = playlists; }
 
 signals:
     void raiseRequested();
@@ -142,6 +144,8 @@ signals:
 private:
     Player *m_player;
     LyricsService *m_lyrics = nullptr;
+    Playlists *m_playlists = nullptr;
+    QJsonObject playlistCommand(const QStringList &args);
     QString m_error;
     QLocalServer m_server;
     MprisRoot *m_root = nullptr;

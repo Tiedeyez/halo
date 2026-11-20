@@ -25,6 +25,7 @@
 #include "library.h"
 #include "lyrics.h"
 #include "player.h"
+#include "playlists.h"
 #include "remote.h"
 #include "safety.h"
 #include "stream.h"
@@ -97,6 +98,9 @@ int main(int argc, char *argv[]) {
     Analyzer analyzer;
     Player player(&library, &analyzer);
     Remote remote(&player);
+    Playlists playlists(&library, &analyzer);
+    remote.setPlaylists(&playlists);
+    QObject::connect(&playlists, &Playlists::message, &player, &Player::message);
     // Lyrics follow the song: a new song looks them up, every position
     // update moves the line being sung.
     LyricsService lyrics;
@@ -144,6 +148,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<PixelVisual>("Halo", 1, 0, "PixelVisual");
     qmlRegisterSingletonType(QUrl("qrc:/Style.qml"), "Halo", 1, 0, "Style");
     qmlRegisterSingletonType(QUrl("qrc:/Secrets.qml"), "Halo", 1, 0, "Secrets");
+    qmlRegisterSingletonType(QUrl("qrc:/PlaylistUi.qml"), "Halo", 1, 0, "PlaylistUi");
     qmlRegisterUncreatableType<QueueModel>("Halo", 1, 0, "QueueModel", "from player");
     qmlRegisterUncreatableType<MomentModel>("Halo", 1, 0, "MomentModel", "from player");
 
@@ -169,6 +174,9 @@ int main(int argc, char *argv[]) {
     context->setContextProperty("albums", &albums);
     context->setContextProperty("tracks", &tracks);
     context->setContextProperty("albumTracks", &albumTracks);
+    PlaylistTrackModel playlistTracks(&playlists, &library);
+    context->setContextProperty("playlists", &playlists);
+    context->setContextProperty("playlistTracks", &playlistTracks);
     PointerWatch pointer;
     context->setContextProperty("pointer", &pointer);
     engine.load(QUrl("qrc:/Main.qml"));
@@ -196,7 +204,7 @@ int main(int argc, char *argv[]) {
             window->grabWindow().save(path);
     });
     QObject::connect(&remote, &Remote::uiRequested, &app, [&](const QString &name, const QString &value) {
-        static const QStringList allowed{"view", "nowPlaying", "helpVisible", "width", "height", "siege"};
+        static const QStringList allowed{"view", "nowPlaying", "helpVisible", "width", "height", "siege", "dialog"};
         if (!allowed.contains(name))
             return;
         if (name == "siege") {
@@ -205,6 +213,11 @@ int main(int argc, char *argv[]) {
             return;
         }
         QObject *root = engine.rootObjects().first();
+        // For QA harnesses: open a playlist dialog (smart, new, rename).
+        if (name == "dialog") {
+            QMetaObject::invokeMethod(root, "openDialog", Q_ARG(QVariant, value));
+            return;
+        }
         if (name == "view")
             QMetaObject::invokeMethod(root, "show", Q_ARG(QVariant, value.toInt()));
         else if (name == "nowPlaying" || name == "helpVisible")

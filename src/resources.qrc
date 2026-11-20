@@ -20,6 +20,13 @@
         <file alias="PixelKaleido.qml">PixelKaleido.qml</file>
         <file alias="PixelVisualView.qml">PixelVisualView.qml</file>
         <file alias="HoloVinyl.qml">HoloVinyl.qml</file>
+        <file alias="PlaylistUi.qml">PlaylistUi.qml</file>
+        <file alias="AddToPlaylistMenu.qml">AddToPlaylistMenu.qml</file>
+        <file alias="PlaylistCover.qml">PlaylistCover.qml</file>
+        <file alias="PlaylistPage.qml">PlaylistPage.qml</file>
+        <file alias="SmartRulesDialog.qml">SmartRulesDialog.qml</file>
+        <file alias="NamePrompt.qml">NamePrompt.qml</file>
+        <file alias="TurntableVisual.qml">TurntableVisual.qml</file>
         <file alias="MotionClock.qml">MotionClock.qml</file>
         <file alias="SmoothWheel.qml">SmoothWheel.qml</file>
         <file alias="data/headphones.json">data/headphones.json</file>

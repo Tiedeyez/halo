@@ -2,6 +2,7 @@
 # rebuilt, changed and reviewed like the rest of the source.
 #
 #   blender -b -P turntable.py -- --out DIR [--preview] [--samples N] [--size PX]
+#   blender -b -P turntable.py -- --out DIR --layers [--frames N]   (the app's layers)
 #
 # An original design (not a copy of any real deck): a dark anodised plinth
 # with chamfered edges, a machined platter with strobe dots, a straight
@@ -497,7 +498,7 @@ def setup_render():
     scene.render.image_settings.color_mode = "RGBA"
 
 
-def main():
+def build_scene():
     clear()
     M = build_materials()
     build_plinth(M)
@@ -507,12 +508,111 @@ def main():
     else:
         r = GROOVE_OUT + (GROOVE_IN - GROOVE_OUT) * ARM_PROGRESS
         heading = stylus_angle(r)
-    build_tonearm(M, heading)
+    swing = build_tonearm(M, heading)
     build_controls(M)
     build_stage()
     setup_render()
-    bpy.context.scene.render.filepath = OUT + "/beauty.png"
+    return M, swing
+
+
+def render(path):
+    bpy.context.scene.render.filepath = path
     bpy.ops.render.render(write_still=True)
+
+
+REST = math.radians(-90)
+
+
+def label_mapping():
+    """The homography from the label's plane (u, v in label radii, +v away
+    from the viewer) to the image (0..1, y down), and its inverse, so a
+    shader can find, for each pixel, where on the label it lands."""
+    import numpy as np
+    from bpy_extras.object_utils import world_to_camera_view
+    scene = bpy.context.scene
+    cam = scene.camera
+    z = DECK + RECORD_T + 0.0003
+    rows = []
+    for k in range(16):
+        a = 2 * math.pi * k / 16
+        for rr in (0.5, 1.0):
+            u, v = rr * math.cos(a), rr * math.sin(a)
+            co = Vector((PLATTER_C.x + LABEL_R * u, PLATTER_C.y + LABEL_R * v, z))
+            q = world_to_camera_view(scene, cam, co)
+            x, y = q.x, 1.0 - q.y
+            rows.append([u, v, 1, 0, 0, 0, -x * u, -x * v, -x])
+            rows.append([0, 0, 0, u, v, 1, -y * u, -y * v, -y])
+    _, _, vt = np.linalg.svd(np.array(rows))
+    H = vt[-1].reshape(3, 3)
+    H /= H[2, 2]
+    Hi = np.linalg.inv(H)
+    Hi /= Hi[2, 2]
+    return H.tolist(), Hi.tolist()
+
+
+def layers():
+    """Halo's turntable visual, as layers the app composes: the deck (lamps
+    off, a white label the cover is printed onto), the lamps' light alone,
+    the spindle and the tonearm at each angle of its swing, with their
+    shadows. Frames go to OUT; tools/turntable-layers crops and packs them."""
+    import json
+    M, swing = build_scene()
+    scene = bpy.context.scene
+    arm = [swing] + [o for o in bpy.data.objects if o.parent == swing]
+    spindle = [o for o in bpy.data.objects if o.name.startswith("Spindle")]
+    moving = set(arm) | set(spindle)
+    deck = [o for o in bpy.data.objects if o.type in ("MESH", "FONT") and o not in moving]
+    lab = bpy.data.objects["Label"]
+    white = principled("Label white", (0.8, 0.8, 0.8), rough=0.5)
+    lab.data.materials.clear()
+    lab.data.materials.append(white)
+
+    def show(objs, on):
+        for o in objs:
+            o.hide_render = not on
+
+    def lamps(strength):
+        for name, full in (("Halo ring", 6.0), ("LED", 12.0)):
+            bpy.data.materials[name].node_tree.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = full * strength
+
+    # Deck, lamps off; then lamps on (the app subtracts to get the light).
+    show(arm + spindle, False)
+    lamps(0)
+    render(OUT + "/deck.png")
+    lamps(1)
+    render(OUT + "/deck-lit.png")
+    # Moving parts over a deck that only catches their shadows.
+    for o in deck:
+        o.is_shadow_catcher = True
+    show(spindle, True)
+    render(OUT + "/spindle.png")
+    show(spindle, False)
+    show(arm, True)
+    lead_in, run_out = stylus_angle(GROOVE_OUT), stylus_angle(GROOVE_IN)
+    count = int(arg("--frames", "36"))
+    headings = [REST + (run_out - REST) * k / (count - 1) for k in range(count)]
+    for k, h in enumerate(headings):
+        swing.rotation_euler = (0, 0, h)
+        render(OUT + "/arm-%02d.png" % k)
+    H, Hi = label_mapping()
+    manifest = {
+        "size": SIZE,
+        "headings": headings,
+        "rest": REST, "leadIn": lead_in, "runOut": run_out,
+        "pivot": [PIVOT.x, PIVOT.y], "centre": [PLATTER_C.x, PLATTER_C.y],
+        "armLength": ARM_L, "grooveOut": GROOVE_OUT, "grooveIn": GROOVE_IN,
+        "label": {"toImage": H, "fromImage": Hi},
+    }
+    with open(OUT + "/manifest.json", "w") as f:
+        json.dump(manifest, f, indent=1)
+
+
+def main():
+    if "--layers" in argv:
+        layers()
+        return
+    build_scene()
+    render(OUT + "/beauty.png")
     bpy.ops.wm.save_as_mainfile(filepath=OUT + "/turntable.blend")
 
 
