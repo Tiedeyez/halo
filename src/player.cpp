@@ -441,6 +441,14 @@ void Player::setCalm(bool on) {
     scheduleSave();
 }
 
+void Player::setOnboarded(bool on) {
+    if (on == m_onboarded)
+        return;
+    m_onboarded = on;
+    emit settingsChanged();
+    scheduleSave();
+}
+
 void Player::setVisualStyle(int style) {
     if (style == m_visualStyle)
         return;
@@ -1210,7 +1218,7 @@ void Player::save() {
         {"volume", m_volume},
         {"settings", QJsonObject{{"blend", m_blend}, {"drift", m_drift}, {"shuffle", m_shuffle},
                                  {"repeat", m_repeat}, {"normalize", m_normalize}, {"calm", m_calm},
-                                 {"visual", m_visualStyle}}},
+                                 {"visual", m_visualStyle}, {"onboarded", m_onboarded}}},
         {"eq", QJsonObject{{"enabled", m_eqEnabled}, {"gains", gains}, {"preamp", m_eqPreamp},
                            {"preset", m_eqPreset}}},
         {"moments", moments}};
@@ -1243,6 +1251,7 @@ void Player::restore() {
     m_repeat = std::clamp(settings.value("repeat").toInt(0), 0, 2);
     m_normalize = settings.value("normalize").toBool(true);
     m_calm = settings.value("calm").toBool(false);
+    m_onboarded = settings.value("onboarded").toBool(false);
     m_visualStyle = std::clamp(settings.value("visual").toInt(0), 0, 11);
     const QJsonObject eq = root.value("eq").toObject();
     m_eqEnabled = eq.value("enabled").toBool(false);

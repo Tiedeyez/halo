@@ -58,6 +58,8 @@ Item {
         id: armArea
         anchors.fill: parent
         hoverEnabled: true
+        Accessible.role: Accessible.Slider
+        Accessible.name: qsTr("Tonearm: drag the needle over the record to move through the song")
         preventStealing: true
         // Only the headshell is a handle: within a few percent of the stylus.
         readonly property real reach: controls.deck.width * 0.035
@@ -94,6 +96,8 @@ Item {
     MouseArea {
         id: faderArea
         readonly property var f: controls.m ? controls.m.fader : null
+        Accessible.role: Accessible.Slider
+        Accessible.name: qsTr("Volume %1%").arg(Math.round(player.volume * 100))
         visible: !!f
         x: f ? f.x * controls.px : 0
         width: f ? f.w * controls.px : 0
@@ -119,6 +123,8 @@ Item {
     MouseArea {
         id: dialArea
         readonly property var d: controls.m ? controls.m.dial : null
+        Accessible.role: Accessible.Dial
+        Accessible.name: ToolTip.text
         readonly property real size: controls.deck.width * 0.045
         visible: !!d
         x: d ? d.cx * controls.px - size / 2 : 0
@@ -156,6 +162,8 @@ Item {
         cursorShape: Qt.PointingHandCursor
         hoverEnabled: true
         onClicked: player.togglePlay()
+        Accessible.role: Accessible.Button
+        Accessible.name: ToolTip.text
         ToolTip.visible: containsMouse
         ToolTip.delay: 500
         ToolTip.text: player.playing ? qsTr("Stop") : qsTr("Start")

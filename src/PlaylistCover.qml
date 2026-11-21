@@ -55,7 +55,7 @@ Item {
         width: Math.max(18, root.width * 0.2)
         height: width
         radius: width / 2
-        color: Style.accent
-        Glyph { anchors.centerIn: parent; width: parent.width * 0.62; height: width; name: "smart"; color: Style.onAccent }
+        color: Style.accentFill
+        Glyph { anchors.centerIn: parent; width: parent.width * 0.62; height: width; name: "smart"; color: Style.accentInk }
     }
 }

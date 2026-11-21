@@ -32,6 +32,9 @@ Rectangle {
         }
 
         TextField {
+            // Selected words in the accent, in the text colour that reads on it.
+            selectionColor: Style.accentFill
+            selectedTextColor: Style.accentInk
             id: searchField
             Layout.fillWidth: true
             placeholderText: qsTr("Search")
@@ -187,8 +190,6 @@ Rectangle {
             IconButton {
                 glyph: "add"
                 glyphSize: 18
-                implicitWidth: 32
-                implicitHeight: 32
                 tip: qsTr("New playlist (Ctrl+N)")
                 onClicked: newMenu.popup()
                 Menu {
@@ -209,7 +210,7 @@ Rectangle {
             id: playlistList
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.minimumHeight: 3 * 40
+            Layout.minimumHeight: 3 * Style.target
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: playlists.all
@@ -219,7 +220,7 @@ Rectangle {
                 id: pl
                 required property var modelData
                 width: playlistList.width
-                implicitHeight: 40
+                implicitHeight: Style.target
                 hoverEnabled: true
                 focusPolicy: Qt.NoFocus
                 readonly property bool selected: root.view === 8 && root.playlistId === modelData.id

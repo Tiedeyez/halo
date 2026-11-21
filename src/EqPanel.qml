@@ -50,15 +50,14 @@ Popup {
             spacing: 8
             Repeater {
                 model: player.eqPresets
-                Button {
+                AccentButton {
                     required property string modelData
                     text: qsTr(modelData)
                     checkable: true
                     checked: player.eqPreset === modelData && player.eqEnabled
-                    flat: !checked
-                    highlighted: checked
-                    Material.accent: Style.accent
-                    Material.roundedScale: Style.radius
+                    filled: checked
+                    leftPadding: 14
+                    rightPadding: 14
                     focusPolicy: Qt.NoFocus
                     onClicked: player.applyEqPreset(modelData)
                 }

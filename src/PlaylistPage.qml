@@ -138,13 +138,9 @@ FocusScope {
                         RowLayout {
                             Layout.topMargin: 10
                             spacing: 10
-                            Button {
+                            AccentButton {
                                 text: qsTr("Play")
-                                highlighted: true
                                 enabled: playlistTracks.count > 0
-                                Material.accent: Style.accent
-                                Material.foreground: Style.onAccent
-                                Material.roundedScale: Style.radius
                                 focusPolicy: Qt.NoFocus
                                 implicitHeight: 48
                                 onClicked: { player.shuffle = false; player.playPaths(playlistTracks.paths(), 0) }

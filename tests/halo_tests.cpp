@@ -1386,6 +1386,141 @@ private slots:
         QCOMPARE(Theme::readAccent(dir.filePath("colors.toml")), QString("#89b4fa"));
     }
 
+    // AAA on every Omarchy theme: each text colour Halo draws, on each
+    // surface it draws it on, reads at 7:1 through Halo's own Theme and
+    // Style, for the themes installed here, the user's own themes, and
+    // accents chosen to be awkward (mid greys and pure primaries, where
+    // neither black nor white reaches 7:1 on the fill). Set
+    // HALO_CONTRAST_REPORT=1 to print the worst pair per theme.
+    void everyThemeReadsAt7To1() {
+        QTemporaryDir synthetic;
+        QStringList dirs;
+        for (const QString &root : {QStringLiteral("/usr/share/omarchy/themes"),
+                                    QDir::homePath() + "/.config/omarchy/themes"})
+            for (const QFileInfo &d : QDir(root).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
+                dirs << d.absoluteFilePath();
+        for (const char *accent : {"#808080", "#777777", "#6e6e6e", "#ff0000", "#00ff00", "#0000ff", "#ffff00",
+                                   "#ff00ff", "#ffffff", "#000000", "#3a3a3a", "#1e66f5"}) {
+            const QString dir = synthetic.filePath(QString("accent-%1").arg(QString(accent).mid(1)));
+            QDir().mkpath(dir);
+            QFile f(dir + "/colors.toml");
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write(QByteArray("accent = \"") + accent + "\"\n");
+            f.close();
+            dirs << dir;
+        }
+        // A theme folder with no colors.toml falls back to Halo's yellow.
+        dirs << synthetic.filePath("no-colours");
+        QDir().mkpath(dirs.last());
+
+        auto luminance = [](const QColor &c) {
+            auto lin = [](double v) { return v <= 0.04045 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4); };
+            return 0.2126 * lin(c.redF()) + 0.7152 * lin(c.greenF()) + 0.0722 * lin(c.blueF());
+        };
+        auto contrast = [&](const QColor &a, const QColor &b) {
+            const double x = luminance(a), y = luminance(b);
+            return (std::max(x, y) + 0.05) / (std::min(x, y) + 0.05);
+        };
+        const bool report = qEnvironmentVariableIntValue("HALO_CONTRAST_REPORT") == 1;
+        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "Halo", 1, 0, "Style");
+        QStringList failures;
+        for (const QString &dir : std::as_const(dirs)) {
+            Theme theme(dir);
+            QQmlPropertyMap playerStub;
+            playerStub.insert("calm", false);
+            QQmlEngine engine;
+            engine.rootContext()->setContextProperty("theme", &theme);
+            engine.rootContext()->setContextProperty("player", &playerStub);
+            QObject *style = engine.singletonInstance<QObject *>("Halo", "Style");
+            QVERIFY2(style, "Style.qml didn't load");
+            auto colour = [&](const char *name) { return style->property(name).value<QColor>(); };
+            const QStringList texts{"text", "muted", "faint", "danger", "accentText"};
+            const QStringList surfaces{"window", "panel", "raised", "hover", "scrim"};
+            QList<std::pair<QString, QString>> pairs;
+            for (const QString &t : texts)
+                for (const QString &s : surfaces)
+                    pairs.append(std::make_pair(t, s));
+            pairs.append(std::make_pair(QString("accentText"), QString("accentWash")));
+            pairs.append(std::make_pair(QString("accentInk"), QString("accentFill")));
+            pairs.append(std::make_pair(QString("accentInk"), QString("accentFillHover")));
+            double worst = 99;
+            QString worstPair;
+            for (const auto &[t, s] : pairs) {
+                const double ratio = contrast(colour(t.toLatin1()), colour(s.toLatin1()));
+                if (ratio < worst) {
+                    worst = ratio;
+                    worstPair = t + " on " + s;
+                }
+                if (ratio < 7)
+                    failures << QString("%1: %2 on %3 = %4").arg(QFileInfo(dir).fileName(), t, s).arg(ratio, 0, 'f', 2);
+            }
+            if (report)
+                qInfo("%-34s accent %s  fill %s  accentInk %s  accentText %s  worst %.2f (%s)",
+                      qPrintable(QFileInfo(dir).fileName()), qPrintable(theme.accent()),
+                      qPrintable(colour("accentFill").name()), qPrintable(colour("accentInk").name()),
+                      qPrintable(colour("accentText").name()), worst, qPrintable(worstPair));
+        }
+        QVERIFY2(failures.isEmpty(), qPrintable(failures.join("\n")));
+    }
+
+    // The first run: Halo finds the desktop's music folder by itself, a
+    // folder chosen on the welcome screen is kept (with the ones it found)
+    // and scanned, and having seen the welcome is remembered in state.json.
+    void firstRunFindsMusicAndRemembersOnboarding() {
+        QTemporaryDir home, config, cache, state, chosen;
+        // HOME too: without it the fallback finds the real ~/Music.
+        const QByteArray oldMusic = qgetenv("HALO_MUSIC"), oldConfig = qgetenv("XDG_CONFIG_HOME"), oldHome = qgetenv("HOME");
+        qunsetenv("HALO_MUSIC");
+        qputenv("XDG_CONFIG_HOME", config.path().toUtf8());
+        qputenv("HOME", home.path().toUtf8());
+        QDir().mkpath(home.filePath("Tunes"));
+        QFile dirs(config.filePath("user-dirs.dirs"));
+        QVERIFY(dirs.open(QIODevice::WriteOnly));
+        dirs.write("XDG_MUSIC_DIR=\"" + home.filePath("Tunes").toUtf8() + "\"\n");
+        dirs.close();
+        QVERIFY(Library::defaultFolders().contains(home.filePath("Tunes")));
+
+        writeWav(chosen.filePath("song.wav"), std::vector<float>(48000 * 12, 0.1f));
+        {
+            Library library({}, cache.path(), state.path());
+            QVERIFY(library.folders().contains(home.filePath("Tunes")));
+            QVERIFY(!library.addFolder(chosen.filePath("missing")));
+            QSignalSpy scanned(&library, &Library::scanningChanged);
+            QVERIFY(library.addFolder(QUrl::fromLocalFile(chosen.path()).toString()));
+            while (library.scanning() || scanned.isEmpty())
+                QVERIFY(scanned.wait(10000));
+            QCOMPARE(library.trackCount(), 1);
+            QFile list(Library::foldersFile());
+            QVERIFY(list.open(QIODevice::ReadOnly));
+            const QString text = QString::fromUtf8(list.readAll());
+            QVERIFY(text.contains(home.filePath("Tunes") + "\n"));
+            QVERIFY(text.contains(QDir::cleanPath(chosen.path()) + "\n"));
+            // Adding it again changes nothing.
+            QVERIFY(library.addFolder(chosen.path()));
+            list.seek(0);
+            QCOMPARE(QString::fromUtf8(list.readAll()), text);
+        }
+        QCOMPARE(Library::defaultFolders(), (QStringList{home.filePath("Tunes"), QDir::cleanPath(chosen.path())}));
+
+        {
+            Library library({chosen.path()}, cache.path(), state.path());
+            Analyzer analyzer(cache.filePath("analysis.json"));
+            Player player(&library, &analyzer, state.path());
+            QVERIFY(!player.onboarded());
+            player.setOnboarded(true);
+            player.flush();
+        }
+        {
+            Library library({chosen.path()}, cache.path(), state.path());
+            Analyzer analyzer(cache.filePath("analysis.json"));
+            Player player(&library, &analyzer, state.path());
+            QVERIFY(player.onboarded());
+        }
+        if (oldMusic.isEmpty()) qunsetenv("HALO_MUSIC"); else qputenv("HALO_MUSIC", oldMusic);
+        if (oldConfig.isEmpty()) qunsetenv("XDG_CONFIG_HOME"); else qputenv("XDG_CONFIG_HOME", oldConfig);
+        qputenv("HOME", oldHome);
+    }
+
     // ---- lyrics ----
 
     void lrcParsesStampsOffsetsAndWords() {

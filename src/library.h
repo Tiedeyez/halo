@@ -79,6 +79,10 @@ public:
     static QStringList expand(const QStringList &paths);
 
     Q_INVOKABLE void rescan();
+    // Adds a music folder (a path or a file:// URL from the folder dialog)
+    // to ~/.config/halo/folders and scans it. False if it isn't a folder.
+    Q_INVOKABLE bool addFolder(const QString &folder);
+    static QString foldersFile();
     void loadCache();
 
     bool scanning() const { return m_scanning; }
@@ -132,6 +136,7 @@ private:
     QHash<QString, int> m_byPath;
     QHash<QString, int> m_byAlbum;
     bool m_scanning = false;
+    bool m_rescanAgain = false;
     std::atomic<int> m_counter{0};
     QTimer m_progress;
     QFutureWatcher<std::vector<Track>> m_watcher;

@@ -144,6 +144,9 @@ Popup {
         }
 
         TextField {
+            // Selected words in the accent, in the text colour that reads on it.
+            selectionColor: Style.accentFill
+            selectedTextColor: Style.accentInk
             id: nameField
             Layout.fillWidth: true
             placeholderText: qsTr("Name")
@@ -203,6 +206,7 @@ Popup {
                 spacing: 8
                 ComboBox {
                     Layout.preferredWidth: 200
+                    Accessible.name: qsTr("What the rule looks at")
                     model: root.fields.map(f => f.label)
                     currentIndex: root.fieldIndex(ruleRow.field)
                     onActivated: i => {
@@ -214,11 +218,15 @@ Popup {
                 }
                 ComboBox {
                     Layout.preferredWidth: 190
+                    Accessible.name: qsTr("How it compares")
                     model: root.opsFor(ruleRow.field).map(o => o.label)
                     currentIndex: root.opIndex(ruleRow.field, ruleRow.op)
                     onActivated: i => { rulesModel.setProperty(ruleRow.index, "op", root.opsFor(ruleRow.field)[i].key); recount.restart() }
                 }
                 TextField {
+                    // Selected words in the accent, in the text colour that reads on it.
+                    selectionColor: Style.accentFill
+                    selectedTextColor: Style.accentInk
                     Layout.fillWidth: true
                     visible: ruleRow.op !== "never"
                     text: ruleRow.value
@@ -297,13 +305,9 @@ Popup {
                 font.weight: Font.DemiBold
             }
             Button { text: qsTr("Cancel"); flat: true; onClicked: root.close() }
-            Button {
+            AccentButton {
                 text: qsTr("Save")
-                highlighted: true
                 enabled: nameField.text.trim().length > 0
-                Material.accent: Style.accent
-                Material.foreground: Style.onAccent
-                Material.roundedScale: Style.radius
                 onClicked: root.save()
             }
         }

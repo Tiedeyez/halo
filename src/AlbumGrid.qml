@@ -8,6 +8,7 @@ import Halo
 FocusScope {
     id: root
     signal openAlbum(string albumId)
+    signal chooseFolder()
 
     ColumnLayout {
         anchors.fill: parent
@@ -173,10 +174,12 @@ FocusScope {
                 busy: library.scanning
                 headline: library.scanning ? qsTr("Reading your music")
                         : albums.query.length ? qsTr("No matches") : qsTr("No music yet")
-                body: library.scanning ? qsTr("%n files so far. Albums appear when the first pass is done.", "", library.scanned)
-                    : albums.query.length ? qsTr("No albums match “%1”.").arg(albums.query)
-                    : qsTr("No music found in %1. Put music there, list more folders in ~/.config/halo/folders, or drop files on this window.")
+                body: library.scanning ? qsTr("%n files so far. Albums appear when Halo has read them all.", "", library.scanned)
+                    : albums.query.length ? qsTr("No albums match “%1”. Try fewer or shorter words.").arg(albums.query)
+                    : qsTr("Halo looked in %1 and found no songs. Choose the folder your music is in, or drop songs on this window.")
                           .arg(library.folders.join(", "))
+                action: !library.scanning && !albums.query.length ? qsTr("Choose your music folder") : ""
+                onActed: root.chooseFolder()
             }
         }
     }

@@ -18,7 +18,8 @@ program. It talks to PipeWire through Qt to play sound.
 
 | Path | What | When |
 | --- | --- | --- |
-| `~/.local/state/halo/state.json` | The queue, position, volume, settings, equalizer, moments | As they change, and on quit |
+| `~/.local/state/halo/state.json` | The queue, position, volume, settings, equalizer, moments, and whether the welcome screen was seen | As they change, and on quit |
+| `~/.config/halo/folders` | Your music folders, one per line (the ones Halo found, plus the one you chose) | Only when you choose a folder with "Choose your music folder" |
 | `~/.local/state/halo/stats.json` | Play counts and last-played times per file | After you hear half a song |
 | `~/.local/state/halo/headphones.json` | Outputs you turned headphone correction off for, by name | When you turn it off or on |
 | Your music files' tags (title, artist, album, album artist, comment) | The fix shown in the Library Doctor | Only when you press Fix, Fix all or U (undo) there |
@@ -49,19 +50,25 @@ Omarchy or Hyprland configuration.
 
 ## What it reads
 
-- Every audio file under `~/Music` and the folders listed in
-  `~/.config/halo/folders` (or `$HALO_MUSIC`): their tags, durations and
+- Every audio file under your music folders: the folders listed in
+  `~/.config/halo/folders` (or `$HALO_MUSIC`), or without that file your
+  desktop's music folder (`XDG_MUSIC_DIR` in `~/.config/user-dirs.dirs`)
+  and `~/Music`: their tags, durations and
   embedded covers through TagLib, and their audio through ffmpeg. Image
   files in those folders, for covers. Files named `.haloignore` or
   `.nomedia`, to skip a folder.
 - For the song playing: a `.lrc` file beside it with the same name, and
   lyrics in its tags, for the lyrics view.
-- `~/.local/state/omarchy/current/theme/colors.toml` for the accent colour,
+- `~/.local/state/omarchy/current/theme/colors.toml` for the accent colour
+  (or `colors.toml` in the folder `$HALO_THEME_DIR` names, when it is set:
+  a way to check a theme without switching to it),
   `$OMARCHY_LANGUAGE_FILE` or `~/.config/omarchy/language` (under
   `$XDG_CONFIG_HOME` when set) for the language, and
   `$OMARCHY_PATH/default/i18n/locales.json` for number formats.
 
-It reads nothing else in your home folder.
+It reads nothing else in your home folder. The "Choose your music folder"
+window is a folder picker that lists folders as you browse them; Halo keeps
+only the folder you pick.
 
 ## Processes it starts
 

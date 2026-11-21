@@ -16,6 +16,8 @@
         <file alias="PixelWordmark.qml">PixelWordmark.qml</file>
         <file alias="PixelLoader.qml">PixelLoader.qml</file>
         <file alias="EmptyState.qml">EmptyState.qml</file>
+        <file alias="AccentButton.qml">AccentButton.qml</file>
+        <file alias="Welcome.qml">Welcome.qml</file>
         <file alias="PixelField.qml">PixelField.qml</file>
         <file alias="PixelKaleido.qml">PixelKaleido.qml</file>
         <file alias="PixelVisualView.qml">PixelVisualView.qml</file>
