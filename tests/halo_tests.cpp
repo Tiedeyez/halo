@@ -1152,15 +1152,17 @@ private slots:
         QVERIFY(!remote.handle({{"cmd", "nonsense"}}).value("ok").toBool());
         QVERIFY(!remote.handle({{"cmd", "grab"}, {"args", QJsonArray{"/tmp/x.txt"}}}).value("ok").toBool());
         // visual: by name, by number, next/previous wrapping, bad names refused.
-        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"hologram"}}}).value("visual").toString(), QString("hologram"));
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"halo"}}}).value("visual").toString(), QString("halo"));
         QCOMPARE(player.visualStyle(), 9);
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("turntable"));
         QCOMPARE(player.visualStyle(), 10);
-        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("halo"));
-        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"previous"}}}).value("visual").toString(), QString("turntable"));
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("hologram"));
+        QCOMPARE(player.visualStyle(), 11);
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("ring"));
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"previous"}}}).value("visual").toString(), QString("hologram"));
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"3"}}}).value("visual").toString(), QString("skyline"));
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"10"}}}).value("visual").toString(), QString("turntable"));
-        QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"11"}}}).value("ok").toBool());
+        QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"12"}}}).value("ok").toBool());
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"3"}}}).value("visual").toString(), QString("skyline"));
         QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"mandelbrot"}}}).value("ok").toBool());
         QCOMPARE(remote.handle({{"cmd", "visual"}}).value("visual").toString(), QString("skyline"));

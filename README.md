@@ -28,10 +28,10 @@ checked against the source.
   the start of a song inside an hour-long mixtape. Moments are ticks on the
   seek bar, `[` and `]` jump between them, and the Moments view replays any of
   them.
-- **The halo.** The visual is drawn from the song itself (Halo's own FFT of
-  what it plays, not every sound on the machine) as a ring of square pixels
-  around the cover in your theme's accent, torn sideways for a frame on hard
-  beats. V cycles to LED bars, then to the kaleidoscope: a mirrored fractal
+- **The visuals.** Every visual is drawn from the song itself (Halo's own FFT
+  of what it plays, not every sound on the machine). The first, **Ring**, is a
+  ring of square pixels around the cover in your theme's accent, torn sideways
+  for a frame on hard beats. V cycles to LED bars, then to the kaleidoscope: a mirrored fractal
   in square pixels that belongs to the song playing. The file decides it:
   the song picks its mirrors (5 to 12) and shape, the album its colours (so
   an album's songs belong together), the tempo its turn (one mirror every
@@ -41,21 +41,29 @@ checked against the source.
   shockwave out; it doesn't swap the design. A new song's mirrors crossfade
   in. Its layers take turns in the theme's accent, magenta and bright cyan,
   anti-aliased four samples a pixel so the shapes stay crisp.
-  Then seven more, all in square pixels and your theme's colours: **Skyline**
+  Then six more, all in square pixels and your theme's colours: **Skyline**
   (a mirrored spectrum over a rippling reflection, bass in the middle),
   **Phosphor** (an oscilloscope trace with afterglow), **Pulsar** (stacked
   ridge lines of the spectrum), **Waterfall** (a scrolling spectrogram),
   **Warp** (flying through stars, faster as the music gets louder),
-  **Aurora** (curtains of light with rays) and **Hologram** (the Turntable's
+  **Aurora** (curtains of light with rays). Then three drawn at the screen's
+  full resolution: **Halo** (a ring of light hanging in the dark, light
+  pouring off it above and below in beams that fan out as they go, motes
+  drifting away, and on every beat a flash, a shockwave across its plane and
+  a surge of light up and down the beams; its thickness round the ring
+  follows the spectrum), **Turntable** (a deck rendered in Blender, seen face
+  up, with the album cover turning on the label and the tonearm following
+  the song) and **Hologram** (the Turntable's
   deck made of light and energy: every edge a line of light with faint
   x-ray lines of the parts behind, the grooves carrying the spectrum, a
   shockwave on each beat, the album cover turning on the label as light,
   and the tonearm following the song).
   In Now Playing, the active visual fills the window behind the song and
   lyrics; a soft window-colour scrim keeps the text at WCAG AAA contrast.
-  Halo, Bars, Kaleidoscope and Hologram grow beyond the window edges, while
-  the six other visuals use square pixels across the full window. Cover art
-  stays in the centre of Halo, Bars and Kaleidoscope, and on Hologram's label.
+  Ring, Bars, Kaleidoscope, Turntable and Hologram grow beyond the window
+  edges, while Halo and the six square-pixel visuals fill the whole window.
+  Cover art stays in the centre of Ring, Bars and Kaleidoscope, and on the
+  label of Turntable and Hologram.
   Visuals crossfade as V switches them, and the name shows for a moment.
   C keeps any of them still. `halo visual <name>` switches from a terminal.
 - **The library is water.** Behind the library views lies a pond of square pixels
@@ -191,7 +199,7 @@ halo status                     # what is playing and the library scan; --json f
 halo add song.flac ; halo playnext ~/Music/Other
 halo next ; halo pause ; halo seek +30 ; halo volume 60
 halo blend on ; halo drift off ; halo repeat all ; halo sleep 30
-halo visual hologram            # switch the visual (next, previous, or one of the eleven by name)
+halo visual hologram            # switch the visual (next, previous, or one of the twelve by name)
 halo lyrics                     # the words of the song playing, the sung line marked
 halo lyrics online on           # look lyrics up on lrclib.net (off by default)
 halo lyrics offset +0.3         # this song's lyrics 0.3 s earlier

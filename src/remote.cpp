@@ -431,8 +431,9 @@ QJsonObject Remote::handle(const QJsonObject &request) {
         return {{"ok", true}};
     }
     if (cmd == "visual") {
-        static const QStringList names{"halo", "bars", "kaleidoscope", "skyline", "phosphor",
-                                       "pulsar", "waterfall", "warp", "aurora", "hologram", "turntable"};
+        static const QStringList names{"ring", "bars", "kaleidoscope", "skyline", "phosphor",
+                                       "pulsar", "waterfall", "warp", "aurora", "halo", "turntable",
+                                       "hologram"};
         if (!args.isEmpty()) {
             const QString v = args.first().toLower();
             bool number = false;

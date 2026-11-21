@@ -37,9 +37,9 @@ Control a running Halo:
   moment                       Save a moment at the current second
   blend|drift|shuffle|normalize <on|off>
   repeat <off|all|one>
-  visual [next|previous|name]  Switch the visual: halo, bars, kaleidoscope, skyline,
-                               phosphor, pulsar, waterfall, warp, aurora, hologram,
-                               turntable
+  visual [next|previous|name]  Switch the visual: ring, bars, kaleidoscope, skyline,
+                               phosphor, pulsar, waterfall, warp, aurora, halo,
+                               turntable, hologram
   sleep <minutes|off>          Fade out and pause after N minutes
   lyrics [--json]              The current song's lyrics, the line being sung marked
   lyrics online <on|off>       Look lyrics up on lrclib.net (sends title, artist,

@@ -20,8 +20,8 @@ Rectangle {
                                      && lyrics.kind !== Lyrics.KindInstrumental
     readonly property bool showWords: lyricsOn && hasWords
     readonly property bool wide: width >= 1080 && height >= 560
-    readonly property var visualNames: [qsTr("HALO"), qsTr("BARS"), qsTr("KALEIDOSCOPE"), qsTr("SKYLINE"),
-        qsTr("PHOSPHOR"), qsTr("PULSAR"), qsTr("WATERFALL"), qsTr("WARP"), qsTr("AURORA"), qsTr("HOLOGRAM"), qsTr("TURNTABLE")]
+    readonly property var visualNames: [qsTr("RING"), qsTr("BARS"), qsTr("KALEIDOSCOPE"), qsTr("SKYLINE"),
+        qsTr("PHOSPHOR"), qsTr("PULSAR"), qsTr("WATERFALL"), qsTr("WARP"), qsTr("AURORA"), qsTr("HALO"), qsTr("TURNTABLE"), qsTr("HOLOGRAM")]
     readonly property real gutter: Math.max(16, Math.min(48, Math.min(width, height) * 0.05))
 
     // The cover's colours wash the background, softly.
@@ -96,13 +96,23 @@ Rectangle {
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
+        // The halo: a ring of light over the whole window, its light
+        // reaching above and below; the ring centres on the song's side.
+        HaloLight {
+            anchors.fill: parent
+            centre: Qt.point(focusPoint.x / Math.max(1, width), focusPoint.y / Math.max(1, height))
+            ringRadius: stage.shortSide * 0.36
+            opacity: player.visualStyle === 9 ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
+        }
         // The hologram: the Turntable's deck made of light, the same square
         // render, so the same size.
         HologramVisual {
             anchors.centerIn: focusPoint
             width: Math.min(stage.focusH * 1.2, stage.focusW * 1.15)
             height: width
-            opacity: player.visualStyle === 9 ? 1 : 0
+            opacity: player.visualStyle === 11 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }

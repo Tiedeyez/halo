@@ -9,6 +9,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QQuickItemGrabResult>
 #include <QQuickWindow>
 #include <QStandardPaths>
 #include <QQmlComponent>
@@ -200,8 +201,19 @@ int main(int argc, char *argv[]) {
     });
 
     QObject::connect(&remote, &Remote::grabRequested, &app, [&](const QString &path) {
-        if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first()))
+        auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        if (!window)
+            return;
+        // A window that isn't on screen (a QA copy on a hidden workspace)
+        // grabs only part of itself; rendering the content item offscreen
+        // gets the whole frame at the window's size.
+        if (window->isExposed()) {
             window->grabWindow().save(path);
+            return;
+        }
+        QSharedPointer<QQuickItemGrabResult> grab = window->contentItem()->grabToImage(window->size());
+        if (grab)
+            QObject::connect(grab.data(), &QQuickItemGrabResult::ready, &app, [grab, path] { grab->image().save(path); });
     });
     QObject::connect(&remote, &Remote::uiRequested, &app, [&](const QString &name, const QString &value) {
         static const QStringList allowed{"view", "nowPlaying", "helpVisible", "width", "height", "siege", "dialog"};

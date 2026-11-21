@@ -3,6 +3,7 @@
 #
 #   blender -b -P turntable.py -- --out DIR [--preview] [--samples N] [--size PX]
 #   blender -b -P turntable.py -- --out DIR --layers [--frames N]   (the Turntable visual's layers)
+#   ... --layers --deck-only   (only deck.png and deck-lit.png, for a fix that leaves the arm alone)
 #   blender -b -P turntable.py -- --out DIR --energy [--frames N]   (the Hologram visual's layers)
 #
 # An original design (not a copy of any real deck): a dark anodised plinth
@@ -27,6 +28,7 @@ OUT = arg("--out", "/tmp/halo-turntable")
 PREVIEW = "--preview" in argv
 SAMPLES = int(arg("--samples", "96"))
 SIZE = int(arg("--size", "1024"))
+VIEW = arg("--view", "top")                      # "top" (face up) or "three-quarter"
 ARM_PROGRESS = float(arg("--progress", "0.35"))   # 0 = lead-in, 1 = run-out; -1 = at rest
 
 # ---------------------------------------------------------------- layout --
@@ -129,6 +131,10 @@ def groove_bump(m, scale, strength):
     tc = nt.nodes.new("ShaderNodeTexCoord")
     w = nt.nodes.new("ShaderNodeTexWave")
     w.wave_type = "RINGS"
+    # Round the object's Z, so the rings are concentric on the flat top. The
+    # default (X) draws straight bands mirrored about the centre line, which
+    # shows as a crease through the record seen from above.
+    w.rings_direction = "Z"
     w.inputs["Scale"].default_value = scale
     w.inputs["Distortion"].default_value = 0.4
     w.inputs["Detail"].default_value = 2
@@ -428,19 +434,32 @@ def build_controls(M):
 # ------------------------------------------------------- camera and light --
 def build_stage():
     scene = bpy.context.scene
-    # A three-quarter view from the front, high: the record reads as a wide
-    # ellipse, and the arm and controls show their height.
-    target = Vector((0.005, 0.012, TOP * 0.6))
+    # Straight down on the deck, face up, as if standing over it: the record
+    # is a true circle and the back of the deck is at the top of the image.
+    # A normal lens from a metre up keeps a little of the arm's and knobs'
+    # height. `--view three-quarter` gives the old high front view.
     bpy.ops.object.camera_add()
     cam = bpy.context.active_object
-    dist = 1.05
-    elev = math.radians(42)
-    azim = math.radians(-90 + 12)
+    if VIEW == "top":
+        target = Vector((0.0, 0.0, TOP))
+        dist = 0.92
+        elev = math.radians(90)
+        azim = math.radians(-90)
+    else:
+        target = Vector((0.005, 0.012, TOP * 0.6))
+        dist = 1.05
+        elev = math.radians(42)
+        azim = math.radians(-90 + 12)
     cam.location = target + Vector((dist * math.cos(elev) * math.cos(azim),
                                     dist * math.cos(elev) * math.sin(azim),
                                     dist * math.sin(elev)))
     direction = target - cam.location
     cam.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
+    if VIEW == "top":
+        # Looking straight down the track is ambiguous; no roll: +y (the
+        # back of the deck) is up in the image.
+        cam.location = target + Vector((0, 0, dist))
+        cam.rotation_euler = (0, 0, 0)
     cam.data.lens = 56
     cam.data.dof.use_dof = False
     scene.camera = cam
@@ -582,6 +601,8 @@ def layers():
     render(OUT + "/deck.png")
     lamps(1)
     render(OUT + "/deck-lit.png")
+    if "--deck-only" in argv:
+        return
     # Moving parts over a deck that only catches their shadows.
     for o in deck:
         o.is_shadow_catcher = True
