@@ -11,9 +11,9 @@ url='https://github.com/Tiedeyez/halo'
 license=('MIT' 'CC-BY-SA-4.0')
 depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'taglib' 'ffmpeg')
 makedepends=('git' 'gcc' 'make' 'qt6-shadertools')
-# Pinned to the release tag; at release time the tag's commit is added
-# after it (#tag=...&commit=... is not valid, so the commit is checked in
-# prepare()) so a moved tag can't change what gets built.
+# Pinned to the release tag. After tagging, the tag's commit goes in
+# _commit in a follow-up commit (a commit can't hold its own hash), and
+# prepare() refuses to build if the tag ever points anywhere else.
 _commit=''
 source=("halo::git+$url.git#tag=v$pkgver")
 sha256sums=('SKIP')
