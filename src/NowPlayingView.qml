@@ -401,7 +401,7 @@ Rectangle {
             visible: parent.canAct
             text: lyrics.status === Lyrics.Offline ? qsTr("Turn on online lyrics") : qsTr("Look again")
             flat: true
-            Material.foreground: Style.accent
+            Material.foreground: Style.accentText
             Material.roundedScale: Style.radius
             implicitHeight: Style.target
             leftPadding: 0

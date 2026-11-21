@@ -1,6 +1,8 @@
+import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import Halo
 
@@ -54,6 +56,31 @@ ApplicationWindow {
         function onShownChanged() { if (!lyrics.shown) Secrets.siege = false }
     }
     property bool helpVisible: false
+
+    // ---- first run ----
+    // Halo looks in the music folder by itself; only when that finds
+    // nothing does the welcome screen ask where the music is. Music found
+    // any way at all counts as onboarded, so the screen never comes back.
+    property bool scannedOnce: library.trackCount > 0
+    readonly property bool welcoming: !player.onboarded && scannedOnce && library.trackCount === 0
+    function chooseMusicFolder() { folderPicker.open() }
+    Connections {
+        target: library
+        function onScanningChanged() { if (!library.scanning) win.scannedOnce = true }
+        function onChanged() { if (library.trackCount > 0) player.onboarded = true }
+    }
+    FolderDialog {
+        id: folderPicker
+        title: qsTr("Choose your music folder")
+        currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+        onAccepted: {
+            const folder = selectedFolder.toString()
+            const ok = library.addFolder(folder)
+            welcome.rejected = !ok
+            welcome.chosen = ok ? decodeURIComponent(folder.replace(/^file:\/\//, "")) : ""
+        }
+    }
+
     readonly property bool typing: sidebar.search.activeFocus
     readonly property bool free: !typing && !helpVisible && !eq.visible
 
@@ -249,6 +276,7 @@ ApplicationWindow {
                     AlbumGrid {
                         focus: win.view === 0
                         onOpenAlbum: id => win.openAlbum(id)
+                        onChooseFolder: win.chooseMusicFolder()
                     }
                     AlbumPage {
                         id: albumPage
@@ -335,13 +363,9 @@ ApplicationWindow {
                                     font.weight: Font.Bold
                                 }
                                 Item { Layout.fillWidth: true }
-                                Button {
+                                AccentButton {
                                     text: qsTr("Play")
                                     visible: win.view === 6 && tracks.count > 0
-                                    highlighted: true
-                                    Material.accent: Style.accent
-                                    Material.foreground: Style.onAccent
-                                    Material.roundedScale: Style.radius
                                     implicitHeight: Style.target
                                     onClicked: player.playPaths(tracks.paths(), 0)
                                 }
@@ -622,6 +646,20 @@ ApplicationWindow {
                     toast.tunedFor = now
                 }
             }
+        }
+
+        Welcome {
+            id: welcome
+            anchors.fill: parent
+            opacity: win.welcoming ? 1 : 0
+            visible: opacity > 0
+            enabled: win.welcoming
+            Behavior on opacity {
+                NumberAnimation { duration: Style.motion ? Style.smooth : 0; easing.type: Easing.OutCubic }
+            }
+            onVisibleChanged: if (visible) forceActiveFocus()
+            onChooseFolder: win.chooseMusicFolder()
+            onDismissed: player.onboarded = true
         }
 
         HelpOverlay {

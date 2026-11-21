@@ -9,6 +9,9 @@ ColumnLayout {
     property string headline
     property string body
     property bool busy: false
+    // An optional button under the words, for the one thing to do next.
+    property string action: ""
+    signal acted()
 
     width: Math.min(parent ? parent.width - 48 : 440, 460)
     spacing: 14
@@ -40,5 +43,12 @@ ColumnLayout {
         color: Style.muted
         font.pixelSize: Style.fontBody
         lineHeight: 1.15
+    }
+    AccentButton {
+        Layout.alignment: Qt.AlignHCenter
+        Layout.topMargin: 6
+        visible: root.action.length > 0
+        text: root.action
+        onClicked: root.acted()
     }
 }

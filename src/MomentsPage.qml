@@ -82,7 +82,7 @@ FocusScope {
                         Layout.preferredWidth: stamp.implicitWidth + 16
                         Layout.preferredHeight: 28
                         radius: Style.small
-                        color: Qt.alpha(Style.accent, 0.16)
+                        color: Style.accentWash
                         Text {
                             id: stamp
                             anchors.centerIn: parent

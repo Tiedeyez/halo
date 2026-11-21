@@ -164,8 +164,10 @@ checked against the source.
 
 ## Your music
 
-Halo reads `~/Music`, and any more folders listed one per line in
-`~/.config/halo/folders`. A folder is an album, which is how mixtapes, rips
+Halo reads your music folder (`XDG_MUSIC_DIR`, usually `~/Music`). When it
+finds nothing there, it says so and asks where your music is; the folder
+you choose is saved, with the ones it found, one per line in
+`~/.config/halo/folders`, and you can list more there. A folder is an album, which is how mixtapes, rips
 and downloads are laid out; a `CD1` or `Disc 2` folder joins its parent.
 Covers come from an image in the folder or from the files' tags. Files
 shorter than ten seconds (drum one-shots, sample packs) stay out of the

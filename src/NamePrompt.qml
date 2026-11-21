@@ -51,6 +51,9 @@ Popup {
             font.weight: Font.Bold
         }
         TextField {
+            // Selected words in the accent, in the text colour that reads on it.
+            selectionColor: Style.accentFill
+            selectedTextColor: Style.accentInk
             id: field
             Layout.fillWidth: true
             placeholderText: qsTr("Name")
@@ -65,13 +68,9 @@ Popup {
             Layout.fillWidth: true
             Item { Layout.fillWidth: true }
             Button { text: qsTr("Cancel"); flat: true; onClicked: root.close() }
-            Button {
+            AccentButton {
                 text: root.action
-                highlighted: true
                 enabled: field.text.trim().length > 0
-                Material.accent: Style.accent
-                Material.foreground: Style.onAccent
-                Material.roundedScale: Style.radius
                 onClicked: root.finish()
             }
         }

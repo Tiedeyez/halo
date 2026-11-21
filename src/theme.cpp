@@ -10,7 +10,6 @@
 #include <QJsonObject>
 #include <QRegularExpression>
 #include <QStandardPaths>
-#include <cmath>
 
 Theme::Theme(const QString &directory, QObject *parent, const QString &hyprctl)
     : QObject(parent),
@@ -102,14 +101,6 @@ QString Theme::readAccent(const QString &path) {
     return "#FFD60A";
 }
 
-// Black or white, whichever reads on the accent (WCAG relative luminance).
-QString Theme::accentForeground() const {
-    const QColor c(m_accent);
-    auto linear = [](double v) { return v <= .04045 ? v / 12.92 : std::pow((v + .055) / 1.055, 2.4); };
-    const double luminance = .2126 * linear(c.redF()) + .7152 * linear(c.greenF()) + .0722 * linear(c.blueF());
-    return luminance > .179 ? "black" : "white";
-}
-
 void Theme::reload() {
     refreshRounding();
     const auto paths = m_watcher.files() + m_watcher.directories();
@@ -123,14 +114,19 @@ void Theme::reload() {
     while (!QFileInfo::exists(ancestor) && ancestor != "/")
         ancestor = QFileInfo(ancestor).absolutePath();
     QStringList candidates{ancestor, QFileInfo(ancestor).absolutePath(), m_directory,
-                           m_directory + "/theme", m_directory + "/theme/colors.toml"};
+                           m_directory + "/theme", m_directory + "/theme/colors.toml", m_directory + "/colors.toml"};
     candidates.removeDuplicates();
     for (const auto &path : candidates)
         if (QFileInfo::exists(path))
             m_watcher.addPath(path);
 
-    const auto accent = readAccent(m_directory + "/theme/colors.toml");
-    const auto palette = readPalette(m_directory + "/theme/colors.toml", accent);
+    // Omarchy's current-theme folder keeps colors.toml in theme/; a theme's
+    // own folder (HALO_THEME_DIR, for checking a theme without switching
+    // to it) keeps it at the top.
+    const QString colours = QFileInfo::exists(m_directory + "/theme/colors.toml") || !QFileInfo::exists(m_directory + "/colors.toml")
+                                ? m_directory + "/theme/colors.toml" : m_directory + "/colors.toml";
+    const auto accent = readAccent(colours);
+    const auto palette = readPalette(colours, accent);
     if (accent != m_accent || palette != m_palette) {
         m_accent = accent;
         m_palette = palette;

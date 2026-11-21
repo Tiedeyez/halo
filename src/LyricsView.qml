@@ -221,12 +221,8 @@ Item {
             spacing: 10
             visible: player.hasTrack && (lyrics.status === Lyrics.Offline || lyrics.status === Lyrics.NotFound
                                          || lyrics.status === Lyrics.Failed)
-            Button {
+            AccentButton {
                 text: lyrics.status === Lyrics.Offline ? qsTr("Turn on online lyrics") : qsTr("Look again")
-                highlighted: true
-                Material.accent: Style.accent
-                Material.foreground: Style.onAccent
-                Material.roundedScale: Style.radius
                 implicitHeight: Style.target
                 onClicked: lyrics.status === Lyrics.Offline ? lyrics.online = true : lyrics.retry()
             }

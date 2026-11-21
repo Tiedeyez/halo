@@ -26,7 +26,7 @@ AbstractButton {
             anchors.fill: parent
             visible: button.primary
             pixel: 4
-            color: button.hovered ? Qt.lighter(Style.accent, 1.12) : Style.accent
+            color: button.hovered ? Style.accentFillHover : Style.accentFill
             scale: button.down ? 0.92 : button.hovered ? 1.04 : 1
             Behavior on scale { NumberAnimation { duration: Style.quick; easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
         }
@@ -51,7 +51,7 @@ AbstractButton {
             width: button.primary ? 28 : button.glyphSize
             height: width
             name: button.glyph
-            color: button.primary ? Style.onAccent
+            color: button.primary ? Style.accentInk
                  : !button.enabled ? Style.line
                  : button.active ? Style.accentText : Style.muted
         }

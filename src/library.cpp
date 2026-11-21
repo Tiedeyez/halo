@@ -17,6 +17,7 @@
 #include <QStandardPaths>
 #include <QThreadPool>
 #include <QtConcurrent>
+#include <QUrl>
 #include <algorithm>
 #include <QDateTime>
 #include <cmath>
@@ -212,6 +213,11 @@ Library::Library(const QStringList &folders, const QString &cacheDirectory, cons
         saveCache();
         m_scanning = false;
         emit scanningChanged();
+        // A folder added mid-scan gets its own pass.
+        if (m_rescanAgain) {
+            m_rescanAgain = false;
+            rescan();
+        }
     });
     m_statsSave.setSingleShot(true);
     m_statsSave.setInterval(2000);
@@ -225,12 +231,18 @@ Library::~Library() {
     flush();
 }
 
-// ~/Music, plus any folders listed one per line in ~/.config/halo/folders.
+QString Library::foldersFile() {
+    return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/halo/folders";
+}
+
+// The folders listed one per line in ~/.config/halo/folders; without that
+// file, the desktop's music folder (XDG_MUSIC_DIR, which Qt reads from
+// user-dirs.dirs) and ~/Music, the ones that exist.
 QStringList Library::defaultFolders() {
     QStringList folders;
     if (!qEnvironmentVariableIsEmpty("HALO_MUSIC"))
         return qEnvironmentVariable("HALO_MUSIC").split(':', Qt::SkipEmptyParts);
-    QFile config(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/halo/folders");
+    QFile config(foldersFile());
     if (config.open(QIODevice::ReadOnly))
         for (const QString &line : QString::fromUtf8(config.readAll()).split('\n')) {
             QString folder = line.trimmed();
@@ -239,9 +251,55 @@ QStringList Library::defaultFolders() {
             if (!folder.isEmpty() && !folder.startsWith('#'))
                 folders << QDir::cleanPath(folder);
         }
+    if (!folders.isEmpty())
+        return folders;
+    const QString xdg = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::MusicLocation));
+    const QString home = QDir::cleanPath(QDir::homePath() + "/Music");
+    for (const QString &candidate : {xdg, home})
+        if (!folders.contains(candidate) && QFileInfo(candidate).isDir())
+            folders << candidate;
     if (folders.isEmpty())
-        folders << QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
+        folders << xdg;
     return folders;
+}
+
+bool Library::addFolder(const QString &folder) {
+    QString path = folder.startsWith("file:") ? QUrl(folder).toLocalFile() : folder;
+    if (path.startsWith("~/"))
+        path = QDir::homePath() + path.mid(1);
+    if (path.isEmpty() || !QFileInfo(path).isDir())
+        return false;
+    path = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+    if (!m_folders.contains(path)) {
+        // The first folder chosen by hand keeps the ones Halo found, so
+        // nothing that was in the library drops out of it.
+        const QString listFile = foldersFile();
+        const bool fresh = !QFileInfo::exists(listFile);
+        QByteArray text;
+        if (fresh) {
+            for (const QString &f : std::as_const(m_folders))
+                if (QFileInfo(f).isDir() && f != path)
+                    text += f.toUtf8() + '\n';
+        } else {
+            // Start on a new line even if the file doesn't end with one.
+            QFile peek(listFile);
+            if (peek.open(QIODevice::ReadOnly) && peek.size() > 0 && peek.seek(peek.size() - 1) && peek.read(1) != "\n")
+                text += '\n';
+        }
+        text += path.toUtf8() + '\n';
+        QDir().mkpath(QFileInfo(listFile).absolutePath());
+        QFile file(listFile);
+        if (!file.open(fresh ? QIODevice::WriteOnly : QIODevice::Append) || file.write(text) != text.size())
+            return false;
+        file.close();
+        m_folders << path;
+        emit changed();
+    }
+    if (m_scanning)
+        m_rescanAgain = true;
+    else
+        rescan();
+    return true;
 }
 
 bool Library::isAudioFile(const QString &path) {

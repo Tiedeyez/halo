@@ -94,7 +94,9 @@ int main(int argc, char *argv[]) {
 
     Translator translator;
     app.installTranslator(&translator);
-    Theme theme;
+    // HALO_THEME_DIR points Halo at one theme's folder (one with a
+    // colors.toml), to check how it looks without switching Omarchy to it.
+    Theme theme(qEnvironmentVariable("HALO_THEME_DIR"));
     Library library;
     Analyzer analyzer;
     Player player(&library, &analyzer);

@@ -93,6 +93,8 @@ class Player : public QObject {
     Q_PROPERTY(int repeat READ repeat WRITE setRepeat NOTIFY settingsChanged)
     Q_PROPERTY(bool normalize READ normalize WRITE setNormalize NOTIFY settingsChanged)
     Q_PROPERTY(bool calm READ calm WRITE setCalm NOTIFY settingsChanged)
+    // The welcome screen has been seen (or music was found without it).
+    Q_PROPERTY(bool onboarded READ onboarded WRITE setOnboarded NOTIFY settingsChanged)
     Q_PROPERTY(int visualStyle READ visualStyle WRITE setVisualStyle NOTIFY settingsChanged)
     Q_PROPERTY(bool eqEnabled READ eqEnabled WRITE setEqEnabled NOTIFY eqChanged)
     Q_PROPERTY(QVariantList eqGains READ eqGains NOTIFY eqChanged)
@@ -152,6 +154,8 @@ public:
     void setNormalize(bool on);
     bool calm() const { return m_calm; }
     void setCalm(bool on);
+    bool onboarded() const { return m_onboarded; }
+    void setOnboarded(bool on);
     int visualStyle() const { return m_visualStyle; }
     void setVisualStyle(int style);
     bool eqEnabled() const { return m_eqEnabled; }
@@ -295,6 +299,7 @@ private:
     int m_repeat = RepeatOff;
     bool m_normalize = true;
     bool m_calm = false;
+    bool m_onboarded = false;
     int m_visualStyle = 0;
     bool m_eqEnabled = false;
     std::array<double, 10> m_eqGains{};
