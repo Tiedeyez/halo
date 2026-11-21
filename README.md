@@ -150,7 +150,8 @@ checked against the source.
   transparent with a window rule. Halo never changes your Hyprland settings,
   so to give it the same look, add this line to
   `~/.config/hypr/looknfeel.lua`:
-  `o.transparent_window("^halo$")`
+  `o.transparent_window("^halo$")` (or `o.transparent_window("^halo$", "0.94 0.9")`
+  for a little more)
 - **Agents can drive it.** `halo status --json`, `halo add <folder>`,
   `halo analyze <file> --json` and more; `halo skill install` teaches coding
   agents how.
