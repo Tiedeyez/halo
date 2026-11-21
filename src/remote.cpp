@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
+#include <QDeadlineTimer>
 #include <QDir>
 #include <QDirIterator>
 #include <QFileInfo>
@@ -224,11 +225,21 @@ bool Remote::send(const QJsonObject &request, QJsonObject *reply, int timeoutMs)
         return false;
     socket.write(QJsonDocument(request).toJson(QJsonDocument::Compact) + "\n");
     socket.flush();
-    while (!socket.canReadLine())
-        if (!socket.waitForReadyRead(timeoutMs))
+    // The whole reply has one deadline and a size cap, so whatever listens on
+    // the socket can't keep a terminal command (or a bar widget polling
+    // `halo status`) waiting forever by trickling bytes, or fill its memory.
+    const QDeadlineTimer deadline(timeoutMs);
+    while (!socket.canReadLine()) {
+        if (socket.bytesAvailable() > Safety::MaxSocketReply || deadline.hasExpired())
             return false;
+        if (!socket.waitForReadyRead(int(std::max<qint64>(1, deadline.remainingTime()))))
+            return false;
+    }
+    const QByteArray line = socket.readLine(Safety::MaxSocketReply + 1);
+    if (line.size() > Safety::MaxSocketReply)
+        return false;
     if (reply)
-        *reply = QJsonDocument::fromJson(socket.readLine()).object();
+        *reply = QJsonDocument::fromJson(line).object();
     return true;
 }
 

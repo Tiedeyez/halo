@@ -108,5 +108,8 @@ inline bool allowedEndpoint(const QString &endpoint) {
 // Bounds on what a peer can make Halo hold in memory.
 constexpr qint64 MaxSocketLine = 64 * 1024;      // one control-socket command
 constexpr qint64 MaxLyricsReply = 2 * 1024 * 1024;   // one LRCLIB response
+// One reply a `halo` command reads back from the window. A whole queue or a
+// big playlist is a few MiB at most; more than this is not Halo talking.
+constexpr qint64 MaxSocketReply = 16 * 1024 * 1024;
 
 }

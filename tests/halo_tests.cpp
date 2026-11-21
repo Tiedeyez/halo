@@ -1,5 +1,12 @@
 #include <QDir>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <atomic>
+#include <chrono>
+#include <cstring>
+#include <thread>
 #include <QJsonDocument>
 #include <QLocalSocket>
 #include <QSaveFile>
@@ -182,6 +189,55 @@ public:
 private:
     QTcpServer server;
     QHash<QTcpSocket *, QByteArray> buffer;
+};
+
+// A misbehaving listener on Halo's socket, on its own thread so a blocking
+// client in the test thread can talk to it: it reads the request line, then
+// either drips bytes without ever ending the line, or sends far too much.
+struct RogueSocket {
+    enum Mode { Trickle, Flood };
+    QString path;
+    int listener = -1;
+    std::atomic<bool> stop{false};
+    std::thread worker;
+
+    RogueSocket(const QString &socketPath, Mode mode) : path(socketPath) {
+        listener = ::socket(AF_UNIX, SOCK_STREAM, 0);
+        sockaddr_un address {};
+        address.sun_family = AF_UNIX;
+        const QByteArray name = QFile::encodeName(path);
+        std::memcpy(address.sun_path, name.constData(), std::min<size_t>(name.size(), sizeof(address.sun_path) - 1));
+        ::bind(listener, reinterpret_cast<sockaddr *>(&address), sizeof(address));
+        ::listen(listener, 1);
+        worker = std::thread([this, mode] {
+            const int client = ::accept(listener, nullptr, nullptr);
+            if (client < 0)
+                return;
+            char c = 0;
+            while (::read(client, &c, 1) == 1 && c != '\n') {}
+            const QByteArray chunk(64 * 1024, 'x');
+            if (mode == Flood) {
+                qint64 sent = 0;
+                while (!stop && sent <= Safety::MaxSocketReply + chunk.size()) {
+                    const ssize_t n = ::send(client, chunk.constData(), chunk.size(), MSG_NOSIGNAL);
+                    if (n <= 0)
+                        break;
+                    sent += n;
+                }
+            } else {
+                while (!stop && ::send(client, "x", 1, MSG_NOSIGNAL) == 1)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
+            ::close(client);
+        });
+    }
+    ~RogueSocket() {
+        stop = true;
+        ::shutdown(listener, SHUT_RDWR);
+        ::close(listener);
+        worker.join();
+        QFile::remove(path);
+    }
 };
 
 class HaloTests : public QObject {
@@ -1847,6 +1903,31 @@ private slots:
         service.load(song, "Title", "Artist", "", 100);
         QTRY_COMPARE_WITH_TIMEOUT(service.status(), int(LyricsService::Failed), 10000);
         QCOMPARE(lrclib.requests.size(), 1);   // failed, not retried as a search
+    }
+
+    // `halo status` (and the bar widget polling it) gives up on a listener
+    // that drips a reply forever or sends far more than any real reply.
+    void cliReplyIsBoundedInTimeAndSize() {
+        QTemporaryDir run;
+        const QByteArray old = qgetenv("HALO_SOCKET");
+        qputenv("HALO_SOCKET", QFile::encodeName(run.filePath("halo.sock")));
+        {
+            RogueSocket rogue(Remote::socketName(), RogueSocket::Trickle);
+            QElapsedTimer clock;
+            clock.start();
+            QJsonObject reply;
+            QVERIFY(!Remote::send({{"cmd", "status"}}, &reply, 800));
+            QVERIFY2(clock.elapsed() < 3000, "a trickling reply kept the client waiting");
+        }
+        {
+            RogueSocket rogue(Remote::socketName(), RogueSocket::Flood);
+            QJsonObject reply;
+            QVERIFY(!Remote::send({{"cmd", "status"}}, &reply, 10000));
+        }
+        if (old.isEmpty())
+            qunsetenv("HALO_SOCKET");
+        else
+            qputenv("HALO_SOCKET", old);
     }
 
     void socketCutsOffOversizeCommands() {
