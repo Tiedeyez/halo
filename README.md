@@ -146,6 +146,11 @@ checked against the source.
 - **Every bar widget is a remote.** Halo speaks MPRIS, so media keys, the
   Omarchy bar, and the now-playing widgets on the plugin marketplace control
   it.
+- **See-through like your terminals.** Omarchy makes terminals slightly
+  transparent with a window rule. Halo never changes your Hyprland settings,
+  so to give it the same look, add this line to
+  `~/.config/hypr/looknfeel.lua`:
+  `o.transparent_window("^halo$")`
 - **Agents can drive it.** `halo status --json`, `halo add <folder>`,
   `halo analyze <file> --json` and more; `halo skill install` teaches coding
   agents how.
