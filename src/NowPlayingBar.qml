@@ -216,52 +216,7 @@ Rectangle {
                 active: player.sleepRemaining > 0
                 onClicked: root.openSleep()
             }
-            IconButton {
-                glyph: player.volume === 0 ? "mute" : "volume"
-                tip: qsTr("Mute")
-                property real before: 0.8
-                onClicked: {
-                    if (player.volume > 0) { before = player.volume; player.volume = 0 }
-                    else player.volume = before
-                }
-            }
-            // Volume as a row of pixel bars rising to the right, like a
-            // signal meter; drag or click across it, or scroll over it.
-            Slider {
-                id: volume
-                Layout.preferredWidth: 108
-                Layout.preferredHeight: Style.target
-                from: 0
-                to: 1
-                value: player.volume
-                onMoved: player.volume = value
-                Accessible.name: qsTr("Volume")
-                focusPolicy: Qt.NoFocus
-                background: Row {
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-                    Repeater {
-                        model: 12
-                        Rectangle {
-                            required property int index
-                            anchors.bottom: parent.bottom
-                            width: (volume.width - 22) / 12
-                            height: 4 + index * 1.2
-                            color: (index + 0.5) / 12 <= volume.visualPosition ? Style.accent : Style.line
-                        }
-                    }
-                }
-                handle: Rectangle {
-                    x: volume.leftPadding + volume.visualPosition * (volume.availableWidth - width)
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: volume.hovered || volume.pressed ? 6 : 0
-                    height: 20
-                    color: Style.text
-                }
-                WheelHandler {
-                    onWheel: e => player.volume = Math.max(0, Math.min(1, player.volume + (e.angleDelta.y > 0 ? 0.05 : -0.05)))
-                }
-            }
+            VolumeControl {}
         }
     }
 }

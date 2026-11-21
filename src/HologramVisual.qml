@@ -10,12 +10,18 @@ import "qrc:/hologram/manifest.js" as Layers
 // grooves carry the spectrum, a shockwave runs out on every beat, the groove
 // under the stylus burns, and the album cover turns on the label as light.
 // The tonearm follows the song like the Turntable's; everything is added as
-// light over what's behind. Motion stops when paused or calm (C).
+// light over what's behind; the fader follows the volume, the dial the EQ's
+// gain, and start/stop lights while playing, the platter spinning up and
+// coasting down. Motion stops when paused or calm (C).
 Item {
     id: root
     readonly property bool supported: GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property bool moving: Style.motion && player.playing && visible && supported
                                    && root.Window.window && root.Window.window.visibility !== Window.Minimized
+    // The platter has weight: it spins up when play is pressed and coasts
+    // down when stopped, so the clock runs on until it has stopped.
+    readonly property bool turning: Style.motion && visible && supported && (player.playing || clock.speed > 0.002)
+                                    && root.Window.window && root.Window.window.visibility !== Window.Minimized
 
     readonly property var manifest: Layers.data
     readonly property alias clock: clock
@@ -59,13 +65,19 @@ Item {
 
     MotionClock {
         id: clock
-        running: root.moving
+        running: root.turning
         property real spin: 0
+        // 0 stopped .. 1 at speed: up in about a second, down in about two.
+        property real speed: player.playing ? 1 : 0
         property vector4d lo: Qt.vector4d(0, 0, 0, 0)
         property vector4d hi: Qt.vector4d(0, 0, 0, 0)
         onTicked: dt => {
-            // 33 1/3 a minute; a beat nudges it like a DJ's hand.
-            clock.spin += dt * (Math.PI * 2 * 33.333 / 60) * (1 + 0.04 * clock.pulse)
+            const target = player.playing ? 1 : 0
+            clock.speed += (target - clock.speed) * (1 - Math.exp(-dt * (target > clock.speed ? 3.2 : 1.6)))
+            if (clock.speed < 0.002 && !player.playing)
+                clock.speed = 0
+            // 33 1/3 a minute at speed; a beat nudges it like a DJ's hand.
+            clock.spin += dt * (Math.PI * 2 * 33.333 / 60) * clock.speed * (1 + 0.04 * clock.pulse)
             if (clock.spin > Math.PI * 2) clock.spin -= Math.PI * 2
             const s = spectrumSource
             clock.lo = Qt.vector4d(s.bandAverage(0, 4), s.bandAverage(4, 10), s.bandAverage(10, 18), s.bandAverage(18, 26))
@@ -164,6 +176,61 @@ Item {
         readonly property real t: { const f = root.frame - lower; const x = Math.max(0, Math.min(1, (f - 0.35) / 0.3)); return x * x * (3 - 2 * x) }
         Light { host: root; anchors.fill: parent; name: root.armName(armBox.lower); gain: armBox.upper === armBox.lower ? 1 : 1 - armBox.t }
         Light { host: root; anchors.fill: parent; name: root.armName(armBox.upper); gain: armBox.upper === armBox.lower ? 0 : armBox.t }
+    }
+
+    // ---- the controls follow Halo's own, as light ----
+    // The fader is the volume; the dial's index the EQ's gain (-12..+12 dB
+    // over its ticks, at rest while the EQ is off). Both ease into place.
+    Light {
+        id: faderLight
+        host: root
+        name: "fader"
+        readonly property var m: root.manifest ? root.manifest.fader : null
+        property real volume: player.volume
+        Behavior on volume { NumberAnimation { duration: Style.motion ? 160 : 0; easing.type: Easing.OutCubic } }
+        x: m ? m.x * root.px : 0
+        y: m ? (m.y + (m.low + (m.high - m.low) * volume) - m.rest) * root.px : 0
+        width: m ? m.w * root.px : 0
+        height: m ? m.h * root.px : 0
+        gain: m ? 1 : 0
+    }
+    Light {
+        id: dialLight
+        host: root
+        name: "dial"
+        readonly property var m: root.manifest ? root.manifest.dial : null
+        property real eqGain: player.eqEnabled ? player.eqPreamp : 0
+        Behavior on eqGain { NumberAnimation { duration: Style.motion ? 200 : 0; easing.type: Easing.OutCubic } }
+        x: m ? m.x * root.px : 0
+        y: m ? m.y * root.px : 0
+        width: m ? m.w * root.px : 0
+        height: m ? m.h * root.px : 0
+        gain: m ? 1 : 0
+        transform: Rotation {
+            origin.x: dialLight.m ? (dialLight.m.cx - dialLight.m.x) * root.px : 0
+            origin.y: dialLight.m ? (dialLight.m.cy - dialLight.m.y) * root.px : 0
+            // Clockwise is up: the ticks run from up-left round to down-left.
+            angle: dialLight.eqGain / 12 * 120
+        }
+    }
+    // Start/stop lights while playing, and the 33 speed light beside it.
+    DeckSpot {
+        host: root
+        readonly property var m: root.manifest && root.manifest.start ? root.manifest.start : null
+        at: m ? Qt.point(m.x, m.y) : Qt.point(-1, -1)
+        across: m ? m.w * 1.5 : 0
+        tall: m ? m.h * 2.2 : 0
+        bar: 0.55
+        tint: Style.paletteColour(1)
+        strength: m ? clock.speed * (0.5 + 0.3 * clock.pulse) : 0
+    }
+    DeckSpot {
+        host: root
+        readonly property var m: root.manifest && root.manifest.pip ? root.manifest.pip : null
+        at: m ? Qt.point(m.x, m.y) : Qt.point(-1, -1)
+        across: 0.03
+        tint: Style.paletteColour(3)
+        strength: m ? clock.speed : 0
     }
 
     // Without a GPU: the lines alone, still recognisably the deck.

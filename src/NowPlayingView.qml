@@ -360,6 +360,10 @@ Rectangle {
             IconButton { glyph: "blend"; tip: qsTr("Blend (B)"); active: player.blend; onClicked: player.blend = !player.blend }
             IconButton { glyph: "lyrics"; tip: qsTr("Lyrics (L)"); active: lyrics.shown; onClicked: lyrics.shown = !lyrics.shown }
         }
+        // The bar (and its volume) is hidden here, so the volume is too.
+        VolumeControl {
+            Layout.alignment: Qt.AlignHCenter
+        }
     }
 
     // A short note in place of the lyrics when there are none to show.

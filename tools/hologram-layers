@@ -55,15 +55,41 @@ done
 set -- $(box "$WORK"/spindle-lines.png "$WORK"/spindle-body.png)
 SX=$1 SY=$2 SW=$3 SH=$4
 pack spindle "$SX" "$SY" "$SW" "$SH"
+# The controls the app moves (the gain dial's index turns, the fader
+# slides), if this render has them.
+CONTROLS=""
+for c in dial fader; do
+    [ -f "$WORK/$c-lines.png" ] || continue
+    set -- $(box "$WORK/$c-lines.png" "$WORK/$c-body.png")
+    pack "$c" "$1" "$2" "$3" "$4"
+    CONTROLS="$CONTROLS $c:$1,$2,$3,$4"
+done
 
-python3 -I - "$IN/manifest.json" "$OUT/manifest.json" "$SIZE" "$AX" "$AY" "$AW" "$AH" "$SX" "$SY" "$SW" "$SH" <<'PY'
-import json, sys
-src, dst, size, ax, ay, aw, ah, sx, sy, sw, sh = sys.argv[1:]
+python3 -I - "$IN/manifest.json" "$OUT/manifest.json" "$SIZE" "$AX" "$AY" "$AW" "$AH" "$SX" "$SY" "$SW" "$SH" "$CONTROLS" "$IN/controls.json" <<'PY'
+import json, os, sys
+src, dst, size, ax, ay, aw, ah, sx, sy, sw, sh, controls, controlsJson = sys.argv[1:]
 m = json.load(open(src))
 m["image"] = int(size)
 m["frames"] = len(m["headings"])
 m["arm"] = {"x": int(ax), "y": int(ay), "w": int(aw), "h": int(ah)}
 m["spindle"] = {"x": int(sx), "y": int(sy), "w": int(sw), "h": int(sh)}
+# The moving controls (packed pixels) and the lit ones (image fractions).
+if controls.strip() and os.path.exists(controlsJson):
+    where = json.load(open(controlsJson))
+    s = int(size)
+    for item in controls.split():
+        name, box = item.split(":")
+        x, y, w, h = map(int, box.split(","))
+        m[name] = {"x": x, "y": y, "w": w, "h": h}
+    if "dial" in m:
+        m["dial"]["cx"], m["dial"]["cy"] = where["dialCentre"][0] * s, where["dialCentre"][1] * s
+    if "fader" in m:
+        m["fader"]["rest"] = where["faderRest"][1] * s
+        m["fader"]["low"] = where["faderLow"][1] * s
+        m["fader"]["high"] = where["faderHigh"][1] * s
+    cx, cy = where["start"]
+    m["start"] = {"x": cx, "y": cy, "w": 2 * abs(where["startCorner"][0] - cx), "h": 2 * abs(where["startCorner"][1] - cy)}
+    m["pip"] = {"x": where["pip"][0], "y": where["pip"][1]}
 json.dump(m, open(dst, "w"), indent=1)
 with open(dst[:-len("manifest.json")] + "manifest.js", "w") as f:
     f.write(".pragma library\n// Written by tools/hologram-layers; see manifest.json.\nvar data = " + json.dumps(m) + ";\n")

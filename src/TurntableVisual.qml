@@ -19,6 +19,10 @@ Item {
     readonly property bool supported: GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property bool moving: Style.motion && player.playing && visible && supported
                                    && root.Window.window && root.Window.window.visibility !== Window.Minimized
+    // The platter has weight: it spins up when play is pressed and coasts
+    // down when stopped, so the clock runs on until it has stopped.
+    readonly property bool turning: Style.motion && visible && supported && (player.playing || clock.speed > 0.002)
+                                    && root.Window.window && root.Window.window.visibility !== Window.Minimized
 
     // Where things are in the render: the deck's geometry, the label's
     // homography and the crops of the moving parts.
@@ -71,11 +75,17 @@ Item {
 
     MotionClock {
         id: clock
-        running: root.moving
+        running: root.turning
         property real spin: 0
+        // 0 stopped .. 1 at speed: up in about a second, down in about two.
+        property real speed: player.playing ? 1 : 0
         onTicked: dt => {
-            // 33 1/3 revolutions a minute.
-            clock.spin += dt * (Math.PI * 2 * 33.333 / 60)
+            const target = player.playing ? 1 : 0
+            clock.speed += (target - clock.speed) * (1 - Math.exp(-dt * (target > clock.speed ? 3.2 : 1.6)))
+            if (clock.speed < 0.002 && !player.playing)
+                clock.speed = 0
+            // 33 1/3 revolutions a minute at speed.
+            clock.spin += dt * (Math.PI * 2 * 33.333 / 60) * clock.speed
             if (clock.spin > Math.PI * 2) clock.spin -= Math.PI * 2
         }
     }
@@ -141,7 +151,8 @@ Item {
         property variant glow: glowImage
         property variant cover: label
         property real spin: clock.spin
-        property real glowLevel: root.moving ? 0.75 + clock.pulse * 1.1 + clock.level * 0.25 : 0.8
+        // The lamps dim while the deck is stopped and come up as it spins.
+        property real glowLevel: root.moving ? (0.35 + 0.4 * clock.speed) + clock.pulse * 1.1 + clock.level * 0.25 : 0.3 + 0.45 * clock.speed
         property real hasCover: player.albumId.length ? 1 : 0
         property real pulse: root.moving ? clock.pulse : 0
         property real level: root.moving ? clock.level : 0.2
@@ -161,6 +172,23 @@ Item {
     }
 
     // ---- the controls follow Halo's own ----
+    // Start/stop lights while playing, and the 33 speed light beside it.
+    DeckSpot {
+        host: root
+        readonly property var m: root.manifest && root.manifest.start ? root.manifest.start : null
+        at: m ? Qt.point(m.x, m.y) : Qt.point(-1, -1)
+        across: m ? m.w * 1.5 : 0
+        tall: m ? m.h * 2.2 : 0
+        bar: 0.55
+        strength: m ? clock.speed * (0.55 + 0.25 * clock.pulse) : 0
+    }
+    DeckSpot {
+        host: root
+        readonly property var m: root.manifest && root.manifest.pip ? root.manifest.pip : null
+        at: m ? Qt.point(m.x, m.y) : Qt.point(-1, -1)
+        across: 0.03
+        strength: m ? clock.speed : 0
+    }
     // The fader is the volume: its cap slides along the slot, from the near
     // end (silent) to the far end (full).
     Image {

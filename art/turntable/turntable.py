@@ -5,6 +5,7 @@
 #   blender -b -P turntable.py -- --out DIR --layers [--frames N]   (the Turntable visual's layers)
 #   ... --layers --deck-only   (only deck.png and deck-lit.png, for a fix that leaves the arm alone)
 #   blender -b -P turntable.py -- --out DIR --energy [--frames N]   (the Hologram visual's layers)
+#   ... --energy --controls-only   (only the deck, dial and fader passes)
 #
 # An original design (not a copy of any real deck): a dark anodised plinth
 # with chamfered edges, a machined platter with strobe dots, a straight
@@ -573,6 +574,46 @@ def label_mapping():
     return H.tolist(), Hi.tolist()
 
 
+def moving_controls():
+    """The controls the app moves: the gain dial's lit index (the dial is
+    round, so only the index shows a turn; the dial and its shadow stay in
+    the deck) and the fader's cap, moved to the slot's middle."""
+    dial = [bpy.data.objects["Anti-skate index"]]
+    fader = [o for o in bpy.data.objects if o.name.startswith(("Pitch cap", "Pitch rib"))]
+    for o in fader:
+        o.location.y += 0.006
+    return dial, fader
+
+
+def control_points():
+    """Where the app's moving and lit controls are, in image fractions
+    (x, y down): the dial's centre, the fader's middle and its two ends, the
+    start/stop button and the 33 speed light."""
+    from bpy_extras.object_utils import world_to_camera_view
+    scene = bpy.context.scene
+
+    def image_at(co):
+        q = world_to_camera_view(scene, scene.camera, co)
+        return [q.x, 1.0 - q.y]
+
+    slot = bpy.data.objects["Pitch slot"]
+    centre = bpy.data.objects["Anti-skate cap"].location
+    start = bpy.data.objects["Start"]
+    pip = bpy.data.objects["Speed pip"]
+    half = slot.dimensions.y / 2 - 0.006                  # the cap's travel either way
+    top = TOP + 0.0055
+    sx, sy = start.dimensions.x / 2, start.dimensions.y / 2
+    return {
+        "dialCentre": image_at(Vector((centre.x, centre.y, centre.z))),
+        "faderRest": image_at(Vector((slot.location.x, slot.location.y, top))),
+        "faderLow": image_at(Vector((slot.location.x, slot.location.y - half, top))),
+        "faderHigh": image_at(Vector((slot.location.x, slot.location.y + half, top))),
+        "start": image_at(start.location),
+        "startCorner": image_at(start.location + Vector((sx, sy, 0))),
+        "pip": image_at(pip.location),
+    }
+
+
 def layers():
     """Halo's turntable visual, as layers the app composes: the deck (lamps
     off, a white label the cover is printed onto), the lamps' light alone,
@@ -584,16 +625,7 @@ def layers():
     arm = [swing] + [o for o in bpy.data.objects if o.parent == swing]
     spindle = [o for o in bpy.data.objects if o.name.startswith("Spindle")]
     moving = set(arm) | set(spindle)
-    # The controls the app moves: the gain dial (turned) and the fader's cap
-    # (slid along its slot). The fader is drawn at the slot's middle.
-    # The dial is round, so only its lit index shows a turn; it moves alone,
-    # and the dial and its shadow stay in the deck (a turned shadow would be
-    # wrong).
-    dial = [bpy.data.objects["Anti-skate index"]]
-    fader = [o for o in bpy.data.objects if o.name.startswith(("Pitch cap", "Pitch rib"))]
-    slot = bpy.data.objects["Pitch slot"]
-    for o in fader:
-        o.location.y += 0.006
+    dial, fader = moving_controls()
     moving |= set(dial) | set(fader)
     deck = [o for o in bpy.data.objects if o.type in ("MESH", "FONT") and o not in moving]
     lab = bpy.data.objects["Label"]
@@ -617,12 +649,6 @@ def layers():
     render(OUT + "/deck-lit.png")
 
     # The controls, each over a deck that only catches their shadows.
-    from bpy_extras.object_utils import world_to_camera_view
-
-    def image_at(co):
-        q = world_to_camera_view(scene, scene.camera, co)
-        return [q.x, 1.0 - q.y]
-
     for o in deck:
         o.is_shadow_catcher = True
     show(dial, True)
@@ -631,19 +657,8 @@ def layers():
     show(fader, True)
     render(OUT + "/fader.png")
     show(fader, False)
-    centre = bpy.data.objects["Anti-skate cap"].location
-    half = slot.dimensions.y / 2 - 0.006                  # the cap's travel either way
-    top = TOP + 0.0055
-    controls = {
-        "dialCentre": image_at(Vector((centre.x, centre.y, centre.z))),
-        # Where the fader cap's middle is with the cap at the slot's middle,
-        # its near (low) end and its far (high) end, in image fractions.
-        "faderRest": image_at(Vector((slot.location.x, slot.location.y, top))),
-        "faderLow": image_at(Vector((slot.location.x, slot.location.y - half, top))),
-        "faderHigh": image_at(Vector((slot.location.x, slot.location.y + half, top))),
-    }
     with open(OUT + "/controls.json", "w") as f:
-        json.dump(controls, f, indent=1)
+        json.dump(control_points(), f, indent=1)
     for o in deck:
         o.is_shadow_catcher = False
     if "--deck-only" in argv:
@@ -688,7 +703,8 @@ def energy():
     vl = scene.view_layers[0]
     arm = [swing] + [o for o in bpy.data.objects if o.parent == swing]
     spindle = [o for o in bpy.data.objects if o.name.startswith("Spindle")]
-    moving = set(arm) | set(spindle)
+    dial, fader = moving_controls()
+    moving = set(arm) | set(spindle) | set(dial) | set(fader)
     deck = [o for o in bpy.data.objects if o.type in ("MESH", "FONT") and o not in moving]
     # The record's own edge lines would be too many rings; the app draws
     # its grooves as energy. Keep the record's rim and the label's edge.
@@ -760,9 +776,20 @@ def energy():
         vl.material_override = rim
         render(OUT + "/energy-%s-body.png" % name)
 
-    show(arm + spindle, False)
+    show(arm + spindle + dial + fader, False)
     passes("deck")
     show(deck, False)
+    # The moving controls (see moving_controls), each alone.
+    show(dial, True)
+    passes("dial")
+    show(dial, False)
+    show(fader, True)
+    passes("fader")
+    show(fader, False)
+    with open(OUT + "/controls.json", "w") as f:
+        json.dump(control_points(), f, indent=1)
+    if "--controls-only" in argv:
+        return
     show(spindle, True)
     passes("spindle")
     show(spindle, False)

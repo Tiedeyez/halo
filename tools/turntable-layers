@@ -110,6 +110,12 @@ if controls.strip() and os.path.exists(controlsJson):
         m[name] = {"x": x, "y": y, "w": w, "h": h}
     if "dial" in m:
         m["dial"]["cx"], m["dial"]["cy"] = where["dialCentre"][0] * s, where["dialCentre"][1] * s
+    # The start/stop button and the 33 speed light, lit while playing
+    # (image fractions).
+    if "start" in where:
+        cx, cy = where["start"]
+        m["start"] = {"x": cx, "y": cy, "w": 2 * abs(where["startCorner"][0] - cx), "h": 2 * abs(where["startCorner"][1] - cy)}
+        m["pip"] = {"x": where["pip"][0], "y": where["pip"][1]}
     if "fader" in m:
         m["fader"]["rest"] = where["faderRest"][1] * s
         m["fader"]["low"] = where["faderLow"][1] * s

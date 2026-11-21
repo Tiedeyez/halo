@@ -22,6 +22,8 @@
         <file alias="HologramVisual.qml">HologramVisual.qml</file>
         <file alias="HaloLight.qml">HaloLight.qml</file>
         <file alias="BarsVisual.qml">BarsVisual.qml</file>
+        <file alias="VolumeControl.qml">VolumeControl.qml</file>
+        <file alias="DeckSpot.qml">DeckSpot.qml</file>
         <file alias="PlaylistUi.qml">PlaylistUi.qml</file>
         <file alias="AddToPlaylistMenu.qml">AddToPlaylistMenu.qml</file>
         <file alias="PlaylistCover.qml">PlaylistCover.qml</file>

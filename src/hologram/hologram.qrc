@@ -74,6 +74,10 @@
         <file alias="arm-35-lines.webp">arm-35-lines.webp</file>
         <file alias="deck-body.webp">deck-body.webp</file>
         <file alias="deck-lines.webp">deck-lines.webp</file>
+        <file alias="dial-body.webp">dial-body.webp</file>
+        <file alias="dial-lines.webp">dial-lines.webp</file>
+        <file alias="fader-body.webp">fader-body.webp</file>
+        <file alias="fader-lines.webp">fader-lines.webp</file>
         <file alias="spindle-body.webp">spindle-body.webp</file>
         <file alias="spindle-lines.webp">spindle-lines.webp</file>
         <file alias="manifest.json">manifest.json</file>
