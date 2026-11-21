@@ -153,14 +153,15 @@ Rectangle {
             size: 640
             scale: player.calm || player.visualStyle !== 0 ? 1 : 1 + spectrumSource.pulse * 0.015
         }
-        HaloView {
-            anchors.centerIn: focusPoint
+        // The bars, with their floor below: the bars keep their place
+        // (centred on the song), the reflection hangs beneath them.
+        BarsVisual {
+            id: barsVisual
+            x: focusPoint.x - width / 2
+            y: focusPoint.y - barsHeight / 2
             width: stage.focusW
-            height: Math.min(stage.focusH * 0.52, Math.max(72, stage.focusW * 0.2))
-            spectrum: spectrumSource
-            color: Style.accent
-            calm: player.calm
-            style: HaloView.Bars
+            barsHeight: Math.min(stage.focusH * 0.52, Math.max(72, stage.focusW * 0.2))
+            height: barsHeight * 1.55
             opacity: player.visualStyle === 1 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }

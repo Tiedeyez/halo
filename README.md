@@ -64,6 +64,10 @@ checked against the source.
   edges, while Halo and the six square-pixel visuals fill the whole window.
   Cover art stays in the centre of Ring, Bars and Kaleidoscope, and on the
   label of Turntable and Hologram.
+  The pixel visuals are lit like a wall of LEDs in a dark room: each cell
+  brighter in its middle, the hottest burning white, light blooming onto
+  their neighbours and lifting on the kick. Bars stand on a glossy floor
+  that reflects them.
   Visuals crossfade as V switches them, and the name shows for a moment.
   C keeps any of them still. `halo visual <name>` switches from a terminal.
 - **The library is water.** Behind the library views lies a pond of square pixels

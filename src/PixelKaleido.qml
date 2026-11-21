@@ -70,7 +70,10 @@ Item {
         id: texture
         sourceItem: scope
         hideSource: true
-        smooth: false
+        // Smooth and mipmapped for the LEDs' bloom; cells are sampled at
+        // texel centres, so they stay exact.
+        smooth: true
+        mipmap: true
         visible: false
         textureSize: Qt.size(scope.width, scope.height)
     }
@@ -84,6 +87,8 @@ Item {
         property size cells: Qt.size(scope.width, scope.height)
         property real cell: root.cell
         property color gapColour: Qt.rgba(Style.window.r * 0.6, Style.window.g * 0.6, Style.window.b * 0.6, 1)
-        fragmentShader: "qrc:/shaders/pixelgrid.frag.qsb"
+        property real pulse: root.moving ? clock.pulse : 0
+        property real glow: 0.8
+        fragmentShader: "qrc:/shaders/ledgrid.frag.qsb"
     }
 }

@@ -3,8 +3,9 @@ import QtQuick.Window
 import Halo
 
 // One of the pixel visualisers (Skyline, Phosphor, Pulsar, Waterfall, Warp,
-// Aurora): PixelVisual (C++) draws it one pixel per cell, and the shared
-// pixel grid enlarges it into square screen pixels with gaps. It steps once
+// Aurora, and the Ring): PixelVisual (C++) draws it one pixel per cell, and
+// the LED grid (shaders/ledgrid.frag) enlarges it into square screen pixels
+// with gaps, each lit like an LED with a bloom that lifts on the beat. It steps once
 // per screen refresh while music plays; calm (C) holds the last frame.
 Item {
     id: root
@@ -40,7 +41,10 @@ Item {
         id: texture
         sourceItem: art
         hideSource: root.supported
-        smooth: false
+        // Smooth and mipmapped for the LEDs' bloom; the cells themselves are
+        // sampled at texel centres, so they stay exact.
+        smooth: true
+        mipmap: true
         visible: false
         live: true
         textureSize: Qt.size(art.width, art.height)
@@ -54,6 +58,8 @@ Item {
         property size cells: Qt.size(art.width, art.height)
         property real cell: root.cell
         property color gapColour: Qt.rgba(0, 0, 0, 0)
-        fragmentShader: "qrc:/shaders/pixelgrid.frag.qsb"
+        property real pulse: root.moving ? clock.pulse : 0
+        property real glow: 1
+        fragmentShader: "qrc:/shaders/ledgrid.frag.qsb"
     }
 }
