@@ -2,13 +2,17 @@ import QtQuick
 import QtQuick.Window
 import Halo
 import "qrc:/turntable/manifest.js" as Layers
+import "qrc:/hologram/manifest.js" as Energy
 
-// The Turntable visual: a deck rendered in Blender (art/turntable), composed
-// live from layers (src/turntable, packed by tools/turntable-layers). The
-// album cover turns on the label at 33 1/3 while music plays and stops where
-// it is when paused or calm (C); the ring and lamps take the theme's accent
-// and lift with the beat; the tonearm sweeps in across the song and parks on
-// its rest when nothing is loaded.
+// The Turntable visual: a deck rendered in Blender (art/turntable), seen
+// from straight above, composed live from layers (src/turntable, packed by
+// tools/turntable-layers). The album cover (or Halo's tile for it) turns on
+// the label at 33 1/3 while music plays and stops where it is when paused or
+// calm (C), with specks of dust riding the vinyl through the light; the
+// ring and lamps take the theme's accent and lift with the beat, the stage
+// light flashes in the record's sheen on the kick, and an underglow
+// breathes with the bass. The tonearm sweeps in across the song and parks
+// on its rest when nothing is loaded.
 Item {
     id: root
     readonly property bool supported: GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
@@ -75,6 +79,20 @@ Item {
         }
     }
 
+    // Under the deck, a light of the theme's accent that breathes with the
+    // bass and flares on the kick, hugging the plinth's outline.
+    ShaderEffect {
+        anchors.fill: parent
+        visible: root.supported && !!root.manifest && !!root.manifest.plinth
+        readonly property var box: root.manifest && root.manifest.plinth ? root.manifest.plinth : ({ x: 0.1, y: 0.2, w: 0.8, h: 0.6 })
+        property vector4d plinth: Qt.vector4d(box.x, box.y, box.w, box.h)
+        property real strength: root.moving ? 0.35 + clock.low * 0.9 + clock.pulse * 0.9 : 0.3
+        property real time: clock.time
+        property color tint: Style.accent
+        property color tint2: Style.paletteColour(1)
+        fragmentShader: "qrc:/shaders/underglow.frag.qsb"
+    }
+
     Image {
         id: deckImage
         source: "qrc:/turntable/deck.webp"
@@ -91,14 +109,28 @@ Item {
         asynchronous: true
         visible: false
     }
-    Image {
+    // The label: the album's cover, or Halo's own tile for it (its colour
+    // and initials) when it has none, so the record is always seen turning.
+    CoverArt {
+        id: labelArt
+        width: 512
+        height: 512
+        albumId: player.albumId
+        title: player.album
+        size: 512
+        corner: 0
+        // Visible, so the source below can draw it; hideSource keeps it
+        // off the screen itself.
+    }
+    ShaderEffectSource {
         id: label
-        source: player.albumId.length ? "image://cover/" + player.albumId : ""
-        sourceSize: Qt.size(512, 512)
-        asynchronous: true
-        visible: false
+        sourceItem: labelArt
+        hideSource: true
+        // The shader samples it like an Image (top row at v = 0).
+        textureMirroring: ShaderEffectSource.NoMirroring
         smooth: true
         mipmap: true
+        visible: false
     }
 
     ShaderEffect {
@@ -109,7 +141,16 @@ Item {
         property variant cover: label
         property real spin: clock.spin
         property real glowLevel: root.moving ? 0.75 + clock.pulse * 1.1 + clock.level * 0.25 : 0.8
-        property real hasCover: label.status === Image.Ready ? 1 : 0
+        property real hasCover: player.albumId.length ? 1 : 0
+        property real pulse: root.moving ? clock.pulse : 0
+        property real level: root.moving ? clock.level : 0.2
+        // The record and its music, in label radii (from the same Blender scene).
+        property real recordR: Energy.data.recordRadius
+        property real grooveOut: Energy.data.grooveOutLabel
+        property real grooveIn: Energy.data.grooveInLabel
+        // Gaps between the album's songs, at least 3, from the album, so a
+        // record keeps its look.
+        property real tracks: player.albumId.length ? 4 + (Qt.md5(player.albumId).charCodeAt(0) % 6) : 6
         readonly property var h: root.manifest ? root.manifest.label.fromImage : [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         property vector4d h0: Qt.vector4d(h[0][0], h[0][1], h[0][2], 0)
         property vector4d h1: Qt.vector4d(h[1][0], h[1][1], h[1][2], 0)

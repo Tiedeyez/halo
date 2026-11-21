@@ -58,7 +58,7 @@ RESOURCES += src/hologram/hologram.qrc
 # always runs it) and packed into the binary through a generated resource file.
 QSB = $$[QT_HOST_BINS]/qsb
 !exists($$QSB): error("qsb is missing. Install it with: omarchy-pkg-add qt6-shadertools")
-SHADERS = glitch.frag pixelfield.frag pixelbar.frag kaleido.frag pixelgrid.frag hologram.frag turntable.frag halolight.frag
+SHADERS = glitch.frag pixelfield.frag pixelbar.frag kaleido.frag pixelgrid.frag hologram.frag turntable.frag halolight.frag underglow.frag
 SHADER_FILES =
 # Commas would split qmake function arguments, so the list lives in a variable.
 QSB_GLSL = "100 es,120,150"
@@ -71,4 +71,4 @@ for(shader, SHADERS) {
 }
 write_file($$OUT_PWD/shaders.qrc, $$list("<RCC>" "    <qresource prefix=\"/\">" $$SHADER_FILES "    </qresource>" "</RCC>"))
 RESOURCES += $$OUT_PWD/shaders.qrc
-DISTFILES += src/shaders/glitch.frag src/shaders/pixelfield.frag src/shaders/pixelbar.frag src/shaders/kaleido.frag src/shaders/pixelgrid.frag src/shaders/hologram.frag src/shaders/turntable.frag src/shaders/halolight.frag
+DISTFILES += src/shaders/glitch.frag src/shaders/pixelfield.frag src/shaders/pixelbar.frag src/shaders/kaleido.frag src/shaders/pixelgrid.frag src/shaders/hologram.frag src/shaders/turntable.frag src/shaders/halolight.frag src/shaders/underglow.frag

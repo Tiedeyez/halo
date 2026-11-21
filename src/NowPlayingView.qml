@@ -36,11 +36,11 @@ Rectangle {
         title: player.album
         size: 64
         corner: 0
-        visible: false
     }
     ShaderEffectSource {
         anchors.fill: parent
         sourceItem: wash
+        hideSource: true      // the 8 px source itself stays off screen
         textureSize: Qt.size(8, 8)
         smooth: true
         live: true

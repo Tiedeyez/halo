@@ -73,14 +73,26 @@ Item {
         }
     }
 
-    Image {
+    // The label: the album's cover, or Halo's own tile for it (its colour
+    // and initials) when it has none, so the record is always seen turning.
+    CoverArt {
+        id: labelArt
+        width: 512
+        height: 512
+        albumId: player.albumId
+        title: player.album
+        size: 512
+        corner: 0
+    }
+    ShaderEffectSource {
         id: label
-        source: player.albumId.length ? "image://cover/" + player.albumId : ""
-        sourceSize: Qt.size(512, 512)
-        asynchronous: true
-        visible: false
+        sourceItem: labelArt
+        hideSource: true
+        // The shader samples it like an Image (top row at v = 0).
+        textureMirroring: ShaderEffectSource.NoMirroring
         smooth: true
         mipmap: true
+        visible: false
     }
 
     // One layer of light: lines and body textures through the shader.
@@ -106,7 +118,7 @@ Item {
         property real level: host.moving ? host.clock.level : 0.3
         property real high: host.moving ? host.clock.high : 0
         property real progress: host.progress
-        property real hasCover: host.cover.status === Image.Ready ? 1 : 0
+        property real hasCover: player.albumId.length ? 1 : 0
         property real recordR: host.manifest ? host.manifest.recordRadius : 3
         property real grooveOut: host.manifest ? host.manifest.grooveOutLabel : 2.9
         property real grooveIn: host.manifest ? host.manifest.grooveInLabel : 1.2

@@ -72,14 +72,20 @@ SX=$1 SY=$2 SW=$3 SH=$4
 magick "$WORK/spindle.png" -crop "${SW}x${SH}+${SX}+${SY}" +repage "$WORK/crop.png"
 feather "$WORK/crop.png" "$OUT/spindle.webp" "$SW" "$SH" -quality 90 -define webp:alpha-quality=90
 
-python3 -I - "$IN/manifest.json" "$OUT/manifest.json" "$SIZE" "$AX" "$AY" "$AW" "$AH" "$SX" "$SY" "$SW" "$SH" <<'EOF'
+# The plinth's outline, as fractions of the image, for the underglow.
+PLINTH=$(magick "$IN/deck.png" -alpha extract -threshold 50% -format "%@ %w" info:)
+
+python3 -I - "$IN/manifest.json" "$OUT/manifest.json" "$SIZE" "$AX" "$AY" "$AW" "$AH" "$SX" "$SY" "$SW" "$SH" "$PLINTH" <<'EOF'
 import json, sys
-src, dst, size, ax, ay, aw, ah, sx, sy, sw, sh = sys.argv[1:]
+src, dst, size, ax, ay, aw, ah, sx, sy, sw, sh, plinth = sys.argv[1:]
 m = json.load(open(src))
 m["image"] = int(size)
 m["frames"] = len(m["headings"])
 m["arm"] = {"x": int(ax), "y": int(ay), "w": int(aw), "h": int(ah)}
 m["spindle"] = {"x": int(sx), "y": int(sy), "w": int(sw), "h": int(sh)}
+import re
+pw, ph, px, py, full = map(int, re.match(r"(\d+)x(\d+)\+(\d+)\+(\d+) (\d+)", plinth).groups())
+m["plinth"] = {"x": px / full, "y": py / full, "w": pw / full, "h": ph / full}
 json.dump(m, open(dst, "w"), indent=1)
 # The same, as a JavaScript library the QML imports.
 with open(dst[:-len("manifest.json")] + "manifest.js", "w") as f:

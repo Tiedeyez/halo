@@ -9,7 +9,9 @@
 //     label, with a sweep that turns at 33 1/3 and a shockwave on each beat;
 //   - the groove the stylus is reading burns brighter;
 //   - the label is the album cover as light, turning with the record;
-//   - scanlines, a slow scan band and a flicker of hologram instability.
+//   - scanlines, a slow scan band and a flicker of hologram instability;
+//   - on hard kicks the projection glitches: bands of rows jump sideways
+//     with their colours split, for a frame or two.
 // Output is light: premultiplied, as opaque as it is bright, so over the
 // dark window it reads as added light. The tonearm and spindle use the same shader with
 // `deck` = 0 (no record, no label).
@@ -67,9 +69,19 @@ void main() {
     vec2 uv = qt_TexCoord0;
     float kick = max(0.0, pulse * 1.6 - 0.6);
 
+    // ---- the glitch ----
+    // Bands of screen rows (the same for every layer: gl_FragCoord, and a
+    // shift in screen pixels) slip sideways on hard kicks, a new pattern
+    // every 1/30 s.
+    float rowBand = floor(gl_FragCoord.y / 14.0);
+    float slice = hash(rowBand * 7.13 + floor(time * 30.0) * 1.71);
+    float slip = step(0.84, slice) * smoothstep(0.4, 0.85, kick);
+    float shiftPx = (hash(rowBand * 3.7 + floor(time * 30.0)) - 0.5) * 36.0 * slip;
+    uv.x += shiftPx * dFdx(qt_TexCoord0.x);
+
     // ---- the drawing, as light ----
     // A hair of chromatic split on the kick: the lines' red and blue sides.
-    float split = 0.0012 * kick;
+    float split = 0.0012 * kick + 0.004 * slip;
     float l = texture(lines, uv).r;
     float lr = texture(lines, uv + vec2(split, 0.0)).r;
     float lb = texture(lines, uv - vec2(split, 0.0)).r;
@@ -98,8 +110,8 @@ void main() {
             float g = abs(fract(r * 14.0) - 0.5);
             float groove = 1.0 - smoothstep(0.0, max(aa * 14.0, 0.07), g);
             // A sweep of light turning with the record, two arms.
-            float sweep = pow(0.5 + 0.5 * cos(2.0 * (a + spin)), 10.0);
-            float lit = groove * (0.10 + energy * 1.35) + sweep * (0.10 + 0.5 * energy) * (0.4 + groove);
+            float sweep = pow(0.5 + 0.5 * cos(2.0 * (a + spin)), 8.0) * 1.6;
+            float lit = groove * (0.10 + energy * 1.35) + sweep * (0.22 + 0.6 * energy) * (0.35 + groove);
             col += lit * mix(c1.rgb, c0.rgb, across);
 
             // The beat: a ring of light running out from the label to the rim.
