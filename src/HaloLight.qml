@@ -7,7 +7,7 @@ import Halo
 // the area it is given; the ring sits at `centre` (0..1 of the item) with
 // the radius `ringRadius` in pixels. The ring and motes are drawn per pixel
 // at the screen's resolution, so they stay sharp at 4K; the soft light round
-// them at half. Motion holds when paused or calm (C).
+// them at a third. Motion holds when paused or calm (C).
 Item {
     id: root
     property point centre: Qt.point(0.5, 0.5)
@@ -71,14 +71,14 @@ Item {
     }
 
     // The soft light (beams, haze, wide bloom, rays, shockwaves) has no fine
-    // detail: drawn at half size and scaled up smoothly, a quarter of the
-    // cost, which keeps the visual at full frame rate on integrated GPUs.
+    // detail: drawn at a third of the size and scaled up smoothly, a ninth of the
+    // cost; it matters on integrated GPUs.
     LightPass {
         anchors.fill: parent
         sharp: 0
         layer.enabled: visible
         layer.smooth: true
-        layer.textureSize: Qt.size(Math.max(1, Math.ceil(width / 2)), Math.max(1, Math.ceil(height / 2)))
+        layer.textureSize: Qt.size(Math.max(1, Math.ceil(width / 3)), Math.max(1, Math.ceil(height / 3)))
     }
     // The ring, the motes and the flare, at the screen's full resolution.
     LightPass {

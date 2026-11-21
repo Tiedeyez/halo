@@ -24,14 +24,27 @@ Rectangle {
         qsTr("PHOSPHOR"), qsTr("PULSAR"), qsTr("WATERFALL"), qsTr("WARP"), qsTr("AURORA"), qsTr("HALO"), qsTr("TURNTABLE"), qsTr("HOLOGRAM")]
     readonly property real gutter: Math.max(16, Math.min(48, Math.min(width, height) * 0.05))
 
-    // The cover's colours wash the background, softly.
+    // The cover's colours wash the background, softly: only its colours.
+    // The cover is drawn 8 pixels square and stretched smoothly, so no
+    // shape of it (a face, a title, a placeholder's initials) shows through
+    // the dark visuals as a ghost, and no stretched pixels show as blocks.
     CoverArt {
-        anchors.fill: parent
+        id: wash
+        width: 8
+        height: 8
         albumId: player.albumId
         title: player.album
-        size: 256
-        opacity: 0.10
+        size: 64
         corner: 0
+        visible: false
+    }
+    ShaderEffectSource {
+        anchors.fill: parent
+        sourceItem: wash
+        textureSize: Qt.size(8, 8)
+        smooth: true
+        live: true
+        opacity: 0.10
     }
     Rectangle {
         anchors.fill: parent
