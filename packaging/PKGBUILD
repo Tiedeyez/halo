@@ -1,0 +1,48 @@
+# Release package for Halo: builds the tagged release from GitHub, not
+# whatever is in a working folder (for that, see bin/install and
+# pkgbuild/PKGBUILD). Install with:  makepkg -si   (in this folder)
+# Maintainer: Tiedeyez <84999823+Tiedeyez@users.noreply.github.com>
+pkgname=halo
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='A music player for Omarchy: your library, mixed like a DJ would'
+arch=('x86_64' 'aarch64')
+url='https://github.com/Tiedeyez/halo'
+license=('MIT' 'CC-BY-SA-4.0')
+depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'taglib' 'ffmpeg')
+makedepends=('git' 'gcc' 'make' 'qt6-shadertools')
+# Pinned to the release tag; at release time the tag's commit is added
+# after it (#tag=...&commit=... is not valid, so the commit is checked in
+# prepare()) so a moved tag can't change what gets built.
+_commit=''
+source=("halo::git+$url.git#tag=v$pkgver")
+sha256sums=('SKIP')
+
+prepare() {
+  cd halo
+  if [ -n "$_commit" ] && [ "$(git rev-parse HEAD)" != "$_commit" ]; then
+    echo "v$pkgver is not commit $_commit; refusing to build" >&2
+    return 1
+  fi
+}
+
+build() {
+  cd halo
+  ./bin/build
+}
+
+check() {
+  cd halo
+  env -u DISPLAY -u WAYLAND_DISPLAY QT_QPA_PLATFORMTHEME=generic ./bin/test
+}
+
+package() {
+  cd halo
+  install -Dm755 build/halo "$pkgdir/usr/bin/halo"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 src/data/HEADPHONES-LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/HEADPHONES-LICENSE.md"
+  install -Dm644 pkgbuild/halo.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/halo.svg"
+  install -Dm644 pkgbuild/halo.desktop "$pkgdir/usr/share/applications/halo.desktop"
+  install -Dm644 DISCLOSURE.md "$pkgdir/usr/share/doc/$pkgname/DISCLOSURE.md"
+  install -Dm644 CHANGELOG.md "$pkgdir/usr/share/doc/$pkgname/CHANGELOG.md"
+}

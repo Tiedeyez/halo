@@ -51,6 +51,16 @@ colours (V cycles them; C holds them still):
   **Pulsar**, **Waterfall**, **Warp** and **Aurora**, lit like a wall of
   LEDs.
 
+### First run, contrast and the bar
+
+- A welcome screen when Halo finds no music, with a folder picker; Halo
+  also looks in your desktop's music folder (`XDG_MUSIC_DIR`).
+- Filled buttons in every Omarchy theme read at 7:1 (WCAG AAA): the fill is
+  adjusted until black or white text on it reaches 7:1.
+- **Halo Player**, a bar widget (Omarchy plugin `tiedeyez.halo`): the song
+  playing, play/pause, next and previous, and a click to open Halo.
+- `packaging/PKGBUILD` builds the tagged release and runs the tests.
+
 ### Omarchy
 
 - Follows the Omarchy theme and language live; keyboard first (? shows

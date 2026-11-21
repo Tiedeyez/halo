@@ -228,6 +228,29 @@ halo skill install              # a skill for coding agents
 Every command takes `--json` and exits 0 on success or 1 with the error on
 stderr.
 
+## Install
+
+From the release, which builds the tagged source and runs the tests first:
+
+```sh
+git clone https://github.com/Tiedeyez/halo && cd halo/packaging
+makepkg -si
+```
+
+Halo is then in the app launcher (Super+Space).
+
+### Halo in the bar
+
+The repository is also an Omarchy plugin, **Halo Player** (`tiedeyez.halo`):
+a bar widget with the song playing, play/pause, next and previous. Install
+it from the Omarchy Marketplace, then add the Halo widget to the bar. It
+needs the Halo app above. Left click opens Halo, middle click plays or
+pauses, the wheel skips, right click shows the song with its controls.
+
+The widget only runs `/usr/bin/halo` (`status`, `toggle`, `next`,
+`previous`, `open`) with a fixed argument list. It writes no files, changes
+no settings and opens no network connection.
+
 ## Build
 
 Halo is C++ and Qt Quick, built with qmake into one binary. It needs Qt 6
@@ -253,6 +276,10 @@ rm -rf ~/.local/state/halo ~/.cache/halo     # your queue, play history, lyrics 
 rm -rf ~/.config/halo                        # only if you made a folders file there
 rm -rf ~/.agents/skills/halo ~/.claude/skills/halo   # only if you ran `halo skill install`
 ```
+
+For the bar widget, remove the Halo widget from the bar, then uninstall
+Halo Player in the Omarchy Marketplace (or delete
+`~/.config/omarchy/plugins/tiedeyez.halo`). It keeps no files of its own.
 
 Halo never edits your music files except through Library Doctor fixes you
 press (each one undoable while Halo is installed), and never changes Omarchy

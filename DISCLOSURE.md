@@ -122,13 +122,24 @@ Locally, Halo listens only on a socket that only your user can open, in
 your private runtime folder (`$XDG_RUNTIME_DIR`). Without one, Halo opens no
 socket at all rather than fall back to the shared `/tmp`, and terminal
 commands say Halo isn't reachable. One command is at most 64 KiB; a
-connection that sends more without a newline is closed. and it
+connection that sends more without a newline is closed. Halo also
 registers `org.mpris.MediaPlayer2.halo` on your D-Bus session bus so media
 keys and bar widgets can control it.
 
 Anything running as your user can send commands on that socket or over
 MPRIS: play, pause, queue files, change settings (online lyrics included),
 or save a picture of the window to a new `.png` file.
+
+## The bar widget (Halo Player plugin)
+
+The repository is also an Omarchy plugin, `tiedeyez.halo`, a bar widget.
+It runs only `/usr/bin/halo` with one of five fixed argument lists
+(`status --json`, `toggle --json`, `next --json`, `previous --json`,
+`open`), never through a shell and never with text from a song in them. It
+polls `status` every 3 to 15 seconds (every second while its popup is open),
+reads at most 64 KiB of a reply, and stops a command after five seconds.
+It writes no files, changes no settings, and opens no network connection.
+What it shows (title, artist, album) is drawn as plain text.
 
 ## How to check this yourself
 
