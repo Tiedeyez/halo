@@ -69,6 +69,10 @@ checked against the source.
   brighter in its middle, the hottest burning white, light blooming onto
   their neighbours and lifting on the kick. Bars stand on a glossy floor
   that reflects them.
+  On Turntable and Hologram the record player works: drag the fader for
+  the volume, turn the dial (drag up or down, or scroll) for the EQ's gain,
+  press start/stop to play and pause, and take the tonearm's headshell and
+  drop the needle anywhere on the record to move through the song.
   Visuals crossfade as V switches them, and the name shows for a moment.
   C keeps any of them still. `halo visual <name>` switches from a terminal.
 - **The library is water.** Behind the library views lies a pond of square pixels

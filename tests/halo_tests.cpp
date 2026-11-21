@@ -114,6 +114,29 @@ bool waitDecoded(Stream &s) {
 }
 
 
+// A stand-in player for the decks' controls: the properties they read and
+// set, and the two calls they make.
+class DeckPlayerStub : public QObject {
+    Q_OBJECT
+    Q_PROPERTY(double volume MEMBER volume NOTIFY changed)
+    Q_PROPERTY(bool eqEnabled MEMBER eqEnabled NOTIFY changed)
+    Q_PROPERTY(double eqPreamp READ preamp WRITE setPreamp NOTIFY changed)
+    Q_PROPERTY(bool playing MEMBER playing NOTIFY changed)
+    Q_PROPERTY(bool hasTrack MEMBER hasTrack NOTIFY changed)
+    Q_PROPERTY(double position MEMBER position NOTIFY changed)
+    Q_PROPERTY(double duration MEMBER duration NOTIFY changed)
+public:
+    double volume = 0.5, eqPreampValue = 0, position = 0, duration = 200, seekedTo = -1;
+    bool eqEnabled = false, playing = false, hasTrack = true;
+    double preamp() const { return eqPreampValue; }
+    void setPreamp(double db) { eqPreampValue = std::clamp(db, -12.0, 12.0); emit changed(); }
+public slots:
+    void togglePlay() { playing = !playing; emit changed(); }
+    void seek(double seconds) { seekedTo = seconds; position = seconds; emit changed(); }
+signals:
+    void changed();
+};
+
 // A tiny stand-in for lrclib.net: answers /api/get and /api/search from
 // canned replies and records every request it was sent.
 class FakeLrclib : public QObject {
@@ -393,6 +416,112 @@ private slots:
         for (int i = 0; i < 60; ++i)
             wheel({}, {0, -120});
         QTRY_COMPARE(list->property("contentY").toDouble(), 100.0 * 40 - 300);
+    }
+
+    // The record player's controls work by hand: the fader sets the volume,
+    // the dial the EQ's gain (and turns the EQ on), start/stop plays and
+    // pauses, and dragging the tonearm's headshell over the record seeks.
+    void deckControlsWorkByHand() {
+        QFile manifestFile(QFINDTESTDATA("../src/turntable/manifest.json"));
+        QVERIFY(manifestFile.open(QIODevice::ReadOnly));
+        const QVariantMap manifest = QJsonDocument::fromJson(manifestFile.readAll()).object().toVariantMap();
+        QFile energyFile(QFINDTESTDATA("../src/hologram/manifest.json"));
+        QVERIFY(energyFile.open(QIODevice::ReadOnly));
+        const QVariantMap energy = QJsonDocument::fromJson(energyFile.readAll()).object().toVariantMap();
+        QVERIFY(manifest.contains("fader") && manifest.contains("dial") && manifest.contains("start"));
+
+        DeckPlayerStub player;
+        QQmlPropertyMap themeStub, translatorStub;
+        themeStub.insert("accent", QColor("#7aa2f7"));
+        themeStub.insert("accentForeground", QColor("#000000"));
+        themeStub.insert("palette", QVariantList{});
+        themeStub.insert("radius", 4);
+        translatorStub.insert("language", "en");
+        QQuickView view;
+        view.rootContext()->setContextProperty("player", &player);
+        view.rootContext()->setContextProperty("theme", &themeStub);
+        view.rootContext()->setContextProperty("translator", &translatorStub);
+        view.rootContext()->setContextProperty("deckManifest", manifest);
+        view.rootContext()->setContextProperty("deckGeometry", energy);
+        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "Halo", 1, 0, "Style");
+        qmlRegisterType(QUrl::fromLocalFile(QFINDTESTDATA("../src/DeckControls.qml")), "Halo", 1, 0, "DeckControls");
+        QQmlComponent component(view.engine());
+        // A deck as the visuals are: its manifest, its scale and the arm's
+        // geometry (heading() as in TurntableVisual.qml).
+        component.setData(R"(
+            import QtQuick
+            import Halo
+            Item {
+                id: deck
+                width: 900; height: 900
+                readonly property var manifest: deckManifest
+                readonly property real px: width / manifest.image
+                function heading(progress) {
+                    const m = manifest
+                    const r = m.grooveOut + (m.grooveIn - m.grooveOut) * Math.max(0, Math.min(1, progress))
+                    const dx = m.centre[0] - m.pivot[0], dy = m.centre[1] - m.pivot[1]
+                    const d = Math.hypot(dx, dy)
+                    const cosA = (m.armLength * m.armLength + d * d - r * r) / (2 * m.armLength * d)
+                    return Math.atan2(dy, dx) + Math.acos(Math.max(-1, Math.min(1, cosA)))
+                }
+                readonly property alias controls: controls
+                DeckControls { id: controls; deck: deck; geometry: deckGeometry }
+                readonly property var f: manifest.fader
+                readonly property point faderHigh: Qt.point((f.x + f.w / 2) * px, f.high * px)
+                readonly property point faderLow: Qt.point((f.x + f.w / 2) * px, f.low * px)
+                readonly property point dial: Qt.point(manifest.dial.cx * px, manifest.dial.cy * px)
+                readonly property point start: Qt.point(manifest.start.x * width, manifest.start.y * height)
+                readonly property point stylusAtStart: controls.stylusAt(0)
+                readonly property point stylusHalfway: controls.stylusAt(0.5)
+            }
+        )", QUrl::fromLocalFile(QFINDTESTDATA("../src/DeckControls.qml")));
+        QScopedPointer<QQuickItem> root(qobject_cast<QQuickItem *>(component.create(view.rootContext())));
+        QVERIFY2(root, qPrintable(component.errorString()));
+        root->setParentItem(view.contentItem());
+        view.resize(900, 900);
+        view.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&view));
+        auto at = [&](const char *name) { return root->property(name).toPointF().toPoint(); };
+
+        // The fader: the far end is full, the near end silent.
+        QTest::mousePress(&view, Qt::LeftButton, {}, at("faderHigh"));
+        QTest::mouseRelease(&view, Qt::LeftButton, {}, at("faderHigh"));
+        QVERIFY2(player.volume > 0.97, qPrintable(QString::number(player.volume)));
+        QTest::mousePress(&view, Qt::LeftButton, {}, at("faderHigh"));
+        QTest::mouseMove(&view, at("faderLow"));
+        QTest::mouseRelease(&view, Qt::LeftButton, {}, at("faderLow"));
+        QVERIFY2(player.volume < 0.03, qPrintable(QString::number(player.volume)));
+
+        // The dial: dragged up 75 px is +12 dB (24 dB over 150 px), and the
+        // EQ comes on; a double click sets it back to 0.
+        const QPoint dial = at("dial");
+        QTest::mousePress(&view, Qt::LeftButton, {}, dial);
+        for (int dy = 15; dy <= 75; dy += 15)
+            QTest::mouseMove(&view, dial - QPoint(0, dy));
+        QTest::mouseRelease(&view, Qt::LeftButton, {}, dial - QPoint(0, 75));
+        QVERIFY(player.eqEnabled);
+        QCOMPARE(player.preamp(), 12.0);
+        QTest::mouseDClick(&view, Qt::LeftButton, {}, dial);
+        QCOMPARE(player.preamp(), 0.0);
+
+        // Start/stop.
+        QVERIFY(!player.playing);
+        QTest::mouseClick(&view, Qt::LeftButton, {}, at("start"));
+        QVERIFY(player.playing);
+        QTest::mouseClick(&view, Qt::LeftButton, {}, at("start"));
+        QVERIFY(!player.playing);
+
+        // The tonearm: from the first groove, its headshell dragged to where
+        // the stylus is halfway through the song, seeks to the middle; a
+        // press away from the headshell does nothing.
+        QTest::mouseClick(&view, Qt::LeftButton, {}, QPoint(450, 450));
+        QCOMPARE(player.seekedTo, -1.0);
+        const QPoint from = at("stylusAtStart"), to = at("stylusHalfway");
+        QTest::mousePress(&view, Qt::LeftButton, {}, from);
+        for (int k = 1; k <= 8; ++k)
+            QTest::mouseMove(&view, from + (to - from) * k / 8);
+        QTest::mouseRelease(&view, Qt::LeftButton, {}, to);
+        QVERIFY2(std::abs(player.seekedTo - 100) < 4, qPrintable(QString::number(player.seekedTo)));
     }
 
     void siegeShootsTheWordsAndKeepsItsKeys() {

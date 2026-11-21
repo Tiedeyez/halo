@@ -43,7 +43,8 @@ Item {
             return 0
         if (!player.hasTrack)
             return 0
-        const p = player.duration > 0 ? player.position / player.duration : 0
+        // Where the song is, or where the hand holds the arm.
+        const p = deckControls.scrub >= 0 ? deckControls.scrub : (player.duration > 0 ? player.position / player.duration : 0)
         const f = (heading(p) - manifest.rest) / (manifest.runOut - manifest.rest) * (manifest.frames - 1)
         return Math.max(0, Math.min(manifest.frames - 1, f))
     }
@@ -63,7 +64,8 @@ Item {
             const dt = Math.min(frameTime, 1 / 20)
             const d = root.targetFrame - root.frame
             // Eased, but never slower than a few frames a second, so it lands.
-            const step = d * (1 - Math.exp(-dt * 5))
+            // Held by the hand, it follows at once.
+            const step = d * (1 - Math.exp(-dt * (deckControls.scrub >= 0 ? 30 : 5)))
             const least = Math.min(Math.abs(d), dt * 3)
             root.frame += Math.sign(d) * Math.max(Math.abs(step), least)
         }
@@ -265,5 +267,13 @@ Item {
             smooth: true
             mipmap: true
         }
+    }
+
+    // The controls work: fader, dial, start/stop and the tonearm.
+    DeckControls {
+        id: deckControls
+        deck: root
+        geometry: Energy.data
+        visible: root.supported && !!root.manifest
     }
 }

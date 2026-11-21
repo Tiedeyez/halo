@@ -37,7 +37,9 @@ Item {
         const cosA = (m.armLength * m.armLength + d * d - r * r) / (2 * m.armLength * d)
         return Math.atan2(dy, dx) + Math.acos(Math.max(-1, Math.min(1, cosA)))
     }
-    readonly property real progress: player.duration > 0 ? player.position / player.duration : 0
+    // Where the song is, or where the hand holds the arm.
+    readonly property real progress: deckControls.scrub >= 0 ? deckControls.scrub
+                                     : (player.duration > 0 ? player.position / player.duration : 0)
     readonly property real targetFrame: {
         if (!manifest || !player.hasTrack)
             return 0
@@ -55,7 +57,8 @@ Item {
             }
             const dt = Math.min(frameTime, 1 / 20)
             const d = root.targetFrame - root.frame
-            const step = d * (1 - Math.exp(-dt * 5))
+            // Held by the hand, it follows at once.
+            const step = d * (1 - Math.exp(-dt * (deckControls.scrub >= 0 ? 30 : 5)))
             const least = Math.min(Math.abs(d), dt * 3)
             root.frame += Math.sign(d) * Math.max(Math.abs(step), least)
         }
@@ -240,5 +243,13 @@ Item {
         source: root.layerUrl("deck", "lines")
         smooth: true
         mipmap: true
+    }
+
+    // The controls work: fader, dial, start/stop and the tonearm.
+    DeckControls {
+        id: deckControls
+        deck: root
+        geometry: root.manifest
+        visible: root.supported && !!root.manifest
     }
 }
