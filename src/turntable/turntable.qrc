@@ -37,6 +37,8 @@
         <file alias="arm-34.webp">arm-34.webp</file>
         <file alias="arm-35.webp">arm-35.webp</file>
         <file alias="deck.webp">deck.webp</file>
+        <file alias="dial.webp">dial.webp</file>
+        <file alias="fader.webp">fader.webp</file>
         <file alias="glow.webp">glow.webp</file>
         <file alias="spindle.webp">spindle.webp</file>
         <file alias="manifest.json">manifest.json</file>

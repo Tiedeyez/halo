@@ -27,7 +27,8 @@ magick \( "$IN/deck-lit.png" -alpha off \) \( "$IN/deck.png" -alpha off \) \
     -quality 88 "$OUT/glow.webp"
 
 # Scale the moving parts first, then find the box each one ever covers.
-for f in "$IN"/spindle.png "$IN"/arm-*.png; do
+for f in "$IN"/spindle.png "$IN"/dial.png "$IN"/fader.png "$IN"/arm-*.png; do
+    [ -f "$f" ] || continue
     magick "$f" -resize "${SIZE}x${SIZE}" "$WORK/$(basename "$f")"
 done
 
@@ -72,12 +73,23 @@ SX=$1 SY=$2 SW=$3 SH=$4
 magick "$WORK/spindle.png" -crop "${SW}x${SH}+${SX}+${SY}" +repage "$WORK/crop.png"
 feather "$WORK/crop.png" "$OUT/spindle.webp" "$SW" "$SH" -quality 90 -define webp:alpha-quality=90
 
+# The controls the app moves (the gain dial turns, the fader slides), if
+# this render has them: cropped like the spindle, their shadows kept.
+CONTROLS=""
+for c in dial fader; do
+    [ -f "$WORK/$c.png" ] || continue
+    set -- $(THRESHOLD=2 BLUR=2 box "$WORK/$c.png")
+    magick "$WORK/$c.png" -crop "${3}x${4}+${1}+${2}" +repage "$WORK/crop.png"
+    feather "$WORK/crop.png" "$OUT/$c.webp" "$3" "$4" -quality 90 -define webp:alpha-quality=90
+    CONTROLS="$CONTROLS $c:$1,$2,$3,$4"
+done
+
 # The plinth's outline, as fractions of the image, for the underglow.
 PLINTH=$(magick "$IN/deck.png" -alpha extract -threshold 50% -format "%@ %w" info:)
 
-python3 -I - "$IN/manifest.json" "$OUT/manifest.json" "$SIZE" "$AX" "$AY" "$AW" "$AH" "$SX" "$SY" "$SW" "$SH" "$PLINTH" <<'EOF'
+python3 -I - "$IN/manifest.json" "$OUT/manifest.json" "$SIZE" "$AX" "$AY" "$AW" "$AH" "$SX" "$SY" "$SW" "$SH" "$PLINTH" "$CONTROLS" "$IN/controls.json" <<'EOF'
 import json, sys
-src, dst, size, ax, ay, aw, ah, sx, sy, sw, sh, plinth = sys.argv[1:]
+src, dst, size, ax, ay, aw, ah, sx, sy, sw, sh, plinth, controls, controlsJson = sys.argv[1:]
 m = json.load(open(src))
 m["image"] = int(size)
 m["frames"] = len(m["headings"])
@@ -86,6 +98,22 @@ m["spindle"] = {"x": int(sx), "y": int(sy), "w": int(sw), "h": int(sh)}
 import re
 pw, ph, px, py, full = map(int, re.match(r"(\d+)x(\d+)\+(\d+)\+(\d+) (\d+)", plinth).groups())
 m["plinth"] = {"x": px / full, "y": py / full, "w": pw / full, "h": ph / full}
+# The moving controls: their crops (packed pixels) and where they pivot and
+# slide (also packed pixels, from Blender's camera).
+import os
+if controls.strip() and os.path.exists(controlsJson):
+    where = json.load(open(controlsJson))
+    s = int(size)
+    for item in controls.split():
+        name, box = item.split(":")
+        x, y, w, h = map(int, box.split(","))
+        m[name] = {"x": x, "y": y, "w": w, "h": h}
+    if "dial" in m:
+        m["dial"]["cx"], m["dial"]["cy"] = where["dialCentre"][0] * s, where["dialCentre"][1] * s
+    if "fader" in m:
+        m["fader"]["rest"] = where["faderRest"][1] * s
+        m["fader"]["low"] = where["faderLow"][1] * s
+        m["fader"]["high"] = where["faderHigh"][1] * s
 json.dump(m, open(dst, "w"), indent=1)
 # The same, as a JavaScript library the QML imports.
 with open(dst[:-len("manifest.json")] + "manifest.js", "w") as f:

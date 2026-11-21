@@ -12,7 +12,8 @@ import "qrc:/hologram/manifest.js" as Energy
 // ring and lamps take the theme's accent and lift with the beat, the stage
 // light flashes in the record's sheen on the kick, and an underglow
 // breathes with the bass. The tonearm sweeps in across the song and parks
-// on its rest when nothing is loaded.
+// on its rest when nothing is loaded; the fader follows the volume and the
+// dial the EQ's gain.
 Item {
     id: root
     readonly property bool supported: GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
@@ -157,6 +158,47 @@ Item {
         property vector4d h2: Qt.vector4d(h[2][0], h[2][1], h[2][2], 0)
         property color tint: Style.accent
         fragmentShader: "qrc:/shaders/turntable.frag.qsb"
+    }
+
+    // ---- the controls follow Halo's own ----
+    // The fader is the volume: its cap slides along the slot, from the near
+    // end (silent) to the far end (full).
+    Image {
+        id: fader
+        readonly property var m: root.manifest ? root.manifest.fader : null
+        property real level: player.volume
+        Behavior on level { NumberAnimation { duration: Style.motion ? 160 : 0; easing.type: Easing.OutCubic } }
+        source: m ? "qrc:/turntable/fader.webp" : ""
+        visible: !!m
+        x: m ? m.x * root.px : 0
+        y: m ? (m.y + (m.low + (m.high - m.low) * level) - m.rest) * root.px : 0
+        width: m ? m.w * root.px : 0
+        height: m ? m.h * root.px : 0
+        smooth: true
+        mipmap: true
+    }
+    // The round dial is the EQ's gain: its lit index turns from the first
+    // tick (-12 dB) through the middle (0) to the last (+12 dB), and rests in
+    // the middle while the EQ is off.
+    Image {
+        id: dialIndex
+        readonly property var m: root.manifest ? root.manifest.dial : null
+        property real gain: player.eqEnabled ? player.eqPreamp : 0
+        Behavior on gain { NumberAnimation { duration: Style.motion ? 200 : 0; easing.type: Easing.OutCubic } }
+        source: m ? "qrc:/turntable/dial.webp" : ""
+        visible: !!m
+        x: m ? m.x * root.px : 0
+        y: m ? m.y * root.px : 0
+        width: m ? m.w * root.px : 0
+        height: m ? m.h * root.px : 0
+        smooth: true
+        mipmap: true
+        transform: Rotation {
+            origin.x: dialIndex.m ? (dialIndex.m.cx - dialIndex.m.x) * root.px : 0
+            origin.y: dialIndex.m ? (dialIndex.m.cy - dialIndex.m.y) * root.px : 0
+            // Clockwise is up: the ticks run from up-left round to down-left.
+            angle: dialIndex.gain / 12 * 120
+        }
     }
 
     Image {

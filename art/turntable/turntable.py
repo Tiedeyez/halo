@@ -302,6 +302,9 @@ def build_tonearm(M, heading):
     dial = cyl("Anti-skate", 0.012, 0.008, (px - 0.042, py + 0.05, TOP + 0.004), 96, M["satin"])
     bevel(dial, 0.0016, 3)
     cap = cyl("Anti-skate cap", 0.0085, 0.002, (px - 0.042, py + 0.05, TOP + 0.0085), 96, M["black"])
+    # A lit index on the cap, so its turn shows (the app turns it with the
+    # EQ's gain); at rest it points at the middle tick.
+    box("Anti-skate index", (0.0055, 0.0011, 0.0004), (px - 0.042 + 0.0045, py + 0.05, TOP + 0.0097), M["led"])
     for k in range(13):
         a = math.radians(-120 + 20 * k)
         box("Anti-skate tick", (0.0045 if k % 3 == 0 else 0.0028, 0.0006, 0.0003),
@@ -581,6 +584,17 @@ def layers():
     arm = [swing] + [o for o in bpy.data.objects if o.parent == swing]
     spindle = [o for o in bpy.data.objects if o.name.startswith("Spindle")]
     moving = set(arm) | set(spindle)
+    # The controls the app moves: the gain dial (turned) and the fader's cap
+    # (slid along its slot). The fader is drawn at the slot's middle.
+    # The dial is round, so only its lit index shows a turn; it moves alone,
+    # and the dial and its shadow stay in the deck (a turned shadow would be
+    # wrong).
+    dial = [bpy.data.objects["Anti-skate index"]]
+    fader = [o for o in bpy.data.objects if o.name.startswith(("Pitch cap", "Pitch rib"))]
+    slot = bpy.data.objects["Pitch slot"]
+    for o in fader:
+        o.location.y += 0.006
+    moving |= set(dial) | set(fader)
     deck = [o for o in bpy.data.objects if o.type in ("MESH", "FONT") and o not in moving]
     lab = bpy.data.objects["Label"]
     white = principled("Label white", (0.8, 0.8, 0.8), rough=0.5)
@@ -596,11 +610,42 @@ def layers():
             bpy.data.materials[name].node_tree.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = full * strength
 
     # Deck, lamps off; then lamps on (the app subtracts to get the light).
-    show(arm + spindle, False)
+    show(arm + spindle + dial + fader, False)
     lamps(0)
     render(OUT + "/deck.png")
     lamps(1)
     render(OUT + "/deck-lit.png")
+
+    # The controls, each over a deck that only catches their shadows.
+    from bpy_extras.object_utils import world_to_camera_view
+
+    def image_at(co):
+        q = world_to_camera_view(scene, scene.camera, co)
+        return [q.x, 1.0 - q.y]
+
+    for o in deck:
+        o.is_shadow_catcher = True
+    show(dial, True)
+    render(OUT + "/dial.png")
+    show(dial, False)
+    show(fader, True)
+    render(OUT + "/fader.png")
+    show(fader, False)
+    centre = bpy.data.objects["Anti-skate cap"].location
+    half = slot.dimensions.y / 2 - 0.006                  # the cap's travel either way
+    top = TOP + 0.0055
+    controls = {
+        "dialCentre": image_at(Vector((centre.x, centre.y, centre.z))),
+        # Where the fader cap's middle is with the cap at the slot's middle,
+        # its near (low) end and its far (high) end, in image fractions.
+        "faderRest": image_at(Vector((slot.location.x, slot.location.y, top))),
+        "faderLow": image_at(Vector((slot.location.x, slot.location.y - half, top))),
+        "faderHigh": image_at(Vector((slot.location.x, slot.location.y + half, top))),
+    }
+    with open(OUT + "/controls.json", "w") as f:
+        json.dump(controls, f, indent=1)
+    for o in deck:
+        o.is_shadow_catcher = False
     if "--deck-only" in argv:
         return
     # Moving parts over a deck that only catches their shadows.
