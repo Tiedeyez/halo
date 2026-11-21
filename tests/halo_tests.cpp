@@ -986,6 +986,43 @@ private slots:
         QVERIFY(bands[2] < 0.3f);
     }
 
+    // Beats are found on loud, compressed masters too: the bass sits near
+    // the top of its scale and a kick lifts it only a little (the old
+    // ratio-over-average test never fired there), and on quiet ones; a
+    // steady, noisy bass with no kicks gives none.
+    void beatsAtAnyLoudness() {
+        auto beatsIn = [](double floor, double kick, bool kicks) {
+            BeatDetector beats;
+            int found = 0, ticks = 0;
+            double before = 0;
+            uint32_t seed = 12345;
+            const double period = 60.0 / 140 / 0.016;          // 140 BPM, in 16 ms ticks
+            for (int t = 0; t < 900; ++t) {                     // 14.4 s
+                seed = seed * 1664525u + 1013904223u;
+                const double noise = (double(seed >> 8) / double(1u << 24) - 0.5) * 0.02;
+                double bass = floor + noise;
+                if (kicks) {
+                    const double phase = std::fmod(t, period);
+                    // A kick: up over two ticks, then back down over ten.
+                    bass += phase < 2 ? kick * (phase + 1) / 2 : kick * std::max(0.0, 1 - (phase - 2) / 10);
+                }
+                const double pulse = beats.step(std::clamp(bass, 0.0, 1.0));
+                if (t > 60) {                                  // after the first second
+                    found += pulse > before * 0.9 + 1e-9 ? 1 : 0;
+                    ++ticks;
+                }
+                before = pulse;
+            }
+            return std::pair<int, double>{found, ticks * 0.016 * 140 / 60};
+        };
+        const auto loud = beatsIn(0.80, 0.08, true);
+        QVERIFY2(std::abs(loud.first - loud.second) <= 2, qPrintable(QString("loud: %1 of %2").arg(loud.first).arg(loud.second)));
+        const auto quiet = beatsIn(0.35, 0.15, true);
+        QVERIFY2(std::abs(quiet.first - quiet.second) <= 2, qPrintable(QString("quiet: %1 of %2").arg(quiet.first).arg(quiet.second)));
+        const auto steady = beatsIn(0.80, 0.0, false);
+        QVERIFY2(steady.first <= 1, qPrintable(QString("steady: %1").arg(steady.first)));
+    }
+
     void namesFromMessyFiles() {
         QCOMPARE(Library::titleFromFileName("/x/01 - Song Name.mp3"), QString("Song Name"));
         QCOMPARE(Library::titleFromFileName("/x/07_Another_One.flac"), QString("Another One"));

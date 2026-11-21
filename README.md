@@ -47,11 +47,12 @@ checked against the source.
   ridge lines of the spectrum), **Waterfall** (a scrolling spectrogram),
   **Warp** (flying through stars, faster as the music gets louder),
   **Aurora** (curtains of light with rays). Then three drawn at the screen's
-  full resolution: **Halo** (a ring of light hanging in the dark, light
-  pouring off it above and below in beams that fan out as they go, motes
-  drifting away, and on every beat a flash, a shockwave across its plane and
-  a surge of light up and down the beams; its thickness round the ring
-  follows the spectrum), **Turntable** (a deck rendered in Blender, seen face
+  full resolution: **Halo** (a ring of light in 3D, seen through a camera
+  and moved by physics: each kick strikes it, so it swells, bounces back and
+  rocks on its tilt; plasma flows round it, its brightness round the ring
+  follows the spectrum, and every beat sends out radiation, a wavefront
+  across its plane and a shell of light round it, with sparks flung off the
+  rim and light surging up and down), **Turntable** (a deck rendered in Blender, seen face
   up, with the album cover turning on the label and the tonearm following
   the song) and **Hologram** (the Turntable's
   deck made of light and energy: every edge a line of light with faint

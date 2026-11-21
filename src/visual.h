@@ -10,6 +10,26 @@
 
 class Engine;
 
+// Finds beats in the bass, at any loudness: a beat is the bass rising (its
+// flux over the last few ticks) well past how much it usually rises. Bands
+// are on a decibel scale, so a fixed ratio over the average can't work on
+// loud, compressed masters, where the bass sits near the top and a kick
+// lifts it only a little; measured against its own spread, it still shows.
+// Fed once a tick (16 ms) with the mean of the raw bass bands, 0..1;
+// returns the pulse, 1 on a hard beat, decaying about 10% a tick.
+class BeatDetector {
+public:
+    double step(double bass);
+    double pulse() const { return m_pulse; }
+
+private:
+    double m_recent[4] = {0, 0, 0, 0};
+    int m_at = 0;
+    double m_fluxAverage = 0, m_fluxSpread = 0.01;
+    int m_sinceBeat = 1000;
+    double m_pulse = 0;
+};
+
 // Turns what the engine played into 64 bands and a beat pulse, sixty times a
 // second while something is watching and the music plays. It reads the
 // engine's tap, so it sees the track itself and not every other sound on
@@ -65,7 +85,8 @@ private:
     std::vector<float> m_history, m_read, m_wave;
     size_t m_historyPos = 0;
     std::vector<float> m_bands, m_peaks, m_peakVelocity;
-    double m_pulse = 0, m_level = 0, m_bassAverage = 0;
+    double m_pulse = 0, m_level = 0;
+    BeatDetector m_beats;
     int m_idleFrames = 0;
 };
 

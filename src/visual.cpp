@@ -72,6 +72,11 @@ void Spectrum::tick() {
         m_wave[i] = m_history[(m_historyPos + i) % Window];
     const auto fresh = analyse(m_wave);
 
+    double freshBass = 0;
+    for (int b = 0; b < 8; ++b)
+        freshBass += fresh[size_t(b)];
+    m_pulse = m_beats.step(freshBass / 8);
+
     double bass = 0, total = 0;
     for (int b = 0; b < Bands; ++b) {
         const float target = fresh[size_t(b)];
@@ -91,18 +96,38 @@ void Spectrum::tick() {
             bass += band;
         total += band;
     }
-    bass /= 8;
     m_level = total / Bands;
-    // A beat is the bass rising well above its recent average.
-    m_bassAverage = m_bassAverage * 0.93 + bass * 0.07;
-    if (bass > m_bassAverage * 1.18 + 0.04 && bass > 0.25)
-        m_pulse = std::min(1.0, m_pulse + (bass - m_bassAverage) * 2.5);
-    m_pulse *= 0.90;
     emit updated();
 
     // Stop polling once the music has been quiet for a while; QML turns it
     // back on when playback resumes.
     m_idleFrames = m_level < 0.002 ? m_idleFrames + 1 : 0;
+}
+
+double BeatDetector::step(double bass) {
+    // The rise: now over the lowest of the last four ticks (a kick's attack
+    // spreads over a few, as the analysis windows overlap).
+    double lowest = bass;
+    for (double r : m_recent)
+        lowest = std::min(lowest, r);
+    m_recent[m_at] = bass;
+    m_at = (m_at + 1) % 4;
+    const double flux = std::max(0.0, bass - lowest);
+
+    // A beat: the rise well past its usual size and spread, the bass not
+    // silent, and at least 150 ms (9 ticks) since the last one.
+    const double threshold = m_fluxAverage + 2.0 * m_fluxSpread + 0.012;
+    ++m_sinceBeat;
+    m_pulse *= 0.90;
+    if (flux > threshold && bass > 0.2 && m_sinceBeat >= 9) {
+        const double strength = std::clamp(0.6 + (flux - threshold) / (4 * m_fluxSpread + 0.02), 0.6, 1.0);
+        m_pulse = std::max(m_pulse, strength);
+        m_sinceBeat = 0;
+    }
+    // The usual rise and its spread, over about a second.
+    m_fluxAverage += (flux - m_fluxAverage) * 0.05;
+    m_fluxSpread += (std::abs(flux - m_fluxAverage) - m_fluxSpread) * 0.05;
+    return m_pulse;
 }
 
 HaloView::HaloView(QQuickItem *parent) : QQuickPaintedItem(parent) {
