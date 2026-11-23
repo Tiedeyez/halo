@@ -11,6 +11,7 @@
 #include <QSaveFile>
 #include <QSet>
 #include <QStandardPaths>
+#include <QStringDecoder>
 #include <QUrl>
 #include <algorithm>
 #include <cmath>
@@ -298,12 +299,35 @@ QString haloLine(const Playlist &p) {
     QJsonObject halo{{"created", p.created}, {"pinned", p.pinned}};
     if (!p.description.isEmpty())
         halo.insert("description", p.description);
-    return "#HALO:" + QString::fromUtf8(QJsonDocument(halo).toJson(QJsonDocument::Compact));
+    // Plain ASCII (other characters as \u escapes), so the line is the same
+    // bytes whatever encoding the rest of the file is in.
+    const QString json = QString::fromUtf8(QJsonDocument(halo).toJson(QJsonDocument::Compact));
+    QString out = "#HALO:";
+    for (const QChar c : json)
+        out += c.unicode() < 0x80 ? QString(c) : QString("\\u%1").arg(uint(c.unicode()), 4, 16, QChar('0'));
+    return out;
 }
 }
 
+// A song can be in a list twice: what was kept about each is filed under
+// the path and which occurrence it is.
+static QString occurrence(const QString &path, int n) {
+    return n == 0 ? path : path + QChar(0) + QString::number(n);
+}
+
+// Tags that describe the one entry under them. Anything else above the
+// first entry belongs to the file as a whole.
+static bool perEntryTag(const QString &line) {
+    static const QStringList tags{"#EXTINF", "#EXTVLCOPT", "#EXTBYT", "#EXTBIN", "#KODIPROP", "#EXTALBUMARTURL"};
+    for (const QString &t : tags)
+        if (line.startsWith(t))
+            return true;
+    return false;
+}
+
 QString Playlists::m3u8(const Playlist &p, const std::function<const Track *(const QString &)> &track) {
-    QString out = "#EXTM3U\n#PLAYLIST:" + cleanName(p.name) + "\n" + haloLine(p) + "\n";
+    QString out = (p.header.isEmpty() ? QStringLiteral("#EXTM3U") : p.header) + "\n#PLAYLIST:" + cleanName(p.name) + "\n" +
+                  haloLine(p) + "\n";
     // Kept lines go back where they were: above their song, or after the
     // song they followed. Each is written once.
     QHash<QString, QList<int>> above, below;
@@ -320,18 +344,21 @@ QString Playlists::m3u8(const Playlist &p, const std::function<const Track *(con
         }
     };
     put(below.value(QString()));
+    QHash<QString, int> count;
     for (const QString &path : p.paths) {
-        put(above.value(path));
+        const QString key = occurrence(path, count[path]++);
+        put(above.value(key));
         const Track *t = track ? track(path) : nullptr;
         if (t) {
             QString credit = t->artist.isEmpty() ? t->title : t->artist + " - " + t->title;
             credit.replace('\n', ' ');
             out += QString("#EXTINF:%1,%2\n").arg(qRound(t->duration)).arg(credit);
-        } else if (p.extinf.contains(path)) {
-            out += p.extinf.value(path) + "\n";
+        } else if (p.extinf.contains(key)) {
+            out += p.extinf.value(key) + "\n";
         }
-        out += p.written.value(path, path) + "\n";
-        put(below.value(path));
+        // A song Halo added a second time is spelt like its first.
+        out += p.written.value(key, p.written.value(path, path)) + "\n";
+        put(below.value(key));
     }
     // A stream whose song was taken out goes to the end; tags that belonged
     // to a removed song go with it.
@@ -343,15 +370,25 @@ QString Playlists::m3u8(const Playlist &p, const std::function<const Track *(con
 
 Playlist Playlists::parseM3u(const QByteArray &data, const QString &baseDir) {
     Playlist p;
-    QString text = QString::fromUtf8(data);
-    if (text.startsWith(QChar(0xFEFF)))
+    // Not UTF-8 (an older player's .m3u in its own code page): each byte is
+    // read as one character, so every line can be written back byte for byte.
+    QStringDecoder utf8(QStringDecoder::Utf8);
+    QString text = utf8(data);
+    p.bytes = utf8.hasError();
+    if (p.bytes)
+        text = QString::fromLatin1(data);
+    p.bom = data.startsWith("\xEF\xBB\xBF");
+    if (p.bom && p.bytes)
+        text.remove(0, 3);
+    else if (text.startsWith(QChar(0xFEFF))) // the decoder usually takes the mark off itself
         text.remove(0, 1);
+    p.crlf = text.contains("\r\n");
     const QStringList lines = text.split('\n');
     QStringList pending; // tags since the last entry
-    QSet<QString> seen;
-    auto keepAfterLast = [&p](const QStringList &what) {
-        p.kept.push_back({p.paths.isEmpty() ? QString() : p.paths.last(), false, what});
-    };
+    QHash<QString, int> count;
+    bool first = true;   // nothing but tags so far
+    QString last;        // the last song's key
+    auto keepAfterLast = [&](const QStringList &what) { p.kept.push_back({last, false, what}); };
     for (QString raw : lines) {
         if (raw.endsWith('\r'))
             raw.chop(1);
@@ -366,9 +403,22 @@ Playlist Playlists::parseM3u(const QByteArray &data, const QString &baseDir) {
                 p.created = qint64(o.value("created").toDouble());
                 p.pinned = o.value("pinned").toBool();
                 p.description = o.value("description").toString().left(2000);
-            } else if (line != "#EXTM3U")
+            } else if (line.startsWith("#EXTM3U") && p.header.isEmpty() && first && pending.isEmpty() && p.kept.empty())
+                p.header = raw; // with whatever attributes it carries
+            else
                 pending << raw;
             continue;
+        }
+        if (first) {
+            // Above the first entry: the file's own tags stay at the top
+            // whatever happens to that entry.
+            QStringList file, entry;
+            for (const QString &t : pending)
+                (perEntryTag(t.trimmed()) ? entry : file) << t;
+            if (!file.isEmpty())
+                p.kept.push_back({QString(), false, file});
+            pending = entry;
+            first = false;
         }
         QString path;
         if (line.startsWith("file://"))
@@ -389,6 +439,7 @@ Playlist Playlists::parseM3u(const QByteArray &data, const QString &baseDir) {
             continue;
         }
         path = QDir::cleanPath(path);
+        const QString key = occurrence(path, count[path]++);
         // Halo writes #EXTINF for songs in the library; other tags stay.
         QString extinf;
         for (int i = int(pending.size()) - 1; i >= 0; --i)
@@ -397,20 +448,15 @@ Playlist Playlists::parseM3u(const QByteArray &data, const QString &baseDir) {
                     extinf = pending[i];
                 pending.removeAt(i);
             }
-        if (seen.contains(path)) {
-            if (!pending.isEmpty())
-                keepAfterLast(pending);
-        } else {
-            seen.insert(path);
-            if (!pending.isEmpty())
-                p.kept.push_back({path, true, pending});
-            if (!extinf.isEmpty())
-                p.extinf.insert(path, extinf);
-            if (line != path)
-                p.written.insert(path, line);
-        }
+        if (!pending.isEmpty())
+            p.kept.push_back({key, true, pending});
+        if (!extinf.isEmpty())
+            p.extinf.insert(key, extinf);
+        if (line != path)
+            p.written.insert(key, line);
         pending.clear();
         p.paths << path;
+        last = key;
     }
     if (!pending.isEmpty())
         keepAfterLast(pending);
@@ -422,7 +468,13 @@ QByteArray Playlists::patchHeader(const QByteArray &data, const Playlist &p, boo
     const bool hasBom = data.startsWith(bom);
     QList<QByteArray> lines = (hasBom ? data.mid(bom.size()) : data).split('\n');
     const QByteArray eol = data.contains("\r\n") ? "\r" : "";
-    const QByteArray halo = haloLine(p).toUtf8(), title = "#PLAYLIST:" + cleanName(p.name).toUtf8();
+    // In a file that isn't UTF-8 the name goes in a byte a character, as
+    // the rest of it is read (saveHeader refuses names that can't).
+    QStringDecoder utf8(QStringDecoder::Utf8);
+    (void)QString(utf8(data));
+    const QString name_ = cleanName(p.name);
+    const QByteArray halo = haloLine(p).toLatin1(),
+                     title = "#PLAYLIST:" + (utf8.hasError() ? name_.toLatin1() : name_.toUtf8());
     int head = -1, titleAt = -1, haloAt = -1;
     for (int i = 0; i < int(lines.size()); ++i) {
         const QByteArray t = lines[i].trimmed();
@@ -434,7 +486,7 @@ QByteArray Playlists::patchHeader(const QByteArray &data, const Playlist &p, boo
             if (name)
                 lines[i] = title + end;
             titleAt = i;
-        } else if (head < 0 && t == "#EXTM3U") {
+        } else if (head < 0 && t.startsWith("#EXTM3U")) {
             head = i;
         }
     }
@@ -566,7 +618,26 @@ bool Playlists::save(Playlist &p) {
         spec.insert("version", 1);
         data = QJsonDocument(QJsonObject::fromVariantMap(spec)).toJson(QJsonDocument::Indented);
     } else {
-        data = m3u8(p, [this](const QString &path) { return m_library ? m_library->track(path) : nullptr; }).toUtf8();
+        const QString text = m3u8(p, [this](const QString &path) { return m_library ? m_library->track(path) : nullptr; });
+        if (p.bytes) {
+            // A file that isn't UTF-8 goes back a byte a character, as it was
+            // read. A name with a character that can't be written that way
+            // would turn the whole file into something else, so it isn't saved.
+            for (const QChar c : text)
+                if (c.unicode() > 0xFF) {
+                    emit message(tr("“%1” isn't a UTF-8 playlist, and that name can't be written into it. Nothing was changed.").arg(p.name));
+                    m_reload.start(); // back to what the file holds
+                    return false;
+                }
+            data = text.toLatin1();
+        } else {
+            data = text.toUtf8();
+        }
+        // The file keeps the line endings and the byte-order mark it came with.
+        if (p.crlf)
+            data.replace("\n", "\r\n");
+        if (p.bom)
+            data.prepend("\xEF\xBB\xBF");
     }
     return write(p, fileOf(p), data);
 }
@@ -579,6 +650,13 @@ bool Playlists::saveHeader(Playlist &p, bool name) {
     QByteArray data;
     if (p.smart || file.isEmpty() || !readBounded(file, data))
         return save(p);
+    if (name && p.bytes)
+        for (const QChar c : p.name)
+            if (c.unicode() > 0xFF) {
+                emit message(tr("“%1” isn't a UTF-8 playlist, and that name can't be written into it. Nothing was changed.").arg(p.id));
+                m_reload.start();
+                return false;
+            }
     p.modified = nowSeconds();
     return write(p, file, patchHeader(data, p, name));
 }

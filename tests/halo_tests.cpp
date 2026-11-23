@@ -2172,7 +2172,9 @@ private slots:
         Playlists edited(&library, nullptr, lists.path());
         QVERIFY(edited.find("mixed")->pinned);
         QCOMPARE(edited.add("mixed", {files[2]}), 1);
-        QStringList lines = QString::fromUtf8(read()).split('\n', Qt::SkipEmptyParts);
+        // The file's own line endings stay (it was written with CRLF).
+        QVERIFY(!read().replace("\r\n", "").contains('\n'));
+        QStringList lines = QString::fromUtf8(read()).remove('\r').split('\n', Qt::SkipEmptyParts);
         auto index = [&](const QString &line) { return int(lines.indexOf(line)); };
         QVERIFY(index("http://radio.example/one") > 0);
         QCOMPARE(lines.value(index("http://radio.example/one") - 1), QString("#EXTVLCOPT:network-caching=1000"));
@@ -2188,7 +2190,7 @@ private slots:
         // Taking out the song a stream followed keeps the stream.
         QVERIFY(edited.move("mixed", 0, 1));
         QVERIFY(edited.removeRows("mixed", {0, 1}));
-        const QString text = QString::fromUtf8(read());
+        const QString text = QString::fromUtf8(read()).remove('\r');
         QVERIFY(text.contains("#EXTINF:-1,Radio One\n#EXTVLCOPT:network-caching=1000\nhttp://radio.example/one\n"));
         QVERIFY(text.contains("#EXTINF:-1,Radio Two\nhttps://radio.example/two\n"));
         QVERIFY(!text.contains("#EXTGRP")); // that tag belonged to a removed song
@@ -2310,6 +2312,127 @@ private slots:
         // The probe works: text left to guess its format does fetch.
         root->property("probe").value<QObject *>()->setProperty("active", true);
         QVERIFY(server.waitForNewConnection(5000));
+    }
+
+    // An MP3 tagged by ffmpeg keeps its comment in a TXXX frame; writing any
+    // other field makes TagLib add a COMM frame beside it, so the comment
+    // reads back twice. Fixing the title and then the comment must still
+    // clear the watermark from every copy, and undo must still work.
+    void doctorFixesACommentStoredTwice() {
+        QCOMPARE(Doctor::withFirst({"A | x.com", "A | x.com"}, "A"), (QStringList{"A", "A"}));
+        QCOMPARE(Doctor::withFirst({"x.com", "x.com", "B"}, ""), (QStringList{"B"}));
+        QTemporaryDir music, state;
+        const QString song = music.filePath("Song.mp3");
+        QProcess ff;
+        ff.start("ffmpeg", {"-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=12", "-metadata",
+                            "title=Song [DatPiff.com]", "-metadata", "artist=Tester", "-metadata", "album=Album",
+                            "-metadata", "comment=Hot tape | DatPiff.com", "-y", song});
+        QVERIFY(ff.waitForFinished(30000));
+        QCOMPARE(ff.exitCode(), 0);
+        Library library({music.path()}, state.filePath("cache"), state.filePath("state"));
+        library.rescan();
+        QTRY_COMPARE_WITH_TIMEOUT(int(library.tracks().size()), 1, 20000);
+        LibraryDoctor doctor(&library, state.filePath("doctor.json"));
+        doctor.scan();
+        QTRY_VERIFY_WITH_TIMEOUT(!doctor.scanning(), 20000);
+        const int fixes = doctor.fixable();
+        QVERIFY(fixes >= 1);
+        QCOMPARE(doctor.fixAll("watermark"), fixes);
+        Doctor::Tags t;
+        QVERIFY(Doctor::readTags(song, t));
+        QCOMPARE(t.title, QString("Song"));
+        QStringList comments;
+        QVERIFY(Doctor::readValues(song, "comment", comments));
+        for (const QString &c : comments)
+            QVERIFY2(!Doctor::hasWatermark(c), qPrintable(c));
+        doctor.scan();
+        QTRY_VERIFY_WITH_TIMEOUT(!doctor.scanning(), 20000);
+        QCOMPARE(doctor.fixable(), 0);
+        // Every fix undoes, in turn, back to what the file said.
+        for (int i = 0; i < fixes; ++i)
+            QVERIFY(doctor.undoLast());
+        QVERIFY(Doctor::readTags(song, t));
+        QCOMPARE(t.title, QString("Song [DatPiff.com]"));
+        QCOMPARE(t.comment, QString("Hot tape | DatPiff.com"));
+    }
+
+    // What a rewrite must not lose or move, on plain data.
+    void playlistRewriteKeepsTheFileAsItWas() {
+        auto again = [](const QByteArray &data, const std::function<void(Playlist &)> &change = {}) {
+            Playlist p = Playlists::parseM3u(data, "/pl");
+            if (change)
+                change(p);
+            return Playlists::m3u8(p, nullptr);
+        };
+        auto body = [](const QString &text) { // without the name and Halo's line
+            QStringList out;
+            for (const QString &line : text.split('\n', Qt::SkipEmptyParts))
+                if (!line.startsWith("#PLAYLIST:") && !line.startsWith("#HALO:"))
+                    out << line;
+            return out;
+        };
+        using L = QStringList;
+        // The header keeps its attributes and stays first.
+        const QByteArray tv = "#EXTM3U url-tvg=\"x\"\n#EXTINF:-1,r\nhttp://s\n";
+        QCOMPARE(body(again(tv)), (L{"#EXTM3U url-tvg=\"x\"", "#EXTINF:-1,r", "http://s"}));
+        QVERIFY(Playlists::patchHeader(tv, Playlist(), false).startsWith("#EXTM3U url-tvg=\"x\"\n#HALO:"));
+        // Tags above the first song that are about the file stay at the top
+        // when that song goes or moves; a tag about the song goes with it.
+        const QByteArray tagged = "#EXTM3U\n#EXTENC:UTF-8\n#EXTGRP:Rock\n# mine\n#EXTVLCOPT:x\n/a\n/b\nhttp://s\n";
+        QCOMPARE(body(again(tagged)), (L{"#EXTM3U", "#EXTENC:UTF-8", "#EXTGRP:Rock", "# mine", "#EXTVLCOPT:x", "/a", "/b", "http://s"}));
+        QCOMPARE(body(again(tagged, [](Playlist &p) { p.paths.removeFirst(); })),
+                 (L{"#EXTM3U", "#EXTENC:UTF-8", "#EXTGRP:Rock", "# mine", "/b", "http://s"}));
+        QCOMPARE(body(again(tagged, [](Playlist &p) { p.paths.move(0, 1); })),
+                 (L{"#EXTM3U", "#EXTENC:UTF-8", "#EXTGRP:Rock", "# mine", "/b", "http://s", "#EXTVLCOPT:x", "/a"}));
+        // A song listed twice: each keeps its place, spelling and #EXTINF,
+        // and what follows the second stays after the second.
+        const QByteArray twice = "#EXTM3U\na.mp3\n/b\n#EXTINF:3,Second\n./a.mp3\nhttp://s\n/c\n#EXTINF:9,left over\n";
+        const L twiceBody{"#EXTM3U", "a.mp3", "/b", "#EXTINF:3,Second", "./a.mp3", "http://s", "/c", "#EXTINF:9,left over"};
+        QCOMPARE(body(again(twice)), twiceBody);
+        QCOMPARE(body(again(again(twice).toUtf8())), twiceBody);
+        QCOMPARE(Playlists::parseM3u(twice, "/pl").paths, (L{"/pl/a.mp3", "/b", "/pl/a.mp3", "/c"}));
+        // Not UTF-8: every byte comes back, and the list says so.
+        const QByteArray latin = "#EXTM3U\n#EXTINF:-1,R\xE9\nhttp://s/\xE9\n/music/caf\xE9.mp3\n";
+        const Playlist old = Playlists::parseM3u(latin, "/pl");
+        QVERIFY(old.bytes);
+        QVERIFY(!Playlists::parseM3u("#EXTM3U\n/music/caf\xC3\xA9.mp3\n", "/pl").bytes);
+        QCOMPARE(body(Playlists::m3u8(old, nullptr)).join('\n').toLatin1() + "\n", latin);
+    }
+
+    // The same through the files: a playlist in an old code page keeps its
+    // bytes when a song is added, and refuses a name it can't hold.
+    void playlistInAnOldCodePageKeepsItsBytes() {
+        QTemporaryDir music, cache, state, lists;
+        Library library({music.path()}, cache.path(), state.path());
+        QStringList files;
+        scanTones(music.path(), library, 2, files);
+        if (QTest::currentTestFailed()) return;
+        const QByteArray original = "#EXTM3U\r\n#EXTINF:-1,R\xE9\r\nhttp://s/\xE9\r\n/music/caf\xE9.mp3\r\n";
+        const QString file = lists.filePath("old.m3u");
+        {
+            QFile f(file);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write(original);
+        }
+        auto read = [&] {
+            QFile f(file);
+            return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+        };
+        Playlists playlists(&library, nullptr, lists.path());
+        QVERIFY(playlists.find("old")->bytes);
+        QCOMPARE(playlists.add("old", {files[0]}), 1);
+        const QByteArray now = read();
+        QVERIFY(now.contains("#EXTINF:-1,R\xE9\r\nhttp://s/\xE9\r\n"));
+        QVERIFY(now.contains("/music/caf\xE9.mp3\r\n"));
+        QVERIFY(now.contains(files[0].toUtf8() + "\r\n"));
+        QVERIFY(!now.contains("\xEF\xBF\xBD")); // no replacement characters
+        // A name outside what the file can hold changes nothing on disk.
+        QSignalSpy said(&playlists, &Playlists::message);
+        QVERIFY(!playlists.rename("old", QString::fromUtf8("\xE6\x97\xA5\xE6\x9C\xAC")));
+        QCOMPARE(said.size(), 1);
+        QCOMPARE(read(), now);
+        QVERIFY(playlists.rename("old", QString::fromUtf8("Caf\xC3\xA9")));
+        QVERIFY(read().contains("#PLAYLIST:Caf\xE9\r\n"));
     }
 
     void smartPlaylistRules() {

@@ -39,8 +39,12 @@ struct Playlist {
         QStringList lines;
     };
     std::vector<Kept> kept;
+    // Keyed by path, and for a song listed more than once by which occurrence.
     QHash<QString, QString> written; // a song's line as the file spelt it (relative, file://)
     QHash<QString, QString> extinf;  // a song's #EXTINF line, for songs not in the library
+    bool crlf = false, bom = false;  // how the file ends its lines and whether it starts with a mark; kept on save
+    bool bytes = false;              // the file isn't UTF-8: read and written a byte a character
+    QString header;                  // its #EXTM3U line, with any attributes
     // A smart playlist: songs from the library that match the rules.
     bool matchAll = true;
     std::vector<PlaylistRule> rules;

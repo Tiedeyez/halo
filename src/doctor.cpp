@@ -276,12 +276,26 @@ QStringList withFirst(QStringList values, const QString &value) {
     if (values.isEmpty()) {
         if (!value.isEmpty())
             values << value;
-    } else if (value.isEmpty()) {
-        values.removeFirst();
-    } else {
-        values[0] = value;
+        return values;
     }
+    // A value stored twice is one value (TagLib reads an ID3 comment kept
+    // in two kinds of frame as two): every copy of the first changes.
+    const QString old = values.first();
+    if (value.isEmpty())
+        values.removeAll(old);
+    else
+        for (QString &v : values)
+            if (v == old)
+                v = value;
     return values;
+}
+
+QStringList distinct(const QStringList &values) {
+    QStringList out;
+    for (const QString &v : values)
+        if (!out.contains(v))
+            out << v;
+    return out;
 }
 
 bool writeField(const QString &path, const QString &field, const QString &value) {
@@ -364,11 +378,30 @@ bool LibraryDoctor::apply(const Finding &f) {
     // whole list goes in the log, so undo puts back exactly what was there.
     QStringList all;
     const QStringList next = readValues(f.path, f.field, all) ? withFirst(all, f.after) : QStringList();
+    // Windows Media files don't hand a list of values back in the order it
+    // was given, so a field with several can't be changed safely there.
+    const QString suffix = QFileInfo(f.path).suffix().toLower();
+    if (distinct(all).size() > 1 && (suffix == "wma" || suffix == "asf")) {
+        emit message(tr("%1 has several values in that field, which Halo can't change safely in this format.")
+                         .arg(QFileInfo(f.path).fileName()));
+        return false;
+    }
     if (next == all || !writeValues(f.path, f.field, next)) {
         emit message(tr("Couldn't write %1.").arg(QFileInfo(f.path).fileName()));
         return false;
     }
-    m_log.push_back({f.path, f.field, f.before, f.after, true, all, next});
+    // What the file holds now is what counts: it must show the fix, and it
+    // is what undo will look for. If the format didn't take the list as
+    // given, the old one goes back and the fix is refused.
+    QStringList stored;
+    Tags now2;
+    if (!readValues(f.path, f.field, stored) || !readTags(f.path, now2) || field(now2, f.field) != f.after
+        || distinct(stored) != distinct(next)) {
+        writeValues(f.path, f.field, all);
+        emit message(tr("%1 didn't keep the change; left as it was.").arg(QFileInfo(f.path).fileName()));
+        return false;
+    }
+    m_log.push_back({f.path, f.field, f.before, f.after, true, all, stored});
     return true;
 }
 
@@ -411,7 +444,8 @@ bool LibraryDoctor::undoLast() {
     // logged whole lists is checked, and put back, by its first value.
     Tags now;
     QStringList all;
-    const bool same = e.whole ? readValues(e.path, e.field, all) && all == e.afterAll
+    // (Copies of a value don't count: writing another field can add one.)
+    const bool same = e.whole ? readValues(e.path, e.field, all) && distinct(all) == distinct(e.afterAll)
                               : readTags(e.path, now) && field(now, e.field) == e.after;
     if (!same) {
         emit message(tr("%1 changed since the fix; not undone.").arg(QFileInfo(e.path).fileName()));

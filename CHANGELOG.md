@@ -3,7 +3,7 @@
 Halo follows [semantic versioning](https://semver.org). Each release has
 notes on its GitHub release page as well.
 
-## 1.0.1 (unreleased)
+## 1.0.1 (2026-11-23)
 
 Fixes from the Marketplace review of 1.0.0.
 
@@ -11,13 +11,18 @@ Fixes from the Marketplace review of 1.0.0.
   with two ARTIST credits) had its whole list replaced by the one corrected
   value. A fix now changes only the value it is about, and undo puts back
   the exact list that was there. Undo also refuses if any value in the
-  field changed since the fix.
+  field changed since the fix. Halo now reads the file back after a
+  fix and refuses the fix if the format didn't keep it (Windows Media files
+  with several values in one field are left alone).
 - **Playlists shared with other players keep what Halo doesn't play.** Pin,
   unpin, rename and describe now change only Halo's own line (and the name)
   in the file; every other byte stays. Adding, removing or moving songs
   rewrites the list with radio and online entries, their tags, other
   players' tags, relative paths and anything past Halo's 100,000-song limit
-  still in it.
+  still in it. The file also keeps its line endings, its byte-order
+  mark, its `#EXTM3U` line with any attributes, and a song listed twice
+  keeps both places. A playlist that isn't UTF-8 is written back byte for
+  byte.
 - **Text from tags is never read as markup.** Every label shows text as
   written, as do tooltips and the playlist names in "Add to playlist", so a
   tag or a playlist name can't make Halo fetch an image from the internet.

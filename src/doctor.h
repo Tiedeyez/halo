@@ -52,9 +52,11 @@ bool readTags(const QString &path, Tags &out);
 // and write the whole list, exactly as stored.
 bool readValues(const QString &path, const QString &field, QStringList &out);
 bool writeValues(const QString &path, const QString &field, const QStringList &values);
-// The list with its first value changed (or, for an empty value, removed);
-// every other value stays.
+// The list with its first value (and any exact copies of it) changed, or
+// for an empty value removed; every other value stays.
 QStringList withFirst(QStringList values, const QString &value);
+// The values without repeats, in order.
+QStringList distinct(const QStringList &values);
 // Sets a field's first value and keeps the rest; false if the file couldn't
 // be written.
 bool writeField(const QString &path, const QString &field, const QString &value);
