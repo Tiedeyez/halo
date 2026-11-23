@@ -14,7 +14,7 @@ makedepends=('git' 'gcc' 'make' 'qt6-shadertools')
 # Pinned to the release tag. After tagging, the tag's commit goes in
 # _commit in a follow-up commit (a commit can't hold its own hash), and
 # prepare() refuses to build if the tag ever points anywhere else.
-_commit=''
+_commit='6951d5d85a21ab7c1f30eec7428ff854e19da84d'
 source=("halo::git+$url.git#tag=v$pkgver")
 sha256sums=('SKIP')
 
