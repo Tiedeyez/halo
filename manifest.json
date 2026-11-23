@@ -17,6 +17,6 @@
     "description": "Now playing in Halo, with play/pause, next and previous",
     "category": "Media",
     "allowMultiple": false,
-    "defaultSection": "centerBegin"
+    "defaultSection": "center"
   }
 }
