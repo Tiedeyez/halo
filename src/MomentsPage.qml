@@ -21,6 +21,7 @@ FocusScope {
             font.weight: Font.Bold
         }
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             Layout.leftMargin: 24
             Layout.rightMargin: 24
@@ -84,6 +85,7 @@ FocusScope {
                         radius: Style.small
                         color: Style.accentWash
                         Text {
+                            textFormat: Text.PlainText
                             id: stamp
                             anchors.centerIn: parent
                             text: Style.clock(row.seconds)
@@ -97,6 +99,7 @@ FocusScope {
                         Layout.fillWidth: true
                         spacing: 0
                         Text {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: row.title
                             color: Style.text
@@ -104,6 +107,7 @@ FocusScope {
                             elide: Text.ElideRight
                         }
                         Text {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: Style.artistName(row.artist)
                             color: Style.muted
@@ -112,6 +116,7 @@ FocusScope {
                         }
                     }
                     Text {
+                        textFormat: Text.PlainText
                         text: row.created ? row.created.toLocaleDateString(Qt.locale(translator.language), Locale.ShortFormat) : ""
                         color: Style.faint
                         font.pixelSize: Style.fontSmall

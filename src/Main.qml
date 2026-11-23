@@ -224,6 +224,7 @@ ApplicationWindow {
                 visible: player.problem.length > 0
                 color: "#3a1418"
                 Text {
+                    textFormat: Text.PlainText
                     id: problemText
                     anchors.fill: parent
                     anchors.margins: 10
@@ -299,6 +300,7 @@ ApplicationWindow {
                                     font.weight: Font.Bold
                                 }
                                 Text {
+                                    textFormat: Text.PlainText
                                     Layout.leftMargin: 8
                                     text: qsTr("%n songs", "", tracks.count)
                                     color: Style.muted
@@ -330,6 +332,7 @@ ApplicationWindow {
                                 font.weight: Font.Bold
                             }
                             Text {
+                                textFormat: Text.PlainText
                                 Layout.leftMargin: 24
                                 Layout.bottomMargin: 12
                                 text: qsTr("Counted on this computer when you hear half a song (or four minutes). Nothing leaves it.")
@@ -371,6 +374,7 @@ ApplicationWindow {
                                 }
                             }
                             Text {
+                                textFormat: Text.PlainText
                                 Layout.leftMargin: 24
                                 Layout.rightMargin: 24
                                 Layout.bottomMargin: 12
@@ -464,6 +468,7 @@ ApplicationWindow {
                                 }
                             }
                             Text {
+                                textFormat: Text.PlainText
                                 Layout.leftMargin: 24
                                 Layout.rightMargin: 24
                                 Layout.bottomMargin: 12
@@ -496,6 +501,7 @@ ApplicationWindow {
                                     height: Style.target + 16
                                     spacing: 10
                                     Text {
+                                        textFormat: Text.PlainText
                                         Layout.leftMargin: 24
                                         Layout.fillWidth: true
                                         elide: Text.ElideRight
@@ -734,7 +740,7 @@ ApplicationWindow {
             id: undoRow
             anchors.centerIn: parent
             spacing: 12
-            Text { text: qsTr("Deleted “%1”").arg(undoDelete.name); color: Style.text; font.pixelSize: Style.fontBody }
+            Text { textFormat: Text.PlainText; text: qsTr("Deleted “%1”").arg(undoDelete.name); color: Style.text; font.pixelSize: Style.fontBody }
             Button {
                 text: qsTr("Undo")
                 flat: true
@@ -760,5 +766,10 @@ ApplicationWindow {
         MenuItem { text: qsTr("Off"); enabled: player.sleepRemaining > 0; onTriggered: player.cancelSleep() }
     }
 
-    Component.onCompleted: Qt.callLater(() => pages.currentItem.forceActiveFocus())
+    Component.onCompleted: {
+        // Every tooltip is drawn by one shared item. Some name an album
+        // ("Play …"), so it shows text as written, never as markup.
+        win.contentItem.ToolTip.toolTip.contentItem.textFormat = Text.PlainText
+        Qt.callLater(() => pages.currentItem.forceActiveFocus())
+    }
 }

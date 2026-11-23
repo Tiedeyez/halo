@@ -81,8 +81,9 @@ Popup {
                     Material.accent: Style.accent
                     Accessible.name: qsTr("Preamp")
                 }
-                Text { Layout.alignment: Qt.AlignHCenter; text: qsTr("Pre"); color: Style.muted; font.pixelSize: Style.fontSmall }
+                Text { textFormat: Text.PlainText; Layout.alignment: Qt.AlignHCenter; text: qsTr("Pre"); color: Style.muted; font.pixelSize: Style.fontSmall }
                 Text {
+                    textFormat: Text.PlainText
                     Layout.alignment: Qt.AlignHCenter
                     text: (player.eqPreamp > 0 ? "+" : "") + player.eqPreamp.toLocaleString(Qt.locale(translator.language), 'f', 1)
                     color: Style.faint
@@ -108,8 +109,9 @@ Popup {
                         Material.accent: Style.accent
                         Accessible.name: qsTr("%1 Hz").arg(root.labels[band.index])
                     }
-                    Text { Layout.alignment: Qt.AlignHCenter; text: root.labels[band.index]; color: Style.muted; font.pixelSize: Style.fontSmall }
+                    Text { textFormat: Text.PlainText; Layout.alignment: Qt.AlignHCenter; text: root.labels[band.index]; color: Style.muted; font.pixelSize: Style.fontSmall }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.alignment: Qt.AlignHCenter
                         text: (player.eqGains[band.index] > 0 ? "+" : "") + Number(player.eqGains[band.index]).toLocaleString(Qt.locale(translator.language), 'f', 1)
                         color: Style.faint
@@ -126,8 +128,9 @@ Popup {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 2
-                Text { text: qsTr("Even loudness"); color: Style.text; font.pixelSize: Style.fontBody }
+                Text { textFormat: Text.PlainText; text: qsTr("Even loudness"); color: Style.text; font.pixelSize: Style.fontBody }
                 Text {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: qsTr("Brings every song to the same loudness (-14 LUFS), measured by Halo, so a quiet album and a loud mixtape sit together.")
                     color: Style.faint
@@ -150,7 +153,7 @@ Popup {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 2
-                Text { text: qsTr("Headphone correction"); color: Style.text; font.pixelSize: Style.fontBody }
+                Text { textFormat: Text.PlainText; text: qsTr("Headphone correction"); color: Style.text; font.pixelSize: Style.fontBody }
                 Text {
                     Layout.fillWidth: true
                     textFormat: Text.PlainText

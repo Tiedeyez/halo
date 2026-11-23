@@ -129,6 +129,7 @@ Rectangle {
                         height: 20
                     }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: item.modelData.label
                         color: item.selected ? Style.text : Style.muted
@@ -147,6 +148,7 @@ Rectangle {
                         color: item.selected ? Style.hover : Style.raised
                         border.color: Style.line
                         Text {
+                            textFormat: Text.PlainText
                             id: countText
                             anchors.centerIn: parent
                             text: parent.count > 999 ? "999+" : String(parent.count)
@@ -173,6 +175,7 @@ Rectangle {
             spacing: 4
             HoverHandler { id: plHover }
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.leftMargin: 4
                 text: qsTr("Playlists")
@@ -251,6 +254,7 @@ Rectangle {
                         height: 18
                     }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: pl.modelData.name
                         color: pl.selected ? Style.text : Style.muted
@@ -266,6 +270,7 @@ Rectangle {
                         height: 14
                     }
                     Text {
+                        textFormat: Text.PlainText
                         text: pl.modelData.count
                         color: Style.faint
                         font.pixelSize: Style.fontSmall
@@ -304,6 +309,7 @@ Rectangle {
             }
             // No playlists yet: one line that says how to start.
             Text {
+                textFormat: Text.PlainText
                 anchors.fill: parent
                 anchors.leftMargin: 4
                 visible: playlistList.count === 0
@@ -321,6 +327,7 @@ Rectangle {
             visible: player.nextTitle.length > 0 && root.height >= 940
             spacing: 2
             Text {
+                textFormat: Text.PlainText
                 text: qsTr("Up next")
                 color: Style.faint
                 font.pixelSize: Style.fontSmall
@@ -329,6 +336,7 @@ Rectangle {
                 font.letterSpacing: 1
             }
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: player.nextTitle
                 color: Style.text
@@ -336,6 +344,7 @@ Rectangle {
                 elide: Text.ElideRight
             }
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: Style.artistName(player.nextArtist)
                 color: Style.muted
@@ -347,6 +356,7 @@ Rectangle {
         PixelRule { Layout.fillWidth: true; Layout.topMargin: 8 }
 
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             Layout.topMargin: 6
             text: library.scanning
@@ -357,6 +367,7 @@ Rectangle {
             wrapMode: Text.Wrap
         }
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: library.trackCount > 0
             text: player.analyzedCount >= library.trackCount
@@ -369,6 +380,7 @@ Rectangle {
             wrapMode: Text.Wrap
         }
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: qsTr("Press ? for shortcuts")
             color: Style.faint

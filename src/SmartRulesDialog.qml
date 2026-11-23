@@ -160,7 +160,7 @@ Popup {
             Layout.fillWidth: true
             visible: root.playlistId.length === 0
             spacing: 8
-            Text { text: qsTr("Start from:"); color: Style.faint; font.pixelSize: Style.fontSmall; height: 32; verticalAlignment: Text.AlignVCenter }
+            Text { textFormat: Text.PlainText; text: qsTr("Start from:"); color: Style.faint; font.pixelSize: Style.fontSmall; height: 32; verticalAlignment: Text.AlignVCenter }
             Repeater {
                 model: root.presets
                 delegate: Button {
@@ -177,14 +177,14 @@ Popup {
 
         RowLayout {
             spacing: 8
-            Text { text: qsTr("Songs that match"); color: Style.muted; font.pixelSize: Style.fontBody }
+            Text { textFormat: Text.PlainText; text: qsTr("Songs that match"); color: Style.muted; font.pixelSize: Style.fontBody }
             ComboBox {
                 id: matchBox
                 model: [qsTr("all"), qsTr("any")]
                 implicitWidth: 100
                 onActivated: recount.restart()
             }
-            Text { text: qsTr("of these rules"); color: Style.muted; font.pixelSize: Style.fontBody }
+            Text { textFormat: Text.PlainText; text: qsTr("of these rules"); color: Style.muted; font.pixelSize: Style.fontBody }
         }
 
         ListView {
@@ -238,6 +238,7 @@ Popup {
                 }
                 Item { Layout.fillWidth: true; visible: ruleRow.op === "never" }
                 Text {
+                    textFormat: Text.PlainText
                     visible: root.fields[root.fieldIndex(ruleRow.field)].kind === "date" && ruleRow.op !== "never"
                     text: qsTr("days")
                     color: Style.muted
@@ -262,7 +263,7 @@ Popup {
 
         RowLayout {
             spacing: 8
-            Text { text: qsTr("Sort by"); color: Style.muted; font.pixelSize: Style.fontBody }
+            Text { textFormat: Text.PlainText; text: qsTr("Sort by"); color: Style.muted; font.pixelSize: Style.fontBody }
             ComboBox {
                 id: sortBox
                 Layout.preferredWidth: 220
@@ -292,12 +293,13 @@ Popup {
                 editable: true
                 onValueModified: recount.restart()
             }
-            Text { text: qsTr("songs"); color: Style.muted; font.pixelSize: Style.fontBody }
+            Text { textFormat: Text.PlainText; text: qsTr("songs"); color: Style.muted; font.pixelSize: Style.fontBody }
         }
 
         RowLayout {
             Layout.fillWidth: true
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: qsTr("%n songs match right now", "", root.matching)
                 color: root.matching > 0 ? Style.accentText : Style.faint

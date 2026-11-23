@@ -24,6 +24,7 @@ Button {
     Accessible.name: text
 
     contentItem: Text {
+        textFormat: Text.PlainText
         text: control.text
         font: control.font
         color: !control.enabled ? Style.muted : control.filled ? Style.accentInk : Style.text

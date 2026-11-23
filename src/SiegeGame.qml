@@ -560,6 +560,7 @@ Item {
         id: floatItems
         model: 10
         Text {
+            textFormat: Text.PlainText
             visible: false
             color: Style.accentText
             font.family: game.fontName
@@ -648,6 +649,7 @@ Item {
         y: 8
         spacing: 14
         Text {
+            textFormat: Text.PlainText
             text: "SIEGE"
             color: Style.accentText
             font.family: Style.mono
@@ -656,6 +658,7 @@ Item {
             font.letterSpacing: 3
         }
         Text {
+            textFormat: Text.PlainText
             text: game.score.toLocaleString(Qt.locale(translator.language), 'f', 0)
             color: Style.text
             font.family: Style.mono
@@ -663,6 +666,7 @@ Item {
             font.bold: true
         }
         Text {
+            textFormat: Text.PlainText
             visible: game.multiplier > 1
             text: "x" + game.multiplier
             color: Style.accentText
@@ -676,6 +680,7 @@ Item {
         y: 10
         spacing: 6
         Text {
+            textFormat: Text.PlainText
             text: qsTr("BEST %1").arg(Secrets.best.toLocaleString(Qt.locale(translator.language), 'f', 0))
             color: Style.faint
             font.family: Style.mono
@@ -702,6 +707,7 @@ Item {
         spacing: 10
         visible: headline.text.length > 0
         Text {
+            textFormat: Text.PlainText
             id: headline
             anchors.horizontalCenter: parent.horizontalCenter
             text: !game.ready ? qsTr("NO TIMED WORDS")
@@ -716,6 +722,7 @@ Item {
             font.letterSpacing: 4
         }
         Text {
+            textFormat: Text.PlainText
             anchors.horizontalCenter: parent.horizontalCenter
             text: !game.ready ? qsTr("This song has no timed lyrics. The siege waits for one that does.")
                  : game.over ? qsTr("%1 points · Space plays again · Esc leaves").arg(game.score.toLocaleString(Qt.locale(translator.language), 'f', 0))

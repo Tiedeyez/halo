@@ -46,6 +46,7 @@ Item {
             GradientStop { position: 1; color: Qt.hsla((cover.hue(cover.albumId) + 0.12) % 1, 0.50, 0.14, 1) }
         }
         Text {
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             text: cover.initials(cover.title)
             color: "#f4f4f7"

@@ -24,6 +24,7 @@ FocusScope {
                 font.weight: Font.Bold
             }
             Text {
+                textFormat: Text.PlainText
                 Layout.leftMargin: 8
                 text: qsTr("%n songs", "", player.queue.count)
                 color: Style.muted
@@ -50,6 +51,7 @@ FocusScope {
         }
 
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             Layout.leftMargin: 24
             Layout.rightMargin: 24
@@ -142,6 +144,7 @@ FocusScope {
                         PixelEq { anchors.centerIn: parent }
                     }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.preferredWidth: 28
                         visible: !row.current
                         horizontalAlignment: Text.AlignHCenter
@@ -161,6 +164,7 @@ FocusScope {
                         Layout.fillWidth: true
                         spacing: 0
                         Text {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: row.title
                             color: row.current ? Style.accentText : row.index < player.currentIndex ? Style.faint : Style.text
@@ -169,6 +173,7 @@ FocusScope {
                             elide: Text.ElideRight
                         }
                         Text {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: Style.artistName(row.artist)
                             color: Style.muted
@@ -187,6 +192,7 @@ FocusScope {
                         HoverHandler { id: driftHover }
                     }
                     Text {
+                        textFormat: Text.PlainText
                         text: row.duration > 0 ? Style.clock(row.duration) : ""
                         color: Style.muted
                         font.pixelSize: Style.fontSmall
@@ -219,6 +225,7 @@ FocusScope {
         }
 
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             Layout.margins: 16
             Layout.leftMargin: 24

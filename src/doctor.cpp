@@ -236,7 +236,23 @@ bool readTags(const QString &path, Tags &out) {
     return true;
 }
 
-bool writeField(const QString &path, const QString &field, const QString &value) {
+bool readValues(const QString &path, const QString &field, QStringList &out) {
+    const char *name = propertyName(field);
+    if (!name)
+        return false;
+    TagLib::FileRef file(QFile::encodeName(path).constData(), false);
+    if (file.isNull() || !file.tag())
+        return false;
+    out.clear();
+    const TagLib::PropertyMap p = file.properties();
+    const auto it = p.find(name);
+    if (it != p.end())
+        for (const TagLib::String &v : it->second)
+            out << QString::fromStdString(v.to8Bit(true));
+    return true;
+}
+
+bool writeValues(const QString &path, const QString &field, const QStringList &values) {
     const char *name = propertyName(field);
     if (!name)
         return false;
@@ -244,12 +260,33 @@ bool writeField(const QString &path, const QString &field, const QString &value)
     if (file.isNull() || !file.tag())
         return false;
     TagLib::PropertyMap p = file.properties();
-    if (value.isEmpty())
+    if (values.isEmpty()) {
         p.erase(name);
-    else
-        p.replace(name, TagLib::StringList(toTag(value)));
+    } else {
+        TagLib::StringList list;
+        for (const QString &v : values)
+            list.append(toTag(v));
+        p.replace(name, list);
+    }
     file.setProperties(p);
     return file.save();
+}
+
+QStringList withFirst(QStringList values, const QString &value) {
+    if (values.isEmpty()) {
+        if (!value.isEmpty())
+            values << value;
+    } else if (value.isEmpty()) {
+        values.removeFirst();
+    } else {
+        values[0] = value;
+    }
+    return values;
+}
+
+bool writeField(const QString &path, const QString &field, const QString &value) {
+    QStringList values;
+    return readValues(path, field, values) && writeValues(path, field, withFirst(values, value));
 }
 
 }
@@ -322,11 +359,16 @@ bool LibraryDoctor::apply(const Finding &f) {
         emit message(tr("%1 changed since the scan; scan again.").arg(QFileInfo(f.path).fileName()));
         return false;
     }
-    if (!writeField(f.path, f.field, f.after)) {
+    // Only the value the finding is about changes: a field can hold several
+    // (a FLAC with two ARTIST credits), and the others stay as they are. The
+    // whole list goes in the log, so undo puts back exactly what was there.
+    QStringList all;
+    const QStringList next = readValues(f.path, f.field, all) ? withFirst(all, f.after) : QStringList();
+    if (next == all || !writeValues(f.path, f.field, next)) {
         emit message(tr("Couldn't write %1.").arg(QFileInfo(f.path).fileName()));
         return false;
     }
-    m_log.push_back({f.path, f.field, f.before, f.after});
+    m_log.push_back({f.path, f.field, f.before, f.after, true, all, next});
     return true;
 }
 
@@ -365,15 +407,20 @@ bool LibraryDoctor::undoLast() {
     if (m_log.empty())
         return false;
     const Entry e = m_log.back();
+    // The file must still hold what the fix left. An entry from before Halo
+    // logged whole lists is checked, and put back, by its first value.
     Tags now;
-    if (!readTags(e.path, now) || field(now, e.field) != e.after) {
+    QStringList all;
+    const bool same = e.whole ? readValues(e.path, e.field, all) && all == e.afterAll
+                              : readTags(e.path, now) && field(now, e.field) == e.after;
+    if (!same) {
         emit message(tr("%1 changed since the fix; not undone.").arg(QFileInfo(e.path).fileName()));
         m_log.pop_back();
         saveLog();
         emit changed();
         return false;
     }
-    const bool ok = writeField(e.path, e.field, e.before);
+    const bool ok = e.whole ? writeValues(e.path, e.field, e.beforeAll) : writeField(e.path, e.field, e.before);
     m_log.pop_back();
     saveLog();
     if (ok && m_library)
@@ -388,8 +435,13 @@ void LibraryDoctor::loadLog() {
         return;
     for (const QJsonValue &v : QJsonDocument::fromJson(f.read(8 * 1024 * 1024)).object().value("fixes").toArray()) {
         const QJsonObject o = v.toObject();
-        m_log.push_back({o.value("path").toString(), o.value("field").toString(), o.value("before").toString(),
-                         o.value("after").toString()});
+        Entry e{o.value("path").toString(), o.value("field").toString(), o.value("before").toString(),
+                o.value("after").toString(), o.contains("beforeAll") && o.contains("afterAll"), {}, {}};
+        for (const QJsonValue &x : o.value("beforeAll").toArray())
+            e.beforeAll << x.toString();
+        for (const QJsonValue &x : o.value("afterAll").toArray())
+            e.afterAll << x.toString();
+        m_log.push_back(e);
     }
 }
 
@@ -399,8 +451,14 @@ void LibraryDoctor::saveLog() const {
     if (!f.open(QIODevice::WriteOnly))
         return;
     QJsonArray fixes;
-    for (const Entry &e : m_log)
-        fixes.append(QJsonObject{{"path", e.path}, {"field", e.field}, {"before", e.before}, {"after", e.after}});
+    for (const Entry &e : m_log) {
+        QJsonObject o{{"path", e.path}, {"field", e.field}, {"before", e.before}, {"after", e.after}};
+        if (e.whole) {
+            o.insert("beforeAll", QJsonArray::fromStringList(e.beforeAll));
+            o.insert("afterAll", QJsonArray::fromStringList(e.afterAll));
+        }
+        fixes.append(o);
+    }
     f.write(QJsonDocument(QJsonObject{{"fixes", fixes}}).toJson());
     f.commit();
 }

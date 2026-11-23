@@ -59,6 +59,7 @@ FocusScope {
                         elide: Text.ElideRight
                     }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: Style.artistName(root.artist)
                         color: Style.muted
@@ -66,6 +67,7 @@ FocusScope {
                         elide: Text.ElideRight
                     }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: [root.year > 0 ? String(root.year) : "", qsTr("%n songs", "", albumTracks.count),
                                Style.hours(albumTracks.totalDuration)].filter(s => s.length).join(" · ")

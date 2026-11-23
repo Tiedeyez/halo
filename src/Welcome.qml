@@ -141,6 +141,7 @@ Rectangle {
                         Layout.fillWidth: true
                         spacing: 2
                         Text {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: modelData[1]
                             color: Style.text
@@ -152,6 +153,7 @@ Rectangle {
                             wrapMode: Text.Wrap
                         }
                         Text {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: modelData[2]
                             color: Style.muted
@@ -169,6 +171,7 @@ Rectangle {
                 spacing: 10
                 Keycap { label: "?" }
                 Text {
+                    textFormat: Text.PlainText
                     Layout.maximumWidth: column.width - 40
                     text: qsTr("shows every shortcut. You can also drop songs or folders on this window.")
                     color: Style.faint

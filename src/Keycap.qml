@@ -13,6 +13,7 @@ Rectangle {
     Accessible.ignored: true
 
     Text {
+        textFormat: Text.PlainText
         id: keyText
         anchors.centerIn: parent
         text: parent.label

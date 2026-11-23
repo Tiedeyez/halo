@@ -102,6 +102,7 @@ Item {
                 height: base.implicitHeight
 
                 Text {
+                    textFormat: Text.PlainText
                     id: base
                     text: word.shown
                     color: root.isCurrent ? Qt.alpha(Style.text, 0.38) : root.isPast ? Style.faint : Style.muted
@@ -116,6 +117,7 @@ Item {
                     height: base.height
                     clip: true
                     Text {
+                        textFormat: Text.PlainText
                         text: word.shown
                         color: Style.accentText
                         font: base.font

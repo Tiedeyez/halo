@@ -48,7 +48,15 @@ std::vector<Finding> diagnose(const std::vector<File> &files);
 
 // TagLib, on real files.
 bool readTags(const QString &path, Tags &out);
-// Sets one field; false if the file couldn't be written.
+// A field can hold several values (two ARTIST credits on a FLAC). These read
+// and write the whole list, exactly as stored.
+bool readValues(const QString &path, const QString &field, QStringList &out);
+bool writeValues(const QString &path, const QString &field, const QStringList &values);
+// The list with its first value changed (or, for an empty value, removed);
+// every other value stays.
+QStringList withFirst(QStringList values, const QString &value);
+// Sets a field's first value and keeps the rest; false if the file couldn't
+// be written.
 bool writeField(const QString &path, const QString &field, const QString &value);
 QString field(const Tags &tags, const QString &name);
 
@@ -91,7 +99,11 @@ private:
     class Library *m_library;
     QString m_logFile;
     std::vector<Doctor::Finding> m_findings;
-    struct Entry { QString path, field, before, after; };
+    struct Entry {
+        QString path, field, before, after;
+        bool whole = false; // the lists below were recorded
+        QStringList beforeAll, afterAll;
+    };
     std::vector<Entry> m_log;
     bool m_scanning = false;
 };

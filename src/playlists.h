@@ -29,6 +29,18 @@ struct Playlist {
     bool pinned = false;
     qint64 created = 0, modified = 0;
     QStringList paths; // a manual playlist's songs, in order
+    // What else the file holds, so that saving never loses it: lines Halo
+    // doesn't play (a radio stream, with the tags above it) or doesn't know
+    // (another player's tags). `anchor` is the song they sit after, or, with
+    // `before`, the song they belong to; empty is the top of the file.
+    struct Kept {
+        QString anchor;
+        bool before = false;
+        QStringList lines;
+    };
+    std::vector<Kept> kept;
+    QHash<QString, QString> written; // a song's line as the file spelt it (relative, file://)
+    QHash<QString, QString> extinf;  // a song's #EXTINF line, for songs not in the library
     // A smart playlist: songs from the library that match the rules.
     bool matchAll = true;
     std::vector<PlaylistRule> rules;
@@ -119,6 +131,10 @@ public:
     // Parses an .m3u/.m3u8: relative entries resolve against `baseDir`,
     // file:// URLs are decoded, anything else (streams) is skipped.
     static Playlist parseM3u(const QByteArray &data, const QString &baseDir);
+    // The file's bytes with only Halo's own line (and, with `name`, the
+    // #PLAYLIST line) changed or added; every other byte stays, whatever
+    // wrote it.
+    static QByteArray patchHeader(const QByteArray &data, const Playlist &p, bool name);
     static QString cleanName(const QString &name);
 
 signals:
@@ -129,6 +145,9 @@ signals:
 private:
     void load();
     bool save(Playlist &p);
+    // For a change to the name, description or pin: rewrites those lines only.
+    bool saveHeader(Playlist &p, bool name);
+    bool write(Playlist &p, const QString &file, const QByteArray &data);
     QString fileOf(const Playlist &p) const;
     QString newId(const QString &name) const;
     Playlist *edit(const QString &id);

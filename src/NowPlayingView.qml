@@ -260,6 +260,7 @@ Rectangle {
         }
         // Producer and feature credits, out of the title's way.
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: Style.credits(player.title)
             visible: player.hasTrack && text.length > 0
@@ -269,6 +270,7 @@ Rectangle {
             elide: Text.ElideRight
         }
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: Style.artistName(player.artist) + (parent.chips || !player.album.length ? "" : "  ·  " + player.album)
             visible: player.hasTrack
@@ -277,6 +279,7 @@ Rectangle {
             elide: Text.ElideRight
         }
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: player.album
             visible: parent.chips && player.hasTrack && player.album.length > 0
@@ -307,6 +310,7 @@ Rectangle {
                     color: Style.raised
                     border.color: Style.line
                     Text {
+                        textFormat: Text.PlainText
                         id: chip
                         anchors.centerIn: parent
                         text: parent.modelData
@@ -326,6 +330,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 10
             Text {
+                textFormat: Text.PlainText
                 text: Style.clock(player.position)
                 color: Style.muted
                 font.pixelSize: Style.fontSmall + 1
@@ -339,6 +344,7 @@ Rectangle {
                 blendFrom: player.blendIn >= 0 ? player.position + player.blendIn : -1
             }
             Text {
+                textFormat: Text.PlainText
                 text: Style.clock(player.duration)
                 color: Style.muted
                 font.pixelSize: Style.fontSmall + 1
@@ -372,6 +378,7 @@ Rectangle {
         readonly property bool canAct: lyrics.status === Lyrics.Offline || lyrics.status === Lyrics.NotFound
                                        || lyrics.status === Lyrics.Failed
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: lyrics.status === Lyrics.Searching ? qsTr("Looking for lyrics")
                 : lyrics.status === Lyrics.Offline ? qsTr("No lyrics on this computer")
@@ -439,6 +446,7 @@ Rectangle {
                     visible: player.nextTitle.length > 0 && root.height >= 520
                     spacing: 2
                     Text {
+                        textFormat: Text.PlainText
                         text: player.blending ? qsTr("Blending from the last song")
                             : player.blendIn >= 0 ? qsTr("Blends in %1").arg(Style.clock(player.blendIn)) : qsTr("Up next")
                         color: Style.faint
@@ -448,6 +456,7 @@ Rectangle {
                         font.letterSpacing: 1
                     }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: player.nextTitle + "  ·  " + Style.artistName(player.nextArtist)
                         color: Style.muted
@@ -462,6 +471,7 @@ Rectangle {
                 }
                 Item { Layout.fillHeight: true }
                 Text {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: qsTr("V switches the visual · C calms the motion · L shows the lyrics")
                     font.family: Style.mono

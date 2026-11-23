@@ -97,6 +97,7 @@ Item {
         color: Style.raised
         border.color: Style.accent
         Text {
+            textFormat: Text.PlainText
             id: hoverTime
             anchors.centerIn: parent
             text: Style.clock(bar.duration * Math.max(0, Math.min(1, mouse.mouseX / bar.width)))

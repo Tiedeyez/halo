@@ -25,6 +25,7 @@ FocusScope {
                 font.weight: Font.Bold
             }
             Text {
+                textFormat: Text.PlainText
                 Layout.leftMargin: 8
                 Layout.alignment: Qt.AlignBaseline
                 text: albums.query.length ? qsTr("%n matching", "", albums.count) : ""
@@ -143,6 +144,7 @@ FocusScope {
                         }
                     }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         Layout.topMargin: 4
                         text: cell.title
@@ -152,6 +154,7 @@ FocusScope {
                         elide: Text.ElideRight
                     }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: Style.artistName(cell.artist) + (cell.year > 0 ? " · " + cell.year : "")
                         color: Style.muted

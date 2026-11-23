@@ -101,6 +101,7 @@ FocusScope {
                         Layout.fillWidth: true
                         spacing: 4
                         Text {
+                            textFormat: Text.PlainText
                             text: root.smart ? qsTr("Smart playlist") : qsTr("Playlist")
                             color: Style.faint
                             font.pixelSize: Style.fontSmall
@@ -118,6 +119,7 @@ FocusScope {
                             TapHandler { onDoubleTapped: PlaylistUi.rename(root.playlistId) }
                         }
                         Text {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             visible: text.length > 0
                             text: root.info.description || ""
@@ -128,6 +130,7 @@ FocusScope {
                             elide: Text.ElideRight
                         }
                         Text {
+                            textFormat: Text.PlainText
                             text: [qsTr("%n songs", "", root.info.count || 0),
                                    (root.info.duration || 0) > 0 ? Style.hours(root.info.duration) : "",
                                    (root.info.missing || 0) > 0 ? qsTr("%n missing", "", root.info.missing) : ""]
@@ -226,6 +229,7 @@ FocusScope {
                     RowLayout {
                         Layout.fillWidth: true
                         Text {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: root.suggestions.length
                                   ? qsTr("Would fit: close in tempo and loudness, or by artists and genres already here")
@@ -266,8 +270,8 @@ FocusScope {
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: 0
-                                    Text { Layout.fillWidth: true; text: s.modelData.title; color: Style.text; font.pixelSize: Style.fontBody; elide: Text.ElideRight }
-                                    Text { Layout.fillWidth: true; text: Style.artistName(s.modelData.artist); color: Style.muted; font.pixelSize: Style.fontSmall; elide: Text.ElideRight }
+                                    Text { textFormat: Text.PlainText; Layout.fillWidth: true; text: s.modelData.title; color: Style.text; font.pixelSize: Style.fontBody; elide: Text.ElideRight }
+                                    Text { textFormat: Text.PlainText; Layout.fillWidth: true; text: Style.artistName(s.modelData.artist); color: Style.muted; font.pixelSize: Style.fontSmall; elide: Text.ElideRight }
                                 }
                                 IconButton {
                                     glyph: "play"
@@ -289,6 +293,7 @@ FocusScope {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     visible: root.smart
                     width: head.width
                     text: qsTr("Fills itself from your library and keeps up as it changes. Edit the rules to change what's in it.")

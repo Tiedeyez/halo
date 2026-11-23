@@ -293,21 +293,51 @@ std::vector<int> Playlists::evaluate(const Playlist &p, const std::vector<Track>
     return rows;
 }
 
-QString Playlists::m3u8(const Playlist &p, const std::function<const Track *(const QString &)> &track) {
-    QString out = "#EXTM3U\n#PLAYLIST:" + cleanName(p.name) + "\n";
+namespace {
+QString haloLine(const Playlist &p) {
     QJsonObject halo{{"created", p.created}, {"pinned", p.pinned}};
     if (!p.description.isEmpty())
         halo.insert("description", p.description);
-    out += "#HALO:" + QString::fromUtf8(QJsonDocument(halo).toJson(QJsonDocument::Compact)) + "\n";
+    return "#HALO:" + QString::fromUtf8(QJsonDocument(halo).toJson(QJsonDocument::Compact));
+}
+}
+
+QString Playlists::m3u8(const Playlist &p, const std::function<const Track *(const QString &)> &track) {
+    QString out = "#EXTM3U\n#PLAYLIST:" + cleanName(p.name) + "\n" + haloLine(p) + "\n";
+    // Kept lines go back where they were: above their song, or after the
+    // song they followed. Each is written once.
+    QHash<QString, QList<int>> above, below;
+    for (int i = 0; i < int(p.kept.size()); ++i)
+        (p.kept[size_t(i)].before ? above : below)[p.kept[size_t(i)].anchor] << i;
+    std::vector<bool> done(p.kept.size(), false);
+    auto put = [&](const QList<int> &which) {
+        for (int i : which) {
+            if (done[size_t(i)])
+                continue;
+            done[size_t(i)] = true;
+            for (const QString &line : p.kept[size_t(i)].lines)
+                out += line + "\n";
+        }
+    };
+    put(below.value(QString()));
     for (const QString &path : p.paths) {
+        put(above.value(path));
         const Track *t = track ? track(path) : nullptr;
         if (t) {
             QString credit = t->artist.isEmpty() ? t->title : t->artist + " - " + t->title;
             credit.replace('\n', ' ');
             out += QString("#EXTINF:%1,%2\n").arg(qRound(t->duration)).arg(credit);
+        } else if (p.extinf.contains(path)) {
+            out += p.extinf.value(path) + "\n";
         }
-        out += path + "\n";
+        out += p.written.value(path, path) + "\n";
+        put(below.value(path));
     }
+    // A stream whose song was taken out goes to the end; tags that belonged
+    // to a removed song go with it.
+    for (int i = 0; i < int(p.kept.size()); ++i)
+        if (!p.kept[size_t(i)].before)
+            put({i});
     return out;
 }
 
@@ -317,8 +347,15 @@ Playlist Playlists::parseM3u(const QByteArray &data, const QString &baseDir) {
     if (text.startsWith(QChar(0xFEFF)))
         text.remove(0, 1);
     const QStringList lines = text.split('\n');
-    for (QString line : lines) {
-        line = line.trimmed();
+    QStringList pending; // tags since the last entry
+    QSet<QString> seen;
+    auto keepAfterLast = [&p](const QStringList &what) {
+        p.kept.push_back({p.paths.isEmpty() ? QString() : p.paths.last(), false, what});
+    };
+    for (QString raw : lines) {
+        if (raw.endsWith('\r'))
+            raw.chop(1);
+        const QString line = raw.trimmed();
         if (line.isEmpty())
             continue;
         if (line.startsWith('#')) {
@@ -329,28 +366,84 @@ Playlist Playlists::parseM3u(const QByteArray &data, const QString &baseDir) {
                 p.created = qint64(o.value("created").toDouble());
                 p.pinned = o.value("pinned").toBool();
                 p.description = o.value("description").toString().left(2000);
-            }
+            } else if (line != "#EXTM3U")
+                pending << raw;
             continue;
         }
         QString path;
         if (line.startsWith("file://"))
             path = QUrl(line).toLocalFile();
-        else if (line.contains("://"))
-            continue; // a stream: Halo plays files
-        else {
+        else if (!line.contains("://")) {
             path = line;
             if (!path.startsWith('/')) {
                 path.replace('\\', '/');
                 path = QDir(baseDir).absoluteFilePath(path);
             }
         }
-        if (path.isEmpty())
+        // A stream (Halo plays files), or more songs than Halo lists: not
+        // shown, and kept in the file as it is.
+        if (path.isEmpty() || p.paths.size() >= MaxEntries) {
+            pending << raw;
+            keepAfterLast(pending);
+            pending.clear();
             continue;
-        p.paths << QDir::cleanPath(path);
-        if (p.paths.size() >= MaxEntries)
-            break;
+        }
+        path = QDir::cleanPath(path);
+        // Halo writes #EXTINF for songs in the library; other tags stay.
+        QString extinf;
+        for (int i = int(pending.size()) - 1; i >= 0; --i)
+            if (pending[i].trimmed().startsWith("#EXTINF")) {
+                if (extinf.isEmpty())
+                    extinf = pending[i];
+                pending.removeAt(i);
+            }
+        if (seen.contains(path)) {
+            if (!pending.isEmpty())
+                keepAfterLast(pending);
+        } else {
+            seen.insert(path);
+            if (!pending.isEmpty())
+                p.kept.push_back({path, true, pending});
+            if (!extinf.isEmpty())
+                p.extinf.insert(path, extinf);
+            if (line != path)
+                p.written.insert(path, line);
+        }
+        pending.clear();
+        p.paths << path;
     }
+    if (!pending.isEmpty())
+        keepAfterLast(pending);
     return p;
+}
+
+QByteArray Playlists::patchHeader(const QByteArray &data, const Playlist &p, bool name) {
+    static const QByteArray bom("\xEF\xBB\xBF");
+    const bool hasBom = data.startsWith(bom);
+    QList<QByteArray> lines = (hasBom ? data.mid(bom.size()) : data).split('\n');
+    const QByteArray eol = data.contains("\r\n") ? "\r" : "";
+    const QByteArray halo = haloLine(p).toUtf8(), title = "#PLAYLIST:" + cleanName(p.name).toUtf8();
+    int head = -1, titleAt = -1, haloAt = -1;
+    for (int i = 0; i < int(lines.size()); ++i) {
+        const QByteArray t = lines[i].trimmed();
+        const QByteArray end = lines[i].endsWith('\r') ? "\r" : "";
+        if (t.startsWith("#HALO:")) {
+            lines[i] = halo + end;
+            haloAt = i;
+        } else if (t.startsWith("#PLAYLIST:")) {
+            if (name)
+                lines[i] = title + end;
+            titleAt = i;
+        } else if (head < 0 && t == "#EXTM3U") {
+            head = i;
+        }
+    }
+    int at = titleAt >= 0 ? titleAt + 1 : head >= 0 ? head + 1 : 0;
+    if (name && titleAt < 0)
+        lines.insert(at++, title + eol);
+    if (haloAt < 0)
+        lines.insert(at, halo + eol);
+    return (hasBom ? bom : QByteArray()) + lines.join('\n');
 }
 
 // ---- Playlists ----
@@ -475,7 +568,22 @@ bool Playlists::save(Playlist &p) {
     } else {
         data = m3u8(p, [this](const QString &path) { return m_library ? m_library->track(path) : nullptr; }).toUtf8();
     }
-    const QString file = fileOf(p);
+    return write(p, fileOf(p), data);
+}
+
+bool Playlists::saveHeader(Playlist &p, bool name) {
+    // The file as it is now on disk, with those lines changed: a playlist in
+    // this folder can be another player's too, and may hold things Halo
+    // doesn't list.
+    const QString file = m_files.value(p.id);
+    QByteArray data;
+    if (p.smart || file.isEmpty() || !readBounded(file, data))
+        return save(p);
+    p.modified = nowSeconds();
+    return write(p, file, patchHeader(data, p, name));
+}
+
+bool Playlists::write(Playlist &p, const QString &file, const QByteArray &data) {
     m_ownWrite = QDateTime::currentMSecsSinceEpoch();
     if (!writeFile(file, data)) {
         emit message(tr("Couldn't save the playlist “%1”.").arg(p.name));
@@ -669,7 +777,7 @@ bool Playlists::rename(const QString &id, const QString &name) {
     if (clean == p->name)
         return true;
     p->name = clean;
-    return save(*p);
+    return saveHeader(*p, true);
 }
 
 bool Playlists::setDescription(const QString &id, const QString &text) {
@@ -677,7 +785,7 @@ bool Playlists::setDescription(const QString &id, const QString &text) {
     if (!p)
         return false;
     p->description = text.trimmed().left(2000);
-    return save(*p);
+    return saveHeader(*p, false);
 }
 
 bool Playlists::setPinned(const QString &id, bool pinned) {
@@ -685,7 +793,7 @@ bool Playlists::setPinned(const QString &id, bool pinned) {
     if (!p)
         return false;
     p->pinned = pinned;
-    return save(*p);
+    return saveHeader(*p, false);
 }
 
 bool Playlists::remove(const QString &id) {
@@ -932,6 +1040,7 @@ bool Playlists::exportFile(const QString &id, const QString &file) const {
         return false;
     Playlist flat = *p;
     flat.paths = paths(id);
+    flat.written.clear(); // spellings relative to the playlist folder mean nothing elsewhere
     return writeFile(file, m3u8(flat, [this](const QString &path) { return m_library ? m_library->track(path) : nullptr; }).toUtf8());
 }
 

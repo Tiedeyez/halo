@@ -130,6 +130,7 @@ FocusScope {
                         visible: row.current
                     }
                     Text {
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         visible: !row.current
                         text: root.showNumber ? (row.number > 0 ? row.number : "") : row.index + 1
@@ -143,6 +144,7 @@ FocusScope {
                     Layout.preferredWidth: 4
                     spacing: 0
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: row.title
                         color: row.current ? Style.accentText : Style.text
@@ -151,6 +153,7 @@ FocusScope {
                         elide: Text.ElideRight
                     }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: row.missing ? qsTr("Missing: the file was moved or deleted") : Style.artistName(row.artist)
                         color: Style.muted
@@ -159,6 +162,7 @@ FocusScope {
                     }
                 }
                 Text {
+                    textFormat: Text.PlainText
                     visible: root.showAlbum && root.width > 760
                     Layout.fillWidth: true
                     Layout.preferredWidth: 3
@@ -173,12 +177,14 @@ FocusScope {
                     }
                 }
                 Text {
+                    textFormat: Text.PlainText
                     visible: root.showPlays
                     text: qsTr("%n plays", "", row.plays)
                     color: Style.muted
                     font.pixelSize: Style.fontSmall
                 }
                 Text {
+                    textFormat: Text.PlainText
                     Layout.preferredWidth: 52
                     horizontalAlignment: Text.AlignRight
                     text: row.duration > 0 ? Style.clock(row.duration) : ""

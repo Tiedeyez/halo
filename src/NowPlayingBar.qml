@@ -71,6 +71,7 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 2
                 Text {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: player.hasTrack ? Style.mainTitle(player.title) : qsTr("Nothing playing")
                     color: Style.text
@@ -79,6 +80,7 @@ Rectangle {
                     elide: Text.ElideRight
                 }
                 Text {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: player.hasTrack ? Style.artistName(player.artist) : qsTr("Pick an album, or drop music here")
                     color: Style.muted
@@ -99,6 +101,7 @@ Rectangle {
                     elide: Text.ElideRight
                 }
                 Text {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     visible: player.blending || player.blendIn >= 0 && player.blendIn < 30
                     text: player.blending ? qsTr("Blending in")
@@ -154,6 +157,7 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 10
                 Text {
+                    textFormat: Text.PlainText
                     text: Style.clock(player.position)
                     color: Style.muted
                     font.pixelSize: Style.fontSmall
@@ -169,6 +173,7 @@ Rectangle {
                     blendFrom: player.blendIn >= 0 ? player.position + player.blendIn : -1
                 }
                 Text {
+                    textFormat: Text.PlainText
                     text: Style.clock(player.duration)
                     color: Style.muted
                     font.pixelSize: Style.fontSmall

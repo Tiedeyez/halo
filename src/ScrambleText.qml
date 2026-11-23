@@ -5,6 +5,7 @@ import Halo
 // symbols, the way Omarchy's screensaver reveals its logo. Screen readers get
 // the real text at once; with calm on, it just appears.
 Text {
+    textFormat: Text.PlainText
     id: root
     property string target
     property int duration: 420

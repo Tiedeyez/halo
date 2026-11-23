@@ -83,6 +83,7 @@ Rectangle {
                             Layout.fillWidth: true
                             spacing: 14
                             Text {
+                                textFormat: Text.PlainText
                                 Layout.preferredWidth: 150
                                 text: modelData[0]
                                 color: Style.accentText
@@ -90,6 +91,7 @@ Rectangle {
                                 font.family: "monospace"
                             }
                             Text {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 text: modelData[1]
                                 color: Style.text
@@ -101,6 +103,7 @@ Rectangle {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     Layout.topMargin: 12
                     Layout.fillWidth: true
                     text: qsTr("Media keys and every MPRIS bar widget control Halo too. From a terminal: halo --help.")

@@ -35,6 +35,7 @@ ColumnLayout {
         wrapMode: Text.Wrap
     }
     Text {
+        textFormat: Text.PlainText
         Layout.fillWidth: true
         visible: text.length > 0
         text: root.body

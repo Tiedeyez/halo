@@ -2050,6 +2050,268 @@ private slots:
         QCOMPARE(int(Playlists::parseM3u(many, "/").paths.size()), Playlists::MaxEntries);
     }
 
+    // A field with several values (two ARTIST credits on a FLAC): a fix
+    // changes the one it is about, and undo puts back the whole list.
+    void doctorKeepsEveryCreditInAField() {
+        using L = QStringList;
+        QCOMPARE(Doctor::withFirst({"A [x.com]", "B", "C"}, "A"), (L{"A", "B", "C"}));
+        QCOMPARE(Doctor::withFirst({"www.x.com", "B"}, ""), (L{"B"}));
+        QCOMPARE(Doctor::withFirst({}, "A"), (L{"A"}));
+        QCOMPARE(Doctor::withFirst({}, ""), L{});
+
+        QTemporaryDir music, state;
+        const QString song = music.filePath("01 Song.flac");
+        QProcess ff;
+        ff.start("ffmpeg", {"-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=12", "-metadata",
+                            "title=Song", "-metadata", "artist=Tester", "-metadata", "album=Album", "-y", song});
+        QVERIFY(ff.waitForFinished(30000));
+        QCOMPARE(ff.exitCode(), 0);
+        const L credits{"Tester [DatPiff.com]", "Second Credit", "Third Credit"};
+        const L albumCredits{"Various", "Guest"};
+        QVERIFY(Doctor::writeValues(song, "artist", credits));
+        QVERIFY(Doctor::writeValues(song, "albumartist", albumCredits));
+        L got;
+        QVERIFY(Doctor::readValues(song, "artist", got));
+        QCOMPARE(got, credits);
+
+        // Setting one field by hand keeps the rest of its list too.
+        QVERIFY(Doctor::writeField(song, "albumartist", "Various Artists"));
+        QVERIFY(Doctor::readValues(song, "albumartist", got));
+        QCOMPARE(got, (L{"Various Artists", "Guest"}));
+
+        Library library({music.path()}, state.filePath("cache"), state.filePath("state"));
+        library.rescan();
+        QTRY_COMPARE_WITH_TIMEOUT(int(library.tracks().size()), 1, 20000);
+        const QString log = state.filePath("doctor.json");
+        {
+            LibraryDoctor doctor(&library, log);
+            doctor.scan();
+            QTRY_VERIFY_WITH_TIMEOUT(!doctor.scanning(), 20000);
+            QCOMPARE(doctor.fixable(), 1);
+            const QVariantMap f = doctor.findings().first().toMap();
+            QCOMPARE(f.value("field").toString(), QString("artist"));
+            QCOMPARE(f.value("after").toString(), QString("Tester"));
+            QVERIFY(doctor.fix(0));
+            QVERIFY(Doctor::readValues(song, "artist", got));
+            QCOMPARE(got, (L{"Tester", "Second Credit", "Third Credit"}));
+            QVERIFY(Doctor::readValues(song, "albumartist", got));
+            QCOMPARE(got, (L{"Various Artists", "Guest"}));
+        }
+        // After a restart, undo restores every credit.
+        {
+            LibraryDoctor doctor(&library, log);
+            QCOMPARE(doctor.undoable(), 1);
+            QVERIFY(doctor.undoLast());
+            QVERIFY(Doctor::readValues(song, "artist", got));
+            QCOMPARE(got, credits);
+        }
+        // A credit changed by hand after the fix, even a later one, stops the undo.
+        LibraryDoctor doctor(&library, log);
+        doctor.scan();
+        QTRY_VERIFY_WITH_TIMEOUT(!doctor.scanning(), 20000);
+        QVERIFY(doctor.fix(0));
+        QVERIFY(Doctor::writeValues(song, "artist", {"Tester", "Second Credit", "Someone New"}));
+        QVERIFY(!doctor.undoLast());
+        QVERIFY(Doctor::readValues(song, "artist", got));
+        QCOMPARE(got, (L{"Tester", "Second Credit", "Someone New"}));
+    }
+
+    // A playlist another player keeps in the shared folder: radio entries
+    // and that player's tags survive everything Halo does to the file.
+    void sharedPlaylistKeepsWhatHaloDoesNotPlay() {
+        QTemporaryDir music, cache, state, lists;
+        Library library({music.path()}, cache.path(), state.path());
+        QStringList files;
+        scanTones(music.path(), library, 3, files);
+        if (QTest::currentTestFailed()) return;
+        const QString rel = QDir(lists.path()).relativeFilePath(files[1]);
+        const QByteArray original = "#EXTM3U\r\n#EXTINF:-1,Radio One\r\n#EXTVLCOPT:network-caching=1000\r\n"
+                                    "http://radio.example/one\r\n#EXTINF:12,Tone Zero\r\n" + files[0].toUtf8() +
+                                    "\r\n# a note\r\n#EXTGRP:Faves\r\n" + rel.toUtf8() +
+                                    "\r\n#EXTINF:-1,Radio Two\r\nhttps://radio.example/two\r\n";
+        const QString file = lists.filePath("mixed.m3u");
+        {
+            QFile f(file);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write(original);
+        }
+        auto read = [&] {
+            QFile f(file);
+            return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+        };
+        auto without = [](QByteArray data, const QByteArray &prefix) {
+            QList<QByteArray> kept;
+            for (const QByteArray &line : data.split('\n'))
+                if (!line.startsWith(prefix))
+                    kept << line;
+            return kept.join('\n');
+        };
+        Playlists playlists(&library, nullptr, lists.path());
+        QCOMPARE(playlists.paths("mixed"), (QStringList{files[0], files[1]}));
+
+        // Pin, unpin, describe: one line of Halo's is added, nothing else moves.
+        QVERIFY(playlists.setPinned("mixed", true));
+        QVERIFY(read().contains("\n#HALO:{"));
+        QCOMPARE(without(read(), "#HALO:"), original);
+        QVERIFY(playlists.setPinned("mixed", false));
+        QVERIFY(playlists.setDescription("mixed", "For the road"));
+        QCOMPARE(without(read(), "#HALO:"), original);
+        QVERIFY(playlists.rename("mixed", "Mixed Up"));
+        QCOMPARE(without(without(read(), "#HALO:"), "#PLAYLIST:"), original);
+        QVERIFY(read().contains("#PLAYLIST:Mixed Up\r\n"));
+        {
+            Playlists again(&library, nullptr, lists.path());
+            QCOMPARE(again.find("mixed")->name, QString("Mixed Up"));
+            QCOMPARE(again.find("mixed")->description, QString("For the road"));
+            QVERIFY(!again.find("mixed")->pinned);
+            QVERIFY(again.setPinned("mixed", true));
+        }
+
+        // Changing the songs rewrites the list, with the streams, their tags
+        // and the other player's lines still in place.
+        Playlists edited(&library, nullptr, lists.path());
+        QVERIFY(edited.find("mixed")->pinned);
+        QCOMPARE(edited.add("mixed", {files[2]}), 1);
+        QStringList lines = QString::fromUtf8(read()).split('\n', Qt::SkipEmptyParts);
+        auto index = [&](const QString &line) { return int(lines.indexOf(line)); };
+        QVERIFY(index("http://radio.example/one") > 0);
+        QCOMPARE(lines.value(index("http://radio.example/one") - 1), QString("#EXTVLCOPT:network-caching=1000"));
+        QCOMPARE(lines.value(index("http://radio.example/one") - 2), QString("#EXTINF:-1,Radio One"));
+        QVERIFY(index("http://radio.example/one") < index(files[0]));
+        QVERIFY(index(files[0]) < index("# a note"));
+        QCOMPARE(index("#EXTGRP:Faves"), index("# a note") + 1);
+        QVERIFY(index(rel) > index("#EXTGRP:Faves")); // spelt as the file had it
+        QCOMPARE(lines.value(index("https://radio.example/two") - 1), QString("#EXTINF:-1,Radio Two"));
+        QVERIFY(index(rel) < index("https://radio.example/two"));
+        QVERIFY(index("https://radio.example/two") < index(files[2]));
+
+        // Taking out the song a stream followed keeps the stream.
+        QVERIFY(edited.move("mixed", 0, 1));
+        QVERIFY(edited.removeRows("mixed", {0, 1}));
+        const QString text = QString::fromUtf8(read());
+        QVERIFY(text.contains("#EXTINF:-1,Radio One\n#EXTVLCOPT:network-caching=1000\nhttp://radio.example/one\n"));
+        QVERIFY(text.contains("#EXTINF:-1,Radio Two\nhttps://radio.example/two\n"));
+        QVERIFY(!text.contains("#EXTGRP")); // that tag belonged to a removed song
+        Playlists last(&library, nullptr, lists.path());
+        QCOMPARE(last.paths("mixed"), (QStringList{files[2]}));
+        QCOMPARE(int(last.find("mixed")->kept.size()), 2);
+    }
+
+    void playlistHeaderPatchKeepsEveryOtherByte() {
+        Playlist p;
+        p.name = "New Name";
+        p.created = 5;
+        p.pinned = true;
+        const QByteArray halo = "#HALO:{\"created\":5,\"pinned\":true}";
+        // No header at all, no final newline, not UTF-8.
+        QCOMPARE(Playlists::patchHeader("caf\xE9.mp3\nhttp://x/y", p, false), halo + "\ncaf\xE9.mp3\nhttp://x/y");
+        QCOMPARE(Playlists::patchHeader("", p, true), QByteArray("#PLAYLIST:New Name\n") + halo + "\n");
+        // A BOM and CRLF stay; existing lines are replaced where they are.
+        QCOMPARE(Playlists::patchHeader("\xEF\xBB\xBF#EXTM3U\r\n#PLAYLIST:Old\r\n#HALO:{}\r\na.mp3\r\n", p, true),
+                 QByteArray("\xEF\xBB\xBF#EXTM3U\r\n#PLAYLIST:New Name\r\n") + halo + "\r\na.mp3\r\n");
+        QCOMPARE(Playlists::patchHeader("#EXTM3U\r\n#PLAYLIST:Old\r\na.mp3\r\n", p, false),
+                 QByteArray("#EXTM3U\r\n#PLAYLIST:Old\r\n") + halo + "\r\na.mp3\r\n");
+        // More entries than Halo lists stay in the file through a rewrite.
+        QByteArray many = "#EXTM3U\n";
+        for (int i = 0; i < Playlists::MaxEntries + 5; ++i)
+            many += "/m/" + QByteArray::number(i) + ".mp3\n";
+        const Playlist big = Playlists::parseM3u(many, "/");
+        QCOMPARE(int(big.paths.size()), Playlists::MaxEntries);
+        const QString again = Playlists::m3u8(big, nullptr);
+        QVERIFY(again.endsWith(QString("/m/%1.mp3\n").arg(Playlists::MaxEntries + 4)));
+        QCOMPARE(int(again.count('\n')), Playlists::MaxEntries + 5 + 3);
+    }
+
+    // Text from tags, file names and playlists is shown as written: markup
+    // in it is never interpreted, so it can't fetch an image from somewhere.
+    void tagTextIsNeverMarkup() {
+        QDir src(QFileInfo(QFINDTESTDATA("../src/Style.qml")).absolutePath());
+        QStringList files;
+        for (const QString &name : src.entryList({"*.qml"}, QDir::Files))
+            files << src.filePath(name);
+        files << QFINDTESTDATA("../plugin/HaloWidget.qml");
+        QVERIFY(files.size() > 40);
+        const QRegularExpression opens("^\\s*(?:[A-Za-z_][\\w.]*:\\s*)?(?:Text|Label|TextEdit|TextArea) \\{");
+        int checked = 0;
+        for (const QString &path : files) {
+            QFile f(path);
+            QVERIFY(f.open(QIODevice::ReadOnly));
+            const QStringList lines = QString::fromUtf8(f.readAll()).split('\n');
+            for (int i = 0; i < lines.size(); ++i) {
+                if (!opens.match(lines[i]).hasMatch())
+                    continue;
+                QString body;
+                int depth = 0;
+                for (int j = i; j < lines.size(); ++j) {
+                    body += lines[j] + "\n";
+                    depth += int(lines[j].count('{')) - int(lines[j].count('}'));
+                    if (depth <= 0)
+                        break;
+                }
+                ++checked;
+                QVERIFY2(body.contains("textFormat: Text.PlainText"),
+                         qPrintable(QString("%1:%2 has no textFormat: Text.PlainText").arg(path).arg(i + 1)));
+            }
+        }
+        QVERIFY(checked > 100);
+
+        // A stock menu item or tooltip would read markup, so the two places
+        // a tag or a playlist's name reaches one are made plain.
+        auto source = [](const QString &name) {
+            QFile f(QFINDTESTDATA("../src/" + name));
+            return f.open(QIODevice::ReadOnly) ? QString::fromUtf8(f.readAll()) : QString();
+        };
+        QVERIFY(source("AddToPlaylistMenu.qml").contains(QRegularExpression("contentItem: Text \\{\\s+textFormat: Text.PlainText")));
+        QVERIFY(source("Main.qml").contains("ToolTip.toolTip.contentItem.textFormat = Text.PlainText"));
+
+        // Shown for real: nothing asks a server for the image in the text.
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        const QString markup = QString("<b>x</b><img src=\"http://127.0.0.1:%1/x.png\">").arg(server.serverPort());
+        QQuickView view;
+        view.rootContext()->setContextProperty("markup", markup);
+        QQmlComponent component(view.engine());
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            Column {
+                id: root
+                width: 400; height: 300
+                property alias probe: probe
+                property string tipFormat: ""
+                Text { textFormat: Text.PlainText; text: markup }
+                TextField { text: markup }
+                MenuItem {
+                    id: item
+                    text: markup
+                    contentItem: Text { textFormat: Text.PlainText; text: item.text }
+                }
+                Rectangle {
+                    id: tipped
+                    width: 20; height: 20
+                    ToolTip.text: markup
+                    Component.onCompleted: {
+                        tipped.ToolTip.toolTip.contentItem.textFormat = Text.PlainText
+                        ToolTip.visible = true
+                        root.tipFormat = tipped.ToolTip.toolTip.contentItem.textFormat === Text.PlainText ? "plain" : "other"
+                    }
+                }
+                Loader { id: probe; active: false; sourceComponent: Text { text: markup } }
+            }
+        )", QUrl::fromLocalFile(QFINDTESTDATA("../src/Main.qml")));
+        QScopedPointer<QQuickItem> root(qobject_cast<QQuickItem *>(component.create(view.rootContext())));
+        QVERIFY2(root, qPrintable(component.errorString()));
+        root->setParentItem(view.contentItem());
+        view.resize(400, 300);
+        view.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&view));
+        QCOMPARE(root->property("tipFormat").toString(), QString("plain"));
+        QVERIFY(!server.waitForNewConnection(700));
+        // The probe works: text left to guess its format does fetch.
+        root->property("probe").value<QObject *>()->setProperty("active", true);
+        QVERIFY(server.waitForNewConnection(5000));
+    }
+
     void smartPlaylistRules() {
         auto track = [](const QString &title, const QString &artist, const QString &album, int year, int number,
                         qint64 mtime, const QString &albumArtist = {}) {

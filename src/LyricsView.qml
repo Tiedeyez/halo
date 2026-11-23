@@ -238,6 +238,7 @@ Item {
         spacing: 14
         visible: player.hasTrack && lyrics.status === Lyrics.Found
         Text {
+            textFormat: Text.PlainText
             text: {
                 const from = lyrics.source === "file" ? qsTr(".lrc file") : lyrics.source === "tags" ? qsTr("song tags") : "LRCLIB"
                 const timing = lyrics.kind === Lyrics.KindWords ? qsTr("timed by word")
@@ -251,6 +252,7 @@ Item {
             font.letterSpacing: 1
         }
         Text {
+            textFormat: Text.PlainText
             visible: Math.abs(lyrics.offset) > 0.001
             text: (lyrics.offset > 0 ? "+" : "") + lyrics.offset.toLocaleString(Qt.locale(translator.language), 'f', 2) + " s"
             color: Style.accentText
@@ -259,6 +261,7 @@ Item {
         }
         Item { Layout.fillWidth: true }
         Text {
+            textFormat: Text.PlainText
             visible: root.synced
             text: qsTr(", . earlier or later")
             color: Style.faint
