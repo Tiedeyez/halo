@@ -1,6 +1,6 @@
 # Halo
 
-![Halo playing a song inside its halo, with two saved moments on the seek bar](docs/screenshot.png)
+![Halo playing a song, the Halo visual filling the window: a ring of light with beams above and below](docs/screenshot.png)
 
 A music player for Omarchy. Halo plays the music on your disk, analyses
 every song once for its tempo and loudness, and uses that to play your
@@ -160,7 +160,9 @@ checked against the source.
   `halo analyze <file> --json` and more; `halo skill install` teaches coding
   agents how.
 
-![The album grid](docs/albums.png)
+![The album grid, with a song playing and the water behind it](docs/albums.png)
+
+![The Turntable visual: a record player seen face up, the album cover spinning as its label](docs/turntable.png)
 
 ## Your music
 
