@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "tiedeyez.halo",
   "name": "Halo Player",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Tiedeyez",
   "license": "MIT",
   "description": "Halo in your bar: the song playing in the native Halo music player, with play/pause, next and previous, and a click that brings the Halo window up. The widget only runs the installed /usr/bin/halo command (status, toggle, next, previous, open); it writes no files, edits no configuration and opens no network connection. Needs the Halo app, installed from this repository.",

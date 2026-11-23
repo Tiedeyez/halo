@@ -401,7 +401,7 @@ int pickSearchResult(const QList<QJsonObject> &results, const LyricsQuery &query
 
 namespace {
 
-const char *UserAgent = "Halo/1.0.0 (Omarchy music player)";
+const char *UserAgent = "Halo/1.0.1 (Omarchy music player)";
 constexpr qint64 MissRecheckSeconds = 7 * 24 * 3600;
 
 QString kindName(int kind) {
