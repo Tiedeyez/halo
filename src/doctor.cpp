@@ -1,5 +1,6 @@
 #include "doctor.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -850,6 +851,13 @@ QStringList distinct(const QStringList &values) {
     return out;
 }
 
+QString cleanAnswer(const QString &value) {
+    QString answer;
+    for (const QChar c : value)
+        answer += c.category() == QChar::Other_Control ? QChar(' ') : c;
+    return answer.simplified().left(200);
+}
+
 bool writeField(const QString &path, const QString &field, const QString &value) {
     QStringList values;
     return readValues(path, field, values) && writeValues(path, field, withFirst(values, value));
@@ -1020,6 +1028,7 @@ bool LibraryDoctor::apply(const Finding &f) {
 bool LibraryDoctor::fix(int index) {
     if (index < 0 || index >= int(m_findings.size()))
         return false;
+    refreshLog();
     ++m_batch;
     const bool ok = apply(m_findings[size_t(index)]);
     if (ok) {
@@ -1043,6 +1052,7 @@ void LibraryDoctor::finishBatch(int done) {
 }
 
 int LibraryDoctor::fixAll(const QString &kind) {
+    refreshLog();
     ++m_batch;
     int done = 0;
     for (int i = int(m_findings.size()) - 1; i >= 0; --i)
@@ -1056,6 +1066,7 @@ int LibraryDoctor::fixAll(const QString &kind) {
 }
 
 int LibraryDoctor::fixGroup(const QString &kind, const QString &folder) {
+    refreshLog();
     ++m_batch;
     int done = 0;
     for (int i = int(m_findings.size()) - 1; i >= 0; --i) {
@@ -1070,13 +1081,10 @@ int LibraryDoctor::fixGroup(const QString &kind, const QString &folder) {
 }
 
 int LibraryDoctor::setGroup(const QString &kind, const QString &folder, const QString &value) {
-    // One line of ordinary text, no longer than a tag reasonably is.
-    QString answer;
-    for (const QChar c : value)
-        answer += c.category() == QChar::Other_Control ? QChar(' ') : c;
-    answer = answer.simplified().left(MaxAnswer);
+    const QString answer = cleanAnswer(value);
     if (answer.isEmpty())
         return 0;
+    refreshLog();
     ++m_batch;
     int done = 0;
     for (int i = int(m_findings.size()) - 1; i >= 0; --i) {
@@ -1096,6 +1104,7 @@ int LibraryDoctor::setGroup(const QString &kind, const QString &folder, const QS
 }
 
 bool LibraryDoctor::undoLast() {
+    refreshLog();
     if (m_log.empty())
         return false;
     // Everything the last press wrote, newest first.
@@ -1132,7 +1141,85 @@ bool LibraryDoctor::undoLast() {
     return left == 0;
 }
 
+namespace {
+// Changes whenever the log file does.
+QString stampOf(const QString &file) {
+    const QFileInfo info(file);
+    return info.exists() ? QString::number(info.size()) + "/" + QString::number(info.lastModified().toMSecsSinceEpoch())
+                         : QString();
+}
+}
+
+void LibraryDoctor::refreshLog() {
+    if (stampOf(m_logFile) != m_logStamp) {
+        loadLog();
+        emit changed();
+    }
+}
+
+void LibraryDoctor::diagnoseFiles(const QStringList &paths, const QStringList &roots) {
+    std::vector<File> files;
+    files.reserve(size_t(paths.size()));
+    for (const QString &p : paths) {
+        File f{p, {}};
+        if (readTags(p, f.tags))
+            files.push_back(f);
+    }
+    m_findings = diagnose(files, roots);
+    changedFindings();
+}
+
+int LibraryDoctor::fixCertain(const QString &kind) {
+    refreshLog();
+    ++m_batch;
+    int done = 0;
+    for (int i = int(m_findings.size()) - 1; i >= 0; --i)
+        if (m_findings[size_t(i)].sure && (kind.isEmpty() || kindName(m_findings[size_t(i)].kind) == kind)
+            && apply(m_findings[size_t(i)])) {
+            m_findings.erase(m_findings.begin() + i);
+            ++done;
+        }
+    finishBatch(done);
+    return done;
+}
+
+int LibraryDoctor::applyAnswers(const QList<Answer> &answers) {
+    refreshLog();
+    ++m_batch;
+    int done = 0;
+    static const QStringList fields{"title", "artist", "album", "albumartist", "comment", "tracknumber"};
+    static const QStringList clearable{"album", "albumartist", "comment"};
+    for (const Answer &a : answers) {
+        const QString name = QFileInfo(a.path).fileName();
+        const QString value = cleanAnswer(a.value);
+        static const QRegularExpression number("^[1-9][0-9]{0,2}$");
+        if (!fields.contains(a.field)) {
+            emit message(tr("%1: Halo doesn't write a field called %2.").arg(name, a.field));
+            continue;
+        }
+        if (a.field == "tracknumber" ? !number.match(value).hasMatch() : (value.isEmpty() && !clearable.contains(a.field))) {
+            emit message(tr("%1: that isn't a value for %2.").arg(name, a.field));
+            continue;
+        }
+        Tags now;
+        if (!readTags(a.path, now)) {
+            emit message(tr("Couldn't read %1.").arg(name));
+            continue;
+        }
+        if (field(now, a.field) == value) {
+            emit message(tr("%1 already says that.").arg(name));
+            continue;
+        }
+        if (apply({Kind::Watermark, a.path, {}, a.field, field(now, a.field), value}))
+            ++done;
+    }
+    finishBatch(done);
+    return done;
+}
+
 void LibraryDoctor::loadLog() {
+    m_log.clear();
+    m_logStamp = stampOf(m_logFile);
     QFile f(m_logFile);
     if (!f.open(QIODevice::ReadOnly))
         return;
@@ -1185,4 +1272,5 @@ void LibraryDoctor::saveLog() const {
     }
     f.write(QJsonDocument(QJsonObject{{"fixes", fixes}}).toJson());
     f.commit();
+    m_logStamp = stampOf(m_logFile);
 }

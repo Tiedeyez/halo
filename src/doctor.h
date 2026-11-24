@@ -82,6 +82,9 @@ QStringList distinct(const QStringList &values);
 // be written.
 bool writeField(const QString &path, const QString &field, const QString &value);
 QString field(const Tags &tags, const QString &name);
+// An answer someone typed, or an agent sent, as one line of ordinary text
+// no longer than a tag reasonably is; empty if nothing is left.
+QString cleanAnswer(const QString &value);
 
 }
 
@@ -125,6 +128,23 @@ public:
     // changed since and was left alone.
     Q_INVOKABLE bool undoLast();
 
+    // For the command line and for agents: the same checks and the same
+    // guarded, logged writes, with no window and no Library. Reads every
+    // file's tags now, on the calling thread.
+    void diagnoseFiles(const QStringList &paths, const QStringList &roots);
+    const std::vector<Doctor::Finding> &found() const { return m_findings; }
+    // Every certain fix, of one kind or (empty) of every kind: one undo.
+    int fixCertain(const QString &kind);
+    // Answers from outside the Doctor's own proposals: this value in this
+    // field of this file. Fields: title, artist, album, albumartist,
+    // comment, tracknumber (1 to 999). An empty value clears album,
+    // albumartist or comment. All of them are one undo. Refusals are said
+    // through message().
+    struct Answer {
+        QString path, field, value;
+    };
+    int applyAnswers(const QList<Answer> &answers);
+
 signals:
     void changed();
     void message(const QString &text);
@@ -143,6 +163,10 @@ private:
         QStringList beforeAll, afterAll;
         qint64 batch = 0;   // fixes written by one press share a number; 0: on its own
     };
+    // The log as it is on disk now: another Halo (the window, or a
+    // command) may have written fixes since this one last looked.
+    void refreshLog();
+    mutable QString m_logStamp;
     void changedFindings();
     void finishBatch(int done);
     qint64 m_batch = 0;
@@ -154,5 +178,4 @@ private:
     // read past this size. 50,000 fixes of ordinary tags is about 15 MiB.
     static constexpr size_t MaxLogEntries = 50000;
     static constexpr qint64 MaxLogBytes = 64 * 1024 * 1024;
-    static constexpr int MaxAnswer = 200; // a typed answer's longest length
 };

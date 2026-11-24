@@ -22,7 +22,7 @@ program. It talks to PipeWire through Qt to play sound.
 | `~/.config/halo/folders` | Your music folders, one per line: exactly the ones ticked in the setup | Only when you press Next on the setup's folders step |
 | `~/.local/state/halo/stats.json` | Play counts and last-played times per file | After you hear half a song |
 | `~/.local/state/halo/headphones.json` | Outputs you turned headphone correction off for, by name | When you turn it off or on |
-| Your music files' tags (title, artist, album, album artist, comment, track number) | The fix shown in the Library Doctor, or the answer you typed there for a folder | Only when you press Fix, Fix all, Fix these, Write (after Type the answer) or U (undo) there |
+| Your music files' tags (title, artist, album, album artist, comment, track number) | The fix shown in the Library Doctor, or the answer you typed there for a folder | Only when you press Fix, Fix all, Fix these, Write (after Type the answer) or U (undo) there, or when `halo doctor fix`, `set`, `apply` or `undo` is run |
 | `~/.local/state/halo/doctor.json` | Each Library Doctor fix: the file, the field, and the old and new value, so it can be undone. The newest 50,000 fixes are kept | When you fix or undo |
 | `~/.local/state/halo/doctor.json.unreadable` | The Library Doctor log itself, renamed, if Halo could not read it (damaged, or over 64 MiB). Halo sets it aside and starts a new log; it never cuts the old one short or writes over it | At start, only in that case |
 | `~/.cache/halo/library.json` | The list of music files with their tags and durations | After each library scan |
@@ -46,8 +46,12 @@ start, and anything an older build left readable is set back to `0700` /
 `0600`. Only your own regular files and folders are changed; symbolic links
 are never followed.
 
-**Halo never writes, moves or deletes a music file**, and never edits your
-Omarchy or Hyprland configuration.
+**Halo never moves, renames or deletes a music file.** It changes one only
+through the Library Doctor, and only its tags: a fix you press in the
+window, or a `halo doctor fix`, `set` or `apply` command that you or a
+coding agent working for you runs. Those commands write only to songs in
+your music folders, refuse any other path, and log every write to the same
+undo log. Halo never edits your Omarchy or Hyprland configuration.
 
 ## What it reads
 
@@ -58,6 +62,8 @@ Omarchy or Hyprland configuration.
   embedded covers through TagLib, and their audio through ffmpeg. Image
   files in those folders, for covers. Files named `.haloignore` or
   `.nomedia`, to skip a folder.
+- The answers file you name in `halo doctor apply <file>`: read once, up to
+  8 MiB, as a JSON list of tag values. Nothing in it is run.
 - For the song playing: a `.lrc` file beside it with the same name, and
   lyrics in its tags, for the lyrics view.
 - `~/.local/state/omarchy/current/theme/colors.toml` for the accent colour

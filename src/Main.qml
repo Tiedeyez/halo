@@ -501,7 +501,7 @@ ApplicationWindow {
                                 Layout.bottomMargin: 12
                                 Layout.fillWidth: true
                                 wrapMode: Text.Wrap
-                                text: qsTr("Checks your songs' tags on this computer and proposes fixes from the tags, file names and folders. Fix all writes only the fixes that are certain; the rest are for you to check, one song or one folder at a time, or to answer yourself. Nothing is written until you say so, and U undoes the last thing you did. Duplicates are only pointed out.")
+                                text: qsTr("Checks your songs' tags on this computer and proposes fixes from the tags, file names and folders. Fix all writes only the fixes that are certain; the rest are for you to check, one song or one folder at a time, or to answer yourself. Nothing is written until you say so, and U undoes the last thing you did. Duplicates are only pointed out. A coding agent can answer what is left: run halo skill install once, then ask it to fix your music library.")
                                 color: Style.faint
                                 font.pixelSize: Style.fontSmall
                             }

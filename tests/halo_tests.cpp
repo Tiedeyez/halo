@@ -1188,6 +1188,76 @@ private slots:
         QCOMPARE(t.album, QString());
     }
 
+    // What `halo doctor` and an agent use: the same checks and guarded
+    // writes with no window, sharing one undo log with the window.
+    void doctorWorksWithoutAWindow() {
+        QTemporaryDir music, state;
+        QVERIFY(QDir(music.path()).mkpath("Some Tape"));
+        QStringList songs;
+        for (int i = 1; i <= 3; ++i) {
+            const QString song = music.filePath(QString("Some Tape/0%1 Song %1.mp3").arg(i));
+            QProcess ff;
+            ff.start("ffmpeg", {"-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=12",
+                                "-metadata", QString("title=Song %1 (Official Video)").arg(i), "-y", song});
+            QVERIFY(ff.waitForFinished(30000));
+            QCOMPARE(ff.exitCode(), 0);
+            songs << song;
+        }
+        const QString log = state.filePath("doctor.json");
+        LibraryDoctor window(nullptr, log); // stands for the open window
+        LibraryDoctor command(nullptr, log);
+        command.diagnoseFiles(songs, {music.path()});
+        QVERIFY(command.found().size() >= 9);
+        // Certain fixes of every kind: the labels and the track numbers.
+        QCOMPARE(command.fixCertain({}), 6);
+        Doctor::Tags t;
+        QVERIFY(Doctor::readTags(songs[0], t));
+        QCOMPARE(t.title, QString("Song 1"));
+        QCOMPARE(t.number, 1);
+        QCOMPARE(t.artist, QString());
+        // An agent's answers: good ones are written, the rest refused and said.
+        QSignalSpy said(&command, &LibraryDoctor::message);
+        QCOMPARE(command.applyAnswers({{songs[0], "artist", "Drake"},
+                                       {songs[1], "artist", " Drake\n & Lil Wayne "},
+                                       {songs[2], "artist", ""},
+                                       {songs[2], "tracknumber", "0"},
+                                       {songs[2], "tracknumber", "12"},
+                                       {songs[2], "genre", "Rap"},
+                                       {songs[2], "title", "Song 3"},
+                                       {music.filePath("missing.mp3"), "artist", "Nobody"}}),
+                 3);
+        QCOMPARE(said.count(), 6); // five refusals and the summary
+        QVERIFY(Doctor::readTags(songs[1], t));
+        QCOMPARE(t.artist, QString("Drake & Lil Wayne"));
+        QVERIFY(Doctor::readTags(songs[2], t));
+        QCOMPARE(t.number, 12);
+        QCOMPARE(t.artist, QString());
+        // An empty value clears an album, never a title.
+        QCOMPARE(command.applyAnswers({{songs[0], "album", "Wrong"}}), 1);
+        QCOMPARE(command.applyAnswers({{songs[0], "album", ""}, {songs[0], "title", ""}}), 1);
+        QVERIFY(Doctor::readTags(songs[0], t));
+        QCOMPARE(t.album, QString());
+        QCOMPARE(t.title, QString("Song 1"));
+        // The window undoes what the command wrote: one log, read afresh.
+        QCOMPARE(window.undoable(), 0);
+        QVERIFY(window.undoLast()); // the cleared album
+        QVERIFY(Doctor::readTags(songs[0], t));
+        QCOMPARE(t.album, QString("Wrong"));
+        QVERIFY(window.undoLast()); // the album
+        QVERIFY(window.undoLast()); // the three answers, whole
+        QVERIFY(Doctor::readTags(songs[1], t));
+        QCOMPARE(t.artist, QString());
+        QVERIFY(Doctor::readTags(songs[2], t));
+        QCOMPARE(t.number, 3);
+        // ...and the command sees that the window did.
+        QCOMPARE(window.undoable(), 6);
+        QVERIFY(command.undoLast()); // the six certain fixes
+        QCOMPARE(command.undoable(), 0);
+        QVERIFY(Doctor::readTags(songs[0], t));
+        QCOMPARE(t.title, QString("Song 1 (Official Video)"));
+        QCOMPARE(t.number, 0);
+    }
+
     void doctorKeepsAnUnreadableLog() {
         QTemporaryDir state;
         const QString log = state.filePath("doctor.json");

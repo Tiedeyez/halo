@@ -7,6 +7,17 @@ notes on its GitHub release page as well.
 
 Library Doctor, made to hold up on a badly kept library.
 
+- **`halo doctor`, for the terminal and for your agent.** `halo doctor`
+  sums up what is wrong, `list` shows the findings with each file's tags
+  (`--json` for an agent), `fix` writes the certain fixes, `set` and `apply`
+  write answers from outside (one tag, or a JSON list undone together), and
+  `undo` takes the last of them back. No window is needed, nothing touches
+  the network, only songs in your music folders can be written, and every
+  write goes through the same checks and undo log as the window. The skill
+  (`halo skill install`) now teaches a coding agent to finish a library the
+  Doctor couldn't: answer what it recognises, leave the rest, say what it
+  changed.
+
 - **A pile of loose songs is not an album.** The music folder itself, a
   folder such as Downloads, and a large folder whose songs are neither
   numbered in turn nor agreed on an album are no longer offered the

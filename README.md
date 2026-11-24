@@ -238,8 +238,23 @@ halo lyrics online on           # look lyrics up on lrclib.net (off by default)
 halo lyrics offset +0.3         # this song's lyrics 0.3 s earlier
 halo analyze track.mp3 --json   # tempo, loudness, where the music starts and stops
 halo scan                       # what is in your music folders, no window needed
+halo doctor                     # what is wrong with your tags, by kind
+halo doctor fix                 # write the fixes that are certain
+halo doctor list noartist       # what is left, with each file's tags
+halo doctor set song.mp3 artist "Drake"
+halo doctor apply answers.json  # many tags at once, undone together
+halo doctor undo                # take back the last fix, set or apply
 halo skill install              # a skill for coding agents
 ```
+
+**Let your agent finish the job.** Omarchy is agent-first, and so is the
+Library Doctor. Halo fixes what it can work out from the tags, file names
+and folders, with no network. What is left usually needs someone who knows
+the music, and a coding agent does: after `halo skill install`, ask yours
+to "fix my music library". It reads `halo doctor list --json`, answers what
+it recognises through `halo doctor apply`, and leaves the rest. Every tag
+it writes goes through the same checks and the same undo log as the
+window, so `halo doctor undo` (or U in the Doctor) takes it back.
 
 Every command takes `--json` and exits 0 on success or 1 with the error on
 stderr.
@@ -301,7 +316,8 @@ Halo Player in the Omarchy Marketplace (or delete
 `~/.config/omarchy/plugins/tiedeyez.halo`). It keeps no files of its own.
 
 Halo never edits your music files except through Library Doctor fixes you
-press (each one undoable while Halo is installed), and never changes Omarchy
+press or `halo doctor` commands you or your agent run (each one undoable
+while Halo is installed), and never changes Omarchy
 or Hyprland settings, so nothing else needs undoing. If you made Halo your
 default player for audio files, pick another in your file manager or remove
 the `halo.desktop` lines from `~/.config/mimeapps.list`.

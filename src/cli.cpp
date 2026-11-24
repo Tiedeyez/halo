@@ -8,11 +8,13 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSaveFile>
+#include <QSet>
 #include <QTextStream>
 #include <cmath>
 #include <cstdio>
 
 #include "analysis.h"
+#include "doctor.h"
 #include "library.h"
 #include "remote.h"
 
@@ -66,6 +68,19 @@ Playlists (files in ~/.local/share/halo/playlists, readable by any player):
   playlist rename <name> <new> | delete <name> | restore
   playlist import <file.m3u8> | export <name> <file.m3u8>
 
+Library Doctor (needs no running Halo; every write is logged and can be undone):
+  doctor [--json]              What is wrong with the library's tags, by kind
+  doctor list [kind] [--folder <dir>] [--limit N] [--json]
+                               The findings, each with the file's tags, the
+                               proposed fix if there is one, and how sure it is
+  doctor fix [kind]            Write the fixes that are certain
+  doctor set <file> <field> <value>
+                               Write one tag. Fields: title artist album
+                               albumartist comment tracknumber
+  doctor apply <answers.json>  Write many: [{"path":..,"field":..,"value":..}],
+                               undone together
+  doctor undo                  Take back the last fix, set or apply, whole
+
 Commands that need no running Halo:
   scan [--json]                Scan the music folders and report what's there
   analyze <file> [--json]      Tempo, loudness and silent edges of a track
@@ -83,9 +98,11 @@ description: |
   playing, play/pause/skip, queue songs or folders, playlists (make, add to,
   smart rules, suggestions), set volume, Blend
   (beat-aware crossfades), Drift (keeps playing similar music from the
-  library), moments, the sleep timer, live lyrics, and track analysis
-  (tempo, loudness). Use when asked to play, queue, pause or skip music,
-  what song is on, or what the words are.
+  library), moments, the sleep timer, live lyrics, track analysis
+  (tempo, loudness), and the Library Doctor (find and fix wrong or missing
+  tags: artist, title, album, track numbers). Use when asked to play, queue,
+  pause or skip music, what song is on, what the words are, or to clean up,
+  tag, organise or fix a music library.
 ---
 
 # Halo
@@ -120,9 +137,49 @@ Online lyrics (lrclib.net) is off unless the user turned it on; it sends the
 title, artist, album and length of each song played. Don't switch it on
 (`halo lyrics online on`) without the user asking.
 
+## Fixing a library's tags
+
+The Library Doctor finds wrong and missing tags and fixes what it can work
+out from the tags, file names and folders. What it can't work out is left
+for the person, or for you: you often know whose song a title is. It needs
+no running Halo, and never touches the network.
+
+```sh
+halo doctor --json                       # {"kinds":{"noartist":{"count":127,"certain":0},..}}
+halo doctor fix                          # write every certain fix (safe to run first)
+halo doctor list noartist --json         # what is left, with each file's tags
+halo doctor list --folder ~/Music/Tape --json
+halo doctor set song.mp3 artist "Drake"  # one tag
+halo doctor apply answers.json           # many, undone together
+halo doctor undo                         # take back the last fix, set or apply
+```
+
+Kinds: watermark labels numbered notitle noartist noalbum nonumber spelling
+album albumartist case duplicate. A finding has `path`, `field`, `before`,
+`after` (the Doctor's proposal, empty when it has none), `certain`, `why`
+(where the proposal comes from) and `tags` (what the file says now).
+answers.json is `[{"path": "/abs/song.mp3", "field": "artist", "value": "Drake"}]`;
+fields are title, artist, album, albumartist, comment, tracknumber. An empty
+value clears album, albumartist or comment.
+
+How to work:
+- Run `halo doctor fix` first, then read what is left a kind or a folder at
+  a time. Proposals that aren't certain say why; check them against the
+  file's name, its folder and its neighbours before accepting them.
+- Answer only what you know: a song you recognise, a tape whose track list
+  you can find. Leave the rest for the person and say which you left. A
+  wrong tag is worse than a missing one.
+- Before writing more than a handful of tags, tell the person what you are
+  about to change and where. Afterwards say how many tags you wrote and that
+  `halo doctor undo` (or U in Halo's Library Doctor) takes them back.
+- Only files in Halo's music folders can be written. Halo never deletes,
+  moves or renames a music file; duplicates are only pointed out.
+
 Music lives in ~/Music (more folders, one per line, in ~/.config/halo/folders).
-Halo never edits or moves music files. State is in ~/.local/state/halo and
-caches (covers, analysis, library index) in ~/.cache/halo.
+Halo changes a music file only through the Library Doctor: a fix someone
+pressed in the window, or a `halo doctor` command. It never moves or deletes
+one. State is in ~/.local/state/halo (the Doctor's undo log is doctor.json
+there) and caches (covers, analysis, library index) in ~/.cache/halo.
 )";
 
 QTextStream &out() {
@@ -338,6 +395,189 @@ int analyze(const QStringList &args, bool json) {
     return 0;
 }
 
+// `halo doctor ...`: the Library Doctor without a window, for the terminal
+// and for agents. The same checks, the same guarded writes and the same
+// undo log as the Doctor page.
+int doctor(QStringList args, bool json) {
+    const QString sub = args.isEmpty() ? QString("summary") : args.takeFirst();
+    QString folder;
+    int limit = -1;
+    for (int i = 0; i < args.size();) {
+        if ((args[i] == "--folder" || args[i] == "--limit") && i + 1 < args.size()) {
+            if (args[i] == "--folder")
+                folder = QDir::cleanPath(QFileInfo(args[i + 1]).absoluteFilePath());
+            else
+                limit = std::max(0, args[i + 1].toInt());
+            args.remove(i, 2);
+        } else {
+            ++i;
+        }
+    }
+    static const QStringList kinds{"watermark", "labels", "numbered", "notitle", "noartist", "noalbum", "nonumber",
+                                   "spelling", "album", "albumartist", "case", "duplicate"};
+    static const QStringList subs{"summary", "list", "fix", "set", "apply", "undo"};
+    const char *usage = "usage: halo doctor [list [kind] [--folder <dir>] [--limit N] | fix [kind] | "
+                        "set <file> <field> <value> | apply <answers.json> | undo] [--json]";
+    if (!subs.contains(sub) || (sub == "set" && args.size() != 3) || (sub == "apply" && args.size() != 1)
+        || ((sub == "list" || sub == "fix") && args.size() > 1) || ((sub == "summary" || sub == "undo") && !args.isEmpty()))
+        return fail(usage, json);
+    if ((sub == "list" || sub == "fix") && !args.isEmpty() && !kinds.contains(args.first()))
+        return fail(QString("%1 isn't a kind of finding. Kinds: %2").arg(args.first(), kinds.join(" ")), json);
+
+    LibraryDoctor doctor(nullptr);
+    QStringList said;
+    QObject::connect(&doctor, &LibraryDoctor::message, [&said](const QString &text) { said << text; });
+    auto done = [&](int count, const QString &verb) {
+        // A running Halo shows the new tags once it looks again.
+        if (count > 0 && Remote::running(300))
+            Remote::send({{"cmd", "rescan"}, {"args", QJsonArray()}}, nullptr, 1000);
+        if (json)
+            out() << QJsonDocument(QJsonObject{{"ok", true}, {verb, count}, {"said", QJsonArray::fromStringList(said)},
+                                               {"undoable", doctor.undoable()}})
+                         .toJson(QJsonDocument::Compact)
+                  << "\n";
+        else
+            for (const QString &line : std::as_const(said))
+                out() << line << "\n";
+        return 0;
+    };
+    if (sub == "undo") {
+        const int before = doctor.undoable();
+        if (before == 0)
+            return fail("Nothing to undo.", json);
+        const bool whole = doctor.undoLast();
+        const int count = before - doctor.undoable();
+        if (!json && said.isEmpty())
+            said << QString("Undid %1 fix%2.").arg(count).arg(count == 1 ? "" : "es");
+        done(count, "undone");
+        return whole ? 0 : 1;
+    }
+
+    // The library as the window would show it.
+    const QStringList folders = Library::defaultFolders();
+    QStringList paths;
+    for (const Track &t : Library::scanFolders(folders, {}))
+        if (t.duration <= 0 || t.duration >= Library::MinimumSeconds)
+            paths << t.path;
+    const QSet<QString> inLibrary(paths.cbegin(), paths.cend());
+
+    if (sub == "set" || sub == "apply") {
+        QList<LibraryDoctor::Answer> answers;
+        if (sub == "set") {
+            answers.append({QFileInfo(args[0]).absoluteFilePath(), args[1].toLower(), args[2]});
+        } else {
+            // The answers file: read once, and no further than this.
+            constexpr qint64 MaxAnswers = 8 * 1024 * 1024;
+            QFile file(args[0]);
+            if (!file.open(QIODevice::ReadOnly))
+                return fail(QString("%1: %2").arg(args[0], file.errorString()), json);
+            const QByteArray bytes = file.read(MaxAnswers + 1);
+            if (bytes.size() > MaxAnswers)
+                return fail(QString("%1 is larger than 8 MiB; send it in parts").arg(args[0]), json);
+            QJsonParseError error;
+            const QJsonDocument doc = QJsonDocument::fromJson(bytes, &error);
+            if (!doc.isArray())
+                return fail(QString("%1 isn't a JSON list of {\"path\", \"field\", \"value\"}%2")
+                                .arg(args[0], error.error == QJsonParseError::NoError ? QString() : ": " + error.errorString()),
+                            json);
+            for (const QJsonValue &v : doc.array()) {
+                const QJsonObject o = v.toObject();
+                if (!o.value("path").isString() || !o.value("field").isString() || !o.value("value").isString())
+                    return fail("every answer needs \"path\", \"field\" and \"value\" as text; nothing was written", json);
+                answers.append({QFileInfo(o.value("path").toString()).absoluteFilePath(),
+                                o.value("field").toString().toLower(), o.value("value").toString()});
+            }
+        }
+        // Only the library's own songs, named as the library names them.
+        QList<LibraryDoctor::Answer> inside;
+        for (const LibraryDoctor::Answer &a : std::as_const(answers)) {
+            if (inLibrary.contains(a.path))
+                inside.append(a);
+            else
+                said << QString("%1 isn't a song in Halo's music folders; left alone.").arg(a.path);
+        }
+        const int count = doctor.applyAnswers(inside);
+        done(count, "written");
+        return count == answers.size() ? 0 : 1;
+    }
+
+    doctor.diagnoseFiles(paths, folders);
+    if (sub == "fix")
+        return done(doctor.fixCertain(args.value(0)), "fixed");
+
+    const std::vector<Doctor::Finding> &found = doctor.found();
+    if (sub == "summary") {
+        QJsonObject byKind;
+        int total = 0, certain = 0, open = 0;
+        for (const QString &kind : kinds) {
+            int count = 0, sure = 0, proposed = 0;
+            for (const Doctor::Finding &f : found)
+                if (Doctor::kindName(f.kind) == kind) {
+                    ++count;
+                    sure += f.sure;
+                    proposed += !f.field.isEmpty() && !f.sure;
+                }
+            if (count == 0)
+                continue;
+            byKind.insert(kind, QJsonObject{{"count", count}, {"certain", sure}, {"toCheck", proposed},
+                                            {"noProposal", count - sure - proposed}});
+            total += count, certain += sure, open += count - sure - proposed;
+            if (!json)
+                out() << kind.leftJustified(12) << QString::number(count).rightJustified(6) << "   " << sure
+                      << " certain, " << proposed << " to check, " << (count - sure - proposed) << " without a proposal\n";
+        }
+        if (json)
+            out() << QJsonDocument(QJsonObject{{"ok", true}, {"songs", int(paths.size())}, {"findings", total},
+                                               {"certain", certain}, {"kinds", byKind}, {"undoable", doctor.undoable()}})
+                         .toJson(QJsonDocument::Compact)
+                  << "\n";
+        else
+            out() << total << " findings in " << paths.size() << " songs; " << certain
+                  << " certain (halo doctor fix writes those), " << open << " with no proposal.\n";
+        return 0;
+    }
+
+    // list
+    QJsonArray list;
+    int shown = 0, matching = 0;
+    for (const Doctor::Finding &f : found) {
+        if (!args.isEmpty() && Doctor::kindName(f.kind) != args.first())
+            continue;
+        if (!folder.isEmpty() && QFileInfo(f.path).absolutePath() != folder && !f.path.startsWith(folder + "/"))
+            continue;
+        ++matching;
+        if (limit >= 0 && shown >= limit)
+            continue;
+        ++shown;
+        if (json) {
+            Doctor::Tags t;
+            Doctor::readTags(f.path, t);
+            QJsonObject o{{"kind", Doctor::kindName(f.kind)}, {"path", f.path}, {"field", f.field},
+                          {"before", f.before}, {"after", f.after}, {"certain", f.sure}, {"why", f.why},
+                          {"tags", QJsonObject{{"title", t.title}, {"artist", t.artist}, {"album", t.album},
+                                               {"albumartist", t.albumArtist}, {"tracknumber", t.number},
+                                               {"seconds", int(t.duration)}}}};
+            if (!f.others.isEmpty())
+                o.insert("others", QJsonArray::fromStringList(f.others));
+            list.append(o);
+        } else {
+            out() << Doctor::kindName(f.kind).leftJustified(12) << f.path << "\n";
+            if (!f.field.isEmpty())
+                out() << "            " << f.field << ": " << (f.before.isEmpty() ? "(empty)" : f.before) << " -> "
+                      << (f.after.isEmpty() ? "(empty)" : f.after) << (f.sure ? "" : "   (to check: " + f.why + ")") << "\n";
+            for (const QString &other : f.others)
+                out() << "            also " << other << "\n";
+        }
+    }
+    if (json)
+        out() << QJsonDocument(QJsonObject{{"ok", true}, {"count", matching}, {"shown", shown}, {"findings", list}})
+                     .toJson(QJsonDocument::Compact)
+              << "\n";
+    else if (shown < matching)
+        out() << shown << " of " << matching << " shown.\n";
+    return 0;
+}
+
 // Installs like Hype: the skill lives in ~/.agents/skills/halo and is linked
 // into ~/.claude/skills so every agent on the machine finds it.
 int skill(const QStringList &args) {
@@ -387,7 +627,7 @@ bool isCommand(const QStringList &arguments) {
     static const QStringList commands{"status", "play", "pause", "toggle", "next", "previous", "prev", "seek",
                                       "volume", "add", "playnext", "queue", "clear", "moment", "blend", "drift",
                                       "shuffle", "normalize", "repeat", "sleep", "rescan", "scan", "analyze", "lyrics", "visual", "playlist",
-                                      "skill", "grab", "ui", "help", "-h", "--help", "-v", "--version"};
+                                      "doctor", "skill", "grab", "ui", "help", "-h", "--help", "-v", "--version"};
     return arguments.size() > 1 && commands.contains(arguments[1]);
 }
 
@@ -408,6 +648,8 @@ int run(const QStringList &arguments) {
         return scan(json);
     if (command == "analyze")
         return analyze(args, json);
+    if (command == "doctor")
+        return doctor(args, json);
     if (command == "skill")
         return skill(args);
     if (command == "prev")
