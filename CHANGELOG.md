@@ -5,6 +5,35 @@ notes on its GitHub release page as well.
 
 ## Unreleased
 
+Library Doctor, made to hold up on a badly kept library.
+
+- **A pile of loose songs is not an album.** The music folder itself, a
+  folder such as Downloads, and a large folder whose songs are neither
+  numbered in turn nor agreed on an album are no longer offered the
+  folder's name as their album, "Various Artists" as their album artist, or
+  an artist from their neighbours. Before, 500 loose songs in Downloads
+  would all have been offered the album "Downloads".
+- **Fix all writes only what is certain.** A fix read from the file's own
+  tags, or matching a name your library already uses, is certain. A fix
+  judged from a folder's name or from the neighbouring songs says so ("To
+  check: from the folder's name") and is applied one song at a time, or a
+  folder at a time with **Fix these**.
+- **Type the answer.** Where nothing on the computer says who a folder's
+  songs are by, or what album they are, you can type it once and it is
+  written to all of them.
+- **U undoes the last thing you did, whole:** one fix, or everything one
+  Fix all, Fix these or typed answer wrote.
+- **New checks:** a track number missing though the file's name starts with
+  one; the same artist spelled two ways ("Lil' Wayne" beside "Lil Wayne");
+  an album name most of the folder doesn't share; video and upload labels
+  in titles ("(Official Video)", and a video's id on a file's name); titles
+  that are only "Track 07"; tags that say nothing ("Unknown Artist");
+  names in all capitals or all small letters.
+- **More artists found:** from "Artist - Song" in a title, and from a known
+  artist a title opens or closes with ("BANG BANG-YOUNG JEEZY"). "Various
+  Artists" is no longer copied into a song's artist.
+- A missing album is taken from the album the folder's other songs name
+  before the folder's own name. The list keeps its place after a fix.
 - **Library Doctor: a missing artist from the folder's name.** A folder
   whose name opens with an artist your library already knows (a lead artist
   on three songs or more) gives that artist to its songs that have none:

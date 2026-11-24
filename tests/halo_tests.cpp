@@ -881,8 +881,8 @@ private slots:
         QVERIFY(!find(Kind::Watermark, "/m/HCSM5-2015/01_3_Way.mp3"));
         // Missing artist comes from the album artist.
         QCOMPARE(find(Kind::MissingArtist, "/m/HCSM5-2015/02_Hustler.mp3")->after, QString("Young Dolph"));
-        // Missing album comes from the folder, scene year tidied.
-        QCOMPARE(find(Kind::MissingAlbum, "/m/HCSM5-2015/03_Pull_Up.mp3")->after, QString("HCSM5 (2015)"));
+        // Missing album comes from the album the folder's other songs name.
+        QCOMPARE(find(Kind::MissingAlbum, "/m/HCSM5-2015/03_Pull_Up.mp3")->after, QString("HCSM5"));
         // The odd album artist out is brought in line.
         QCOMPARE(find(Kind::MixedAlbumArtist, "/m/HCSM5-2015/03_Pull_Up.mp3")->after, QString("Young Dolph"));
         // An album that is only a site's name is missing, not emptied.
@@ -1023,6 +1023,171 @@ private slots:
     }
 
     // A log that can't be read is set aside, not replaced by an empty one.
+    // A badly kept library: files dropped in one place, names from video
+    // sites, tags that say nothing. The Doctor must not take a pile for an
+    // album, and must say which fixes it is sure of.
+    void doctorHandlesAMessyLibrary() {
+        using namespace Doctor;
+        std::vector<File> files;
+        auto add = [&](const QString &path, Tags t) { files.push_back({path, t}); };
+        // the music folder itself, and a Downloads folder: piles, not albums
+        add("/m/Daft Punk - One More Time (Official Video) [dQw4w9WgXcQ].mp3", {"", "", "", "", "", 0, 320});
+        add("/m/loose.mp3", {"Loose", "Somebody", "", "One", "", 0, 100});
+        add("/m/loose2.mp3", {"Loose Two", "Somebody Else", "", "Two", "", 0, 101});
+        add("/home/u/Downloads/a.mp3", {"A", "X", "", "", "", 0, 102});
+        add("/home/u/Downloads/track.mp3", {"Unknown", "Unknown Artist", "Unknown Album", "", "", 0, 103});
+        // a large folder that is neither numbered nor agreed on an album
+        for (int i = 0; i < 9; ++i)
+            add(QString("/m/grab bag/song %1.mp3").arg(QChar('a' + i)),
+                {QString("Song %1").arg(QChar('A' + i)), i < 7 ? "Mostly Her" : "", i % 2 ? QString("Album %1").arg(i) : QString(), "", "", 0, 110.0 + i});
+        // a real album: numbered files, most of them tagged alike
+        add("/m/Discovery/01 One More Time.mp3", {"One More Time", "Daft Punk", "Discovery", "", "", 0, 200});
+        add("/m/Discovery/02 Aerodynamic.mp3", {"AERODYNAMIC", "daft punk", "Discovery", "", "", 0, 201});
+        add("/m/Discovery/03 Digital Love.mp3", {"Digital Love (Official Audio)", "Daft Punk", "Digital Love", "", "", 0, 202});
+        add("/m/Discovery/04 Harder.mp3", {"Track 04", "Daft Punk", "Discovery", "", "", 4, 203});
+        add("/m/Discovery/05 Crescendolls.mp3", {"Crescendolls", "Daft-Punk", "", "Various Artists", "", 5, 204});
+        add("/m/Discovery/06 Nightvision.mp3", {"Nightvision", "", "Discovery", "Various Artists", "", 6, 205});
+        const auto found = diagnose(files, {"/m"});
+        auto find = [&](Kind k, const QString &path) -> const Finding * {
+            for (const Finding &f : found)
+                if (f.kind == k && f.path == path)
+                    return &f;
+            return nullptr;
+        };
+        // In a pile: no album from the folder's name, no album artist judged,
+        // no artist from the neighbours, no track numbers.
+        for (const Finding &f : found)
+            if (f.path.startsWith("/m/loose") || f.path.startsWith("/home/u/Downloads") || f.path.startsWith("/m/grab bag"))
+                QVERIFY2(f.kind != Kind::MissingAlbum && f.kind != Kind::MixedAlbumArtist && f.kind != Kind::MixedAlbum
+                             && f.kind != Kind::MissingNumber && f.why != "folder-songs",
+                         qPrintable(f.path + " " + kindName(f.kind)));
+        // ...but a missing artist is still pointed out there,
+        const Finding *grab = find(Kind::MissingArtist, "/m/grab bag/song h.mp3");
+        QVERIFY(grab && grab->field.isEmpty());
+        // and tags that say nothing count as missing.
+        QVERIFY(find(Kind::MissingArtist, "/home/u/Downloads/track.mp3"));
+        QVERIFY(find(Kind::MissingTitle, "/home/u/Downloads/track.mp3"));
+        // A video site's file name: artist and title, without the label or the id.
+        const QString video = "/m/Daft Punk - One More Time (Official Video) [dQw4w9WgXcQ].mp3";
+        QCOMPARE(find(Kind::MissingArtist, video)->after, QString("Daft Punk"));
+        QVERIFY(find(Kind::MissingArtist, video)->sure); // a name the library knows
+        QCOMPARE(find(Kind::MissingTitle, video)->after, QString("One More Time"));
+        QVERIFY(!find(Kind::MissingTitle, video)->sure);
+        // The album: spelling by capitals alone is certain, by punctuation is not.
+        const Finding *lower = find(Kind::ArtistSpelling, "/m/Discovery/02 Aerodynamic.mp3");
+        QVERIFY(lower && lower->sure);
+        QCOMPARE(lower->after, QString("Daft Punk"));
+        const Finding *hyphen = find(Kind::ArtistSpelling, "/m/Discovery/05 Crescendolls.mp3");
+        QVERIFY(hyphen && !hyphen->sure);
+        QCOMPARE(hyphen->after, QString("Daft Punk"));
+        // Capitals, labels, a title that is only its number.
+        QCOMPARE(find(Kind::Case, "/m/Discovery/02 Aerodynamic.mp3"), nullptr); // one word: could be meant
+        QCOMPARE(find(Kind::UploadLabel, "/m/Discovery/03 Digital Love.mp3")->after, QString("Digital Love"));
+        QVERIFY(find(Kind::UploadLabel, "/m/Discovery/03 Digital Love.mp3")->sure);
+        QCOMPARE(find(Kind::MissingTitle, "/m/Discovery/04 Harder.mp3")->after, QString("Harder"));
+        // Track numbers from the file names; an album most of the folder names.
+        const Finding *number = find(Kind::MissingNumber, "/m/Discovery/02 Aerodynamic.mp3");
+        QVERIFY(number && number->sure);
+        QCOMPARE(number->field, QString("tracknumber"));
+        QCOMPARE(number->after, QString("2"));
+        QVERIFY(!find(Kind::MissingNumber, "/m/Discovery/04 Harder.mp3"));
+        QCOMPARE(find(Kind::MixedAlbum, "/m/Discovery/03 Digital Love.mp3")->after, QString("Discovery"));
+        const Finding *album = find(Kind::MissingAlbum, "/m/Discovery/05 Crescendolls.mp3");
+        QCOMPARE(album->after, QString("Discovery"));
+        QVERIFY(!album->sure);
+        // "Various Artists" is nobody's name; the neighbours say who it is.
+        const Finding *various = find(Kind::MissingArtist, "/m/Discovery/06 Nightvision.mp3");
+        QCOMPARE(various->after, QString("Daft Punk"));
+        QCOMPARE(various->why, QString("folder-songs"));
+        QVERIFY(!various->sure);
+        // Stripping is conservative: words of the song stay.
+        for (const Finding &f : found)
+            if (!f.field.isEmpty())
+                QVERIFY2(f.before != f.after, qPrintable(f.path));
+    }
+
+    // "Fix all" writes only what is certain; a folder's proposals and a
+    // typed answer are one press each, and one U takes each back whole.
+    void doctorFixesAFolderAtATime() {
+        QTemporaryDir music, state;
+        QVERIFY(QDir(music.path()).mkpath("Some Tape"));
+        QStringList songs;
+        for (int i = 1; i <= 3; ++i) {
+            const QString song = music.filePath(QString("Some Tape/0%1 Song %1.mp3").arg(i));
+            QProcess ff;
+            ff.start("ffmpeg", {"-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=12",
+                                "-metadata", QString("title=Song %1").arg(i), "-y", song});
+            QVERIFY(ff.waitForFinished(30000));
+            QCOMPARE(ff.exitCode(), 0);
+            songs << song;
+        }
+        Library library({music.path()}, state.filePath("cache"), state.filePath("state"));
+        library.rescan();
+        QTRY_COMPARE_WITH_TIMEOUT(int(library.tracks().size()), 3, 20000);
+        LibraryDoctor doctor(&library, state.filePath("doctor.json"));
+        auto scan = [&] {
+            doctor.scan();
+            QTRY_VERIFY_WITH_TIMEOUT(!doctor.scanning(), 20000);
+        };
+        scan();
+        const QString folder = music.filePath("Some Tape");
+        QCOMPARE(doctor.counts().value("noartist").toInt(), 3);
+        QCOMPARE(doctor.counts().value("noalbum").toInt(), 3);
+        QCOMPARE(doctor.counts().value("nonumber/sure").toInt(), 3);
+        // The album comes from the folder's name: a judgement, so not in Fix all.
+        QCOMPARE(doctor.fixAll("noalbum"), 0);
+        QCOMPARE(doctor.fixGroup("noalbum", folder), 3);
+        Doctor::Tags t;
+        QVERIFY(Doctor::readTags(songs[1], t));
+        QCOMPARE(t.album, QString("Some Tape"));
+        // Track numbers are certain.
+        QCOMPARE(doctor.fixAll("nonumber"), 3);
+        QVERIFY(Doctor::readTags(songs[2], t));
+        QCOMPARE(t.number, 3);
+        // Nothing names the artist: the person does, once for the folder.
+        const QVariantMap first = [&] {
+            for (const QVariant &v : doctor.findings())
+                if (v.toMap().value("kind") == "noartist")
+                    return v.toMap();
+            return QVariantMap();
+        }();
+        QVERIFY(first.value("groupFirst").toBool() && first.value("answerable").toBool());
+        QVERIFY(!first.value("fixable").toBool());
+        QCOMPARE(first.value("groupSize").toInt(), 3);
+        QCOMPARE(doctor.setGroup("noartist", folder, "   "), 0);
+        QCOMPARE(doctor.setGroup("nonumber", folder, "9"), 0); // not a kind that takes an answer
+        QCOMPARE(doctor.setGroup("noartist", music.filePath("Elsewhere"), "Nobody"), 0);
+        QCOMPARE(doctor.setGroup("noartist", folder, "  Typed\n Artist\t"), 3);
+        for (const QString &song : songs) {
+            QVERIFY(Doctor::readTags(song, t));
+            QCOMPARE(t.artist, QString("Typed Artist"));
+        }
+        QCOMPARE(doctor.counts().value("noartist").toInt(), 0);
+        // U: the typed answer, then the numbers, then the album, each whole.
+        QCOMPARE(doctor.undoable(), 9);
+        QVERIFY(doctor.undoLast());
+        QCOMPARE(doctor.undoable(), 6);
+        for (const QString &song : songs) {
+            QVERIFY(Doctor::readTags(song, t));
+            QCOMPARE(t.artist, QString());
+            QCOMPARE(t.album, QString("Some Tape"));
+        }
+        // The batches survive a restart.
+        LibraryDoctor again(&library, state.filePath("doctor.json"));
+        QVERIFY(again.undoLast());
+        QCOMPARE(again.undoable(), 3);
+        QVERIFY(Doctor::readTags(songs[2], t));
+        QCOMPARE(t.number, 0);
+        // A file edited since is left alone, and U says so.
+        QVERIFY(Doctor::writeField(songs[0], "album", "Edited by hand"));
+        QVERIFY(!again.undoLast());
+        QCOMPARE(again.undoable(), 0);
+        QVERIFY(Doctor::readTags(songs[0], t));
+        QCOMPARE(t.album, QString("Edited by hand"));
+        QVERIFY(Doctor::readTags(songs[1], t));
+        QCOMPARE(t.album, QString());
+    }
+
     void doctorKeepsAnUnreadableLog() {
         QTemporaryDir state;
         const QString log = state.filePath("doctor.json");
@@ -2582,9 +2747,10 @@ private slots:
         doctor.scan();
         QTRY_VERIFY_WITH_TIMEOUT(!doctor.scanning(), 20000);
         QCOMPARE(doctor.fixable(), 0);
-        // Every fix undoes, in turn, back to what the file said.
-        for (int i = 0; i < fixes; ++i)
-            QVERIFY(doctor.undoLast());
+        // One U takes back everything that press wrote.
+        QCOMPARE(doctor.undoable(), fixes);
+        QVERIFY(doctor.undoLast());
+        QCOMPARE(doctor.undoable(), 0);
         QVERIFY(Doctor::readTags(song, t));
         QCOMPARE(t.title, QString("Song [DatPiff.com]"));
         QCOMPARE(t.comment, QString("Hot tape | DatPiff.com"));

@@ -413,11 +413,16 @@ ApplicationWindow {
                         focus: win.view === 7
                         readonly property var labels: ({
                             "watermark": qsTr("Site names in tags"),
+                            "labels": qsTr("Video and upload labels in titles"),
                             "numbered": qsTr("Track numbers or the artist in titles"),
                             "notitle": qsTr("Missing titles"),
                             "noartist": qsTr("Missing artists"),
                             "noalbum": qsTr("Missing albums"),
+                            "nonumber": qsTr("Missing track numbers"),
+                            "spelling": qsTr("One artist spelled two ways"),
+                            "album": qsTr("Album differs within a folder"),
                             "albumartist": qsTr("Album artist differs within an album"),
+                            "case": qsTr("All capitals or all small letters"),
                             "duplicate": qsTr("The same song more than once")
                         })
                         readonly property var fields: ({
@@ -425,18 +430,36 @@ ApplicationWindow {
                             "artist": qsTr("Artist"),
                             "album": qsTr("Album"),
                             "albumartist": qsTr("Album artist"),
-                            "comment": qsTr("Comment")
+                            "comment": qsTr("Comment"),
+                            "tracknumber": qsTr("Track number")
                         })
+                        // Where a proposal that isn't certain comes from.
+                        readonly property var reasons: ({
+                            "tag": qsTr("from the file's other tags"),
+                            "filename": qsTr("from the file's name"),
+                            "title": qsTr("from the title"),
+                            "folder-songs": qsTr("from the other songs in the folder"),
+                            "folder-name": qsTr("from the folder's name"),
+                            "library": qsTr("how most of your songs spell it"),
+                            "case": qsTr("ordinary capitals")
+                        })
+                        // What a typed answer is asked as, by kind.
+                        readonly property var questions: ({
+                            "noartist": qsTr("Artist for these songs"),
+                            "noalbum": qsTr("Album for these songs"),
+                            "album": qsTr("Album for these songs"),
+                            "albumartist": qsTr("Album artist for these songs")
+                        })
+                        function folderName(folder) {
+                            const parts = folder.split("/")
+                            return parts[parts.length - 1]
+                        }
                         // "Folder/file.mp3": enough to tell copies apart.
                         function shortPath(path) {
                             const parts = path.split("/")
                             return parts.slice(-2).join("/")
                         }
-                        function countOf(kind) {
-                            let n = 0
-                            for (const f of doctor.findings) if (f.kind === kind) ++n
-                            return n
-                        }
+                        readonly property var counts: doctor.counts
                         onVisibleChanged: if (visible && doctor.findings.length === 0 && !doctor.scanning) doctor.scan()
                         Shortcut { sequence: "U"; enabled: win.view === 7 && win.free; onActivated: doctor.undoLast() }
                         ColumnLayout {
@@ -478,7 +501,7 @@ ApplicationWindow {
                                 Layout.bottomMargin: 12
                                 Layout.fillWidth: true
                                 wrapMode: Text.Wrap
-                                text: qsTr("Checks your songs' tags on this computer and proposes fixes from the tags, file names and folders. Nothing is written until you say so, and every fix can be undone. Duplicates are only pointed out.")
+                                text: qsTr("Checks your songs' tags on this computer and proposes fixes from the tags, file names and folders. Fix all writes only the fixes that are certain; the rest are for you to check, one song or one folder at a time, or to answer yourself. Nothing is written until you say so, and U undoes the last thing you did. Duplicates are only pointed out.")
                                 color: Style.faint
                                 font.pixelSize: Style.fontSmall
                             }
@@ -498,6 +521,15 @@ ApplicationWindow {
                                 visible: !doctor.scanning && doctor.findings.length > 0
                                 clip: true
                                 model: doctor.findings
+                                // A fix gives the list a new model, which would
+                                // jump it back to the top: stay where the person was.
+                                function act(run) {
+                                    const y = contentY
+                                    run()
+                                    Qt.callLater(() => {
+                                        contentY = Math.max(originY, Math.min(y, originY + contentHeight - height))
+                                    })
+                                }
                                 section.property: "kind"
                                 section.delegate: RowLayout {
                                     required property string section
@@ -509,7 +541,7 @@ ApplicationWindow {
                                         Layout.leftMargin: 24
                                         Layout.fillWidth: true
                                         elide: Text.ElideRight
-                                        text: (doctorPage.labels[section] || section) + "  ·  " + doctorPage.countOf(section)
+                                        text: (doctorPage.labels[section] || section) + "  ·  " + (doctorPage.counts[section] || 0)
                                         color: Style.text
                                         font.family: Style.mono
                                         font.pixelSize: Style.fontBody
@@ -518,56 +550,117 @@ ApplicationWindow {
                                     }
                                     Button {
                                         Layout.rightMargin: 24
-                                        visible: section !== "duplicate"
-                                        text: qsTr("Fix all")
+                                        readonly property int sure: doctorPage.counts[section + "/sure"] || 0
+                                        visible: sure > 0
+                                        text: qsTr("Fix all %1 certain").arg(sure)
                                         flat: true
                                         Material.foreground: Style.accentText
                                         implicitHeight: Style.target
-                                        onClicked: doctor.fixAll(section)
+                                        onClicked: findingsList.act(() => doctor.fixAll(section))
                                     }
                                 }
-                                delegate: RowLayout {
+                                delegate: ColumnLayout {
+                                    id: finding
                                     required property var modelData
                                     required property int index
                                     width: findingsList.width
-                                    spacing: 12
-                                    ColumnLayout {
-                                        Layout.leftMargin: 24
+                                    spacing: 0
+                                    // The folder's heading, on its first song: fix
+                                    // the folder's proposals together, or answer.
+                                    RowLayout {
                                         Layout.fillWidth: true
-                                        Layout.topMargin: 6
-                                        Layout.bottomMargin: 6
-                                        spacing: 2
+                                        Layout.topMargin: 8
+                                        spacing: 10
+                                        visible: finding.modelData.groupFirst
+                                                 && (finding.modelData.groupSize > 1 || finding.modelData.answerable)
                                         Text {
+                                            Layout.leftMargin: 24
                                             Layout.fillWidth: true
-                                            text: doctorPage.shortPath(modelData.path)
                                             textFormat: Text.PlainText
                                             elide: Text.ElideMiddle
-                                            color: Style.muted
+                                            text: doctorPage.folderName(finding.modelData.folder) + "  ·  " + finding.modelData.groupSize
+                                            color: Style.text
                                             font.family: Style.mono
                                             font.pixelSize: Style.fontSmall
+                                            font.weight: Font.Bold
                                         }
-                                        Text {
-                                            Layout.fillWidth: true
-                                            textFormat: Text.PlainText
-                                            wrapMode: Text.Wrap
-                                            color: Style.text
-                                            font.pixelSize: Style.fontBody
-                                            text: modelData.kind === "duplicate"
-                                                  ? qsTr("Also at: %1").arg(modelData.others.map(doctorPage.shortPath).join(", "))
-                                                  : modelData.field.length === 0
-                                                    ? qsTr("Nothing on this computer says what it should be.")
-                                                    : (doctorPage.fields[modelData.field] || modelData.field) + ":  " + (modelData.before.length ? modelData.before : qsTr("(empty)"))
-                                                      + "  →  " + (modelData.after.length ? modelData.after : qsTr("(empty)"))
+                                        Button {
+                                            visible: finding.modelData.answerable
+                                            Layout.rightMargin: finding.modelData.groupFixes > 1 ? 0 : 24
+                                            text: qsTr("Type the answer")
+                                            flat: true
+                                            Material.foreground: Style.accentText
+                                            implicitHeight: Style.target
+                                            Accessible.description: doctorPage.folderName(finding.modelData.folder)
+                                            onClicked: {
+                                                const kind = finding.modelData.kind, folder = finding.modelData.folder
+                                                namePrompt.ask(doctorPage.questions[kind] + " (" + finding.modelData.groupSize + ")",
+                                                               qsTr("Write"), finding.modelData.after,
+                                                               value => findingsList.act(() => doctor.setGroup(kind, folder, value)))
+                                            }
+                                        }
+                                        Button {
+                                            Layout.rightMargin: 24
+                                            visible: finding.modelData.groupFixes > 1
+                                            text: qsTr("Fix these %1").arg(finding.modelData.groupFixes)
+                                            flat: true
+                                            Material.foreground: Style.accentText
+                                            implicitHeight: Style.target
+                                            Accessible.description: doctorPage.folderName(finding.modelData.folder)
+                                            onClicked: findingsList.act(() => doctor.fixGroup(finding.modelData.kind, finding.modelData.folder))
                                         }
                                     }
-                                    Button {
-                                        Layout.rightMargin: 24
-                                        visible: modelData.fixable
-                                        text: qsTr("Fix")
-                                        flat: true
-                                        Material.foreground: Style.accentText
-                                        implicitHeight: Style.target
-                                        onClicked: doctor.fix(index)
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 12
+                                        ColumnLayout {
+                                            Layout.leftMargin: 24
+                                            Layout.fillWidth: true
+                                            Layout.topMargin: 6
+                                            Layout.bottomMargin: 6
+                                            spacing: 2
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: finding.modelData.file
+                                                textFormat: Text.PlainText
+                                                elide: Text.ElideMiddle
+                                                color: Style.muted
+                                                font.family: Style.mono
+                                                font.pixelSize: Style.fontSmall
+                                            }
+                                            Text {
+                                                Layout.fillWidth: true
+                                                textFormat: Text.PlainText
+                                                wrapMode: Text.Wrap
+                                                color: Style.text
+                                                font.pixelSize: Style.fontBody
+                                                text: finding.modelData.kind === "duplicate"
+                                                      ? qsTr("Also at: %1").arg(finding.modelData.others.map(doctorPage.shortPath).join(", "))
+                                                      : finding.modelData.field.length === 0
+                                                        ? qsTr("Nothing on this computer says what it should be.")
+                                                        : (doctorPage.fields[finding.modelData.field] || finding.modelData.field) + ":  " + (finding.modelData.before.length ? finding.modelData.before : qsTr("(empty)"))
+                                                          + "  →  " + (finding.modelData.after.length ? finding.modelData.after : qsTr("(empty)"))
+                                            }
+                                            Text {
+                                                Layout.fillWidth: true
+                                                visible: finding.modelData.fixable && !finding.modelData.sure
+                                                textFormat: Text.PlainText
+                                                wrapMode: Text.Wrap
+                                                color: Style.muted
+                                                font.pixelSize: Style.fontSmall
+                                                text: qsTr("To check: %1.").arg(doctorPage.reasons[finding.modelData.why] || finding.modelData.why)
+                                            }
+                                        }
+                                        Button {
+                                            Layout.rightMargin: 24
+                                            visible: finding.modelData.fixable
+                                            text: qsTr("Fix")
+                                            flat: true
+                                            Material.foreground: Style.accentText
+                                            implicitHeight: Style.target
+                                            Accessible.description: finding.modelData.file
+                                            onClicked: findingsList.act(() => doctor.fix(finding.index))
+                                        }
                                     }
                                 }
                                 ScrollBar.vertical: PixelScrollBar {}

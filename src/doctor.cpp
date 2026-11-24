@@ -27,7 +27,12 @@ namespace Doctor {
 QString kindName(Kind kind) {
     switch (kind) {
     case Kind::Watermark: return "watermark";
+    case Kind::UploadLabel: return "labels";
     case Kind::NumberedTitle: return "numbered";
+    case Kind::MissingNumber: return "nonumber";
+    case Kind::ArtistSpelling: return "spelling";
+    case Kind::MixedAlbum: return "album";
+    case Kind::Case: return "case";
     case Kind::MissingTitle: return "notitle";
     case Kind::MissingArtist: return "noartist";
     case Kind::MissingAlbum: return "noalbum";
@@ -195,56 +200,185 @@ QString field(const Tags &t, const QString &name) {
     if (name == "album") return t.album;
     if (name == "albumartist") return t.albumArtist;
     if (name == "comment") return t.comment;
+    if (name == "tracknumber") return t.number > 0 ? QString::number(t.number) : QString();
     return {};
 }
 
-std::vector<Finding> diagnose(const std::vector<File> &files) {
-    std::vector<Finding> out;
-    QHash<QString, QList<const File *>> byFolder;
-    for (const File &f : files)
-        byFolder[QFileInfo(f.path).absolutePath()].append(&f);
-    // A folder's artist, for the songs in it that have none: the lead artist
-    // of at least two thirds of its songs that name one, when at least half
-    // of the folder does.
-    QHash<QString, QString> folderArtist;
-    for (auto it = byFolder.cbegin(); it != byFolder.cend(); ++it) {
-        QHash<QString, int> counts;
-        QHash<QString, QString> spelling;
-        int named = 0;
-        for (const File *f : *it) {
-            const QString lead = leadArtist(stripWatermark(f->tags.artist));
-            if (lead.isEmpty())
-                continue;
-            ++named;
-            ++counts[key(lead)];
-            if (!spelling.contains(key(lead)))
-                spelling.insert(key(lead), lead);
-        }
-        if (named * 2 < it->size())
-            continue;
-        for (auto c = counts.cbegin(); c != counts.cend(); ++c)
-            if (c.value() * 3 >= named * 2)
-                folderArtist.insert(it.key(), spelling.value(c.key()));
-    }
-    // The artists this library knows: a lead artist on at least three songs.
-    // A folder whose name opens with one of them is taken as that artist's.
-    QList<KnownArtist> known;
-    {
-        QHash<QString, int> at;
-        for (const File &f : files) {
-            const QString lead = leadArtist(stripWatermark(f.tags.artist));
-            const QStringList words = wordsOf(lead);
-            if (words.isEmpty())
-                continue;
-            const QString k = words.join(' ');
-            if (!at.contains(k)) {
-                at.insert(k, int(known.size()));
-                known.append({words, lead, 0});
+namespace {
+// A tag that says nothing: "Unknown Artist", "Untitled", "<unknown>".
+bool isPlaceholder(const QString &text) {
+    static const QRegularExpression empty(
+        R"(^\s*<?\s*(unknown(\s+(artist|album|title|track))?|untitled|no\s+(artist|album|title)|n/?a|none)\s*>?\s*$)",
+        QRegularExpression::CaseInsensitiveOption);
+    return empty.match(text).hasMatch();
+}
+
+bool isVarious(const QString &text) {
+    const QString k = key(text);
+    return k == "variousartists" || k == "various" || k == "va";
+}
+
+// What a video site or a download tool adds to a name: "(Official Video)",
+// "[Lyrics]", "(HD)", and on a file's name the video's own id in square
+// brackets. The words of the song stay.
+QString stripLabels(const QString &text, bool fileName) {
+    static const QRegularExpression label(
+        R"(\s*[\(\[]\s*(?:(?:the\s+)?official\s+)?(?:(?:music|lyrics?|hd|hq|4k)\s+)?(?:video|audio|visuali[sz]er|lyrics?|hd|hq|4k|1080p|720p|\d{3}\s?kbps)(?:\s+(?:video|hd|hq|4k))?\s*[\)\]])",
+        QRegularExpression::CaseInsensitiveOption);
+    QString s = text;
+    s.remove(label);
+    bool removed = s != text;
+    if (fileName) {
+        // Eleven letters, digits, - or _ in square brackets at the very
+        // end, and not a plain word ("[Alternative]").
+        static const QRegularExpression id(R"(\s*\[([A-Za-z0-9_-]{11})\]\s*$)");
+        if (const auto m = id.match(s); m.hasMatch()) {
+            const QString inner = m.captured(1);
+            static const QRegularExpression random(R"([0-9_-]|[a-z][A-Z])");
+            if (random.match(inner).hasMatch()) {
+                s.remove(m.capturedStart(), m.capturedLength());
+                removed = true;
             }
-            ++known[at.value(k)].songs;
         }
-        known.removeIf([](const KnownArtist &a) { return a.songs < 3; });
     }
+    s = s.trimmed();
+    return removed && !s.isEmpty() ? s : text;
+}
+
+// "Track 07", "07": a title that is only its place on the album.
+bool isOnlyANumber(const QString &title, bool *named = nullptr) {
+    static const QRegularExpression only(R"(^\s*(track|audiotrack|audio track|titel|pista|piste)?\s*#?\d{1,3}\s*$)",
+                                         QRegularExpression::CaseInsensitiveOption);
+    const auto m = only.match(title);
+    if (named)
+        *named = m.hasMatch() && !m.captured(1).isEmpty();
+    return m.hasMatch();
+}
+
+// A name written all in capitals or all in small letters, set in ordinary
+// capitals; empty when it is fine as it is or too short to tell ("ABBA").
+QString recased(const QString &text) {
+    int upper = 0, lower = 0;
+    for (const QChar c : text) {
+        if (c.isUpper()) ++upper;
+        else if (c.isLower()) ++lower;
+    }
+    if (upper > 0 && lower > 0)
+        return {};
+    if (lower > 0 ? lower < 3 : (upper < 5 || !text.simplified().contains(' ')))
+        return {};
+    // A capital on each word, a word starting after a space, a hyphen, a
+    // slash or an opening bracket; "dj" and "mc" and roman numerals whole.
+    QString fixed = text.toLower();
+    static const QRegularExpression word(R"((?<![\p{L}\p{N}'’.])([\p{L}])([\p{L}\p{N}'’]*))");
+    auto it = word.globalMatch(fixed);
+    while (it.hasNext()) {
+        const auto m = it.next();
+        const QString w = m.captured(0);
+        if (w == "dj" || w == "mc" || w == "ii" || w == "iii" || w == "iv")
+            fixed.replace(m.capturedStart(0), w.size(), w.toUpper());
+        else
+            fixed[m.capturedStart(1)] = fixed[m.capturedStart(1)].toUpper();
+    }
+    return fixed == text ? QString() : fixed;
+}
+
+// The number a file's name opens with ("07 Song.mp3", "07-artist-song.mp3"),
+// or 0. Three digits and more are a disc and a track, or a year.
+int fileNumber(const QString &path) {
+    static const QRegularExpression number(R"(^\s*(\d{1,2})(?=[\s.\-_\)]))");
+    if (const auto m = number.match(QFileInfo(path).fileName()); m.hasMatch())
+        return m.captured(1).toInt();
+    // "Some Tape - Track 07.mp3", "07.mp3".
+    static const QRegularExpression last(R"((?:^|\btrack\s*#?)(\d{1,2})\s*$)", QRegularExpression::CaseInsensitiveOption);
+    const auto m = last.match(QFileInfo(path).completeBaseName());
+    return m.hasMatch() ? m.captured(1).toInt() : 0;
+}
+
+// "Album (Disc 2)" and "Album" are one album for telling albums apart.
+QString albumKey(const QString &album) {
+    static const QRegularExpression disc(R"([\(\[]?\b(disc|disk|cd|part|pt|vol|volume)\b\.?\s*\d+[\)\]]?)",
+                                         QRegularExpression::CaseInsensitiveOption);
+    QString a = album;
+    a.remove(disc);
+    const QString k = key(a);
+    return k.isEmpty() ? key(album) : k;
+}
+
+// A folder people drop files into, whatever is in them.
+bool isDumpFolder(const QString &folder, const QSet<QString> &roots) {
+    if (roots.contains(folder) || folder == QDir::homePath() || folder == QDir::rootPath())
+        return true;
+    static const QSet<QString> names{"downloads", "download", "desktop", "documents", "music", "musik", "musique",
+                                     "musica", "newfolder", "misc", "unsorted", "singles", "random", "mp3", "mp3s",
+                                     "songs", "tracks", "audio", "temp", "tmp", "stuff", "incoming"};
+    return names.contains(key(QFileInfo(folder).fileName()));
+}
+
+// What a folder says about the songs in it.
+struct Folder {
+    QList<const File *> files;
+    bool dump = false;   // a place files are dropped: its name means nothing
+    bool loose = false;  // not one album: nothing here speaks for its neighbours
+    bool numbered = false;
+    QString artist;      // the lead artist of two thirds of its songs
+    QString album;       // the album two thirds of its tagged songs name
+    bool albumByMost = false; // ...and at least half the folder carries one
+    const KnownArtist *named = nullptr;
+    QHash<int, int> numbers; // how many files claim each track number
+};
+}
+
+std::vector<Finding> diagnose(const std::vector<File> &files, const QStringList &libraryRoots) {
+    std::vector<Finding> out;
+    QSet<QString> roots;
+    for (const QString &r : libraryRoots)
+        roots.insert(QDir::cleanPath(r));
+    QHash<QString, Folder> folders;
+    for (const File &f : files)
+        folders[QFileInfo(f.path).absolutePath()].files.append(&f);
+
+    // The artists this library knows: a lead artist on at least three songs,
+    // under the spelling most of those songs use.
+    QList<KnownArtist> known;
+    QHash<QString, QString> canonical; // key(lead) -> the spelling to use
+    {
+        QHash<QString, QHash<QString, int>> spellings;
+        for (const File &f : files) {
+            const QString a = stripWatermark(f.tags.artist);
+            if (a.isEmpty() || isPlaceholder(a))
+                continue;
+            const QString lead = leadArtist(a);
+            if (!key(lead).isEmpty())
+                ++spellings[key(lead)][lead];
+        }
+        QStringList keys = spellings.keys();
+        std::sort(keys.begin(), keys.end());
+        for (const QString &k : keys) {
+            const auto &names = spellings[k];
+            QString best;
+            int most = 0, total = 0;
+            for (auto n = names.cbegin(); n != names.cend(); ++n) {
+                total += n.value();
+                // Most songs; then a name in ordinary capitals over one all
+                // in capitals or small letters; then by name.
+                const bool plainer = recased(n.key()).isEmpty() && !recased(best).isEmpty();
+                if (n.value() > most || (n.value() == most && (plainer || (recased(n.key()).isEmpty() == recased(best).isEmpty() && n.key() < best))))
+                    most = n.value(), best = n.key();
+            }
+            if (names.size() > 1)
+                canonical.insert(k, best);
+            if (total >= 3 && !wordsOf(best).isEmpty())
+                known.append({wordsOf(best), best, total});
+        }
+    }
+    auto knownArtist = [&known](const QString &name) -> const KnownArtist * {
+        const QStringList words = wordsOf(name);
+        for (const KnownArtist &a : known)
+            if (a.words == words)
+                return &a;
+        return nullptr;
+    };
     // Every name the artist tags mention, guests and partners too, to tell
     // when a file's own name credits someone other than its folder's artist.
     // A one-word name is as likely a word of the title, so it needs three
@@ -269,30 +403,201 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
             if (it.value() >= 3 || wordsFor.value(it.key()).size() > 1)
                 mentioned.append(wordsFor.value(it.key()));
     }
-    QHash<QString, const KnownArtist *> namedFor;
-    for (auto it = byFolder.cbegin(); it != byFolder.cend(); ++it)
-        if (!folderArtist.contains(it.key()))
-            if (const KnownArtist *a = folderNameArtist(it.key(), known))
-                namedFor.insert(it.key(), a);
+
+    for (auto it = folders.begin(); it != folders.end(); ++it) {
+        Folder &d = *it;
+        d.dump = isDumpFolder(it.key(), roots);
+        // Numbered like an album: most files carry a track number, and the
+        // numbers are nearly all different.
+        // The file names count on their own: on a tape put together from
+        // other releases each tag still holds its old album's number.
+        QSet<int> byName, byTag;
+        int named = 0, tagged = 0;
+        for (const File *f : d.files) {
+            const int inName = fileNumber(f->path), inTag = f->tags.number;
+            if (inName > 0)
+                ++named, byName.insert(inName);
+            if (inTag > 0)
+                ++tagged, byTag.insert(inTag);
+            if (const int n = inTag > 0 ? inTag : inName; n > 0)
+                ++d.numbers[n];
+        }
+        auto inTurn = [&d](int with, qsizetype different) {
+            return with * 10 >= d.files.size() * 6 && different * 10 >= with * 8;
+        };
+        d.numbered = inTurn(named, byName.size()) || inTurn(tagged, byTag.size());
+        // The album two thirds of the tagged songs name.
+        QHash<QString, int> albums;
+        QHash<QString, QHash<QString, int>> albumSpellings;
+        int withAlbum = 0;
+        for (const File *f : d.files) {
+            const QString a = stripWatermark(f->tags.album);
+            if (a.isEmpty() || isPlaceholder(a))
+                continue;
+            ++withAlbum;
+            ++albums[albumKey(a)];
+            ++albumSpellings[albumKey(a)][a];
+        }
+        for (auto a = albums.cbegin(); a != albums.cend(); ++a)
+            if (a.value() >= 2 && a.value() * 3 >= withAlbum * 2) {
+                int most = 0;
+                const auto &names = albumSpellings[a.key()];
+                for (auto n = names.cbegin(); n != names.cend(); ++n)
+                    if (n.value() > most || (n.value() == most && n.key() < d.album))
+                        most = n.value(), d.album = n.key();
+                d.albumByMost = withAlbum * 2 >= d.files.size();
+            }
+        // One album, or a pile? A dump is a pile. So is a large folder whose
+        // songs are neither numbered in turn nor agreed on an album.
+        d.loose = d.dump || (d.files.size() >= 8 && !d.numbered && !d.albumByMost);
+        if (d.dump)
+            continue;
+        // The lead artist of at least two thirds of its songs that name
+        // one, when at least half of the folder does.
+        if (!d.loose) {
+            QHash<QString, int> counts;
+            QHash<QString, QString> spelling;
+            int namedSongs = 0;
+            for (const File *f : d.files) {
+                const QString a = stripWatermark(f->tags.artist);
+                if (a.isEmpty() || isPlaceholder(a))
+                    continue;
+                const QString lead = leadArtist(a);
+                ++namedSongs;
+                ++counts[key(lead)];
+                if (!spelling.contains(key(lead)))
+                    spelling.insert(key(lead), canonical.value(key(lead), lead));
+            }
+            if (namedSongs * 2 >= d.files.size())
+                for (auto c = counts.cbegin(); c != counts.cend(); ++c)
+                    if (c.value() * 3 >= namedSongs * 2)
+                        d.artist = spelling.value(c.key());
+        }
+        if (d.artist.isEmpty())
+            d.named = folderNameArtist(it.key(), known);
+    }
+
     for (const File &f : files) {
         const Tags &t = f.tags;
+        const Folder &d = folders[QFileInfo(f.path).absolutePath()];
+        auto add = [&](Kind kind, const QString &fieldName, const QString &before, const QString &after, bool sure,
+                       const char *why) {
+            Finding x{kind, f.path, {}, fieldName, before, after};
+            x.sure = sure && !fieldName.isEmpty();
+            x.why = QString::fromLatin1(why);
+            out.push_back(x);
+        };
         // At most one finding per field, so fixing one never makes another
         // stale. Watermarks on the fields that aren't checked further:
         for (const QString name : {"albumartist", "comment"}) {
             const QString v = field(t, name);
             if (!v.isEmpty() && hasWatermark(v))
-                out.push_back({Kind::Watermark, f.path, {}, name, v, stripWatermark(v)});
+                add(Kind::Watermark, name, v, stripWatermark(v), true, "tag");
         }
-        // The title: watermark and numbering are fixed together.
-        const QString title = stripWatermark(t.title);
-        if (title.isEmpty()) {
-            // From the file's name, without a site's stamp or the artist said
-            // again; failing that, the tag's own words without the stamp.
-            QString named = Library::cleanTitle(stripWatermark(Library::titleFromFileName(f.path)), t.artist);
-            if (named.isEmpty() || named.compare(t.artist, Qt::CaseInsensitive) == 0)
-                named = withoutSites(t.title);
-            const bool usable = !named.isEmpty() && named != t.title;
-            out.push_back({Kind::MissingTitle, f.path, {}, usable ? "title" : QString(), t.title, usable ? named : QString()});
+
+        // The artist first: the title's fix depends on who the song is by.
+        // A tag that is nothing but a site's name, or "Unknown Artist",
+        // counts as missing.
+        QString artistNow = stripWatermark(t.artist);
+        if (isPlaceholder(artistNow))
+            artistNow.clear();
+        const QString fromFile = stripLabels(stripWatermark(Library::titleFromFileName(f.path)), true);
+        if (!artistNow.isEmpty() && artistNow != t.artist) {
+            add(Kind::Watermark, "artist", t.artist, artistNow, true, "tag");
+        } else if (artistNow.isEmpty()) {
+            // In turn: the album artist; "Artist - Song" in the file's name
+            // or the title; a scene release's "01-artist-song"; a known
+            // artist the title opens or closes with; the artist nearly
+            // every other song in the folder has; the known artist the
+            // folder's name opens with. Otherwise it is only pointed out.
+            QString artist;
+            bool sure = false;
+            const char *why = "";
+            if (!t.albumArtist.isEmpty() && !hasWatermark(t.albumArtist) && !isPlaceholder(t.albumArtist)
+                && !isVarious(t.albumArtist)) {
+                artist = t.albumArtist, sure = true, why = "tag";
+            }
+            auto beforeDash = [&](const QString &name, const char *source) {
+                const int dash = name.indexOf(" - ");
+                if (!artist.isEmpty() || dash <= 0)
+                    return;
+                QString left = stripWatermark(name.left(dash).trimmed());
+                static const QRegularExpression number(R"(^\s*\d{1,3}\s*[-._\)]*\s+)");
+                left.remove(number);
+                static const QRegularExpression letters(R"(\p{L})");
+                if (left.isEmpty() || !letters.match(left).hasMatch() || isPlaceholder(left) || isVarious(left))
+                    return;
+                const KnownArtist *k = knownArtist(leadArtist(left));
+                // A name the library knows is taken as the library spells it.
+                artist = k ? k->name + left.mid(leadArtist(left).size()) : left;
+                sure = k != nullptr;
+                why = source;
+            };
+            beforeDash(fromFile, "filename");
+            beforeDash(stripLabels(stripWatermark(t.title), false), "title");
+            if (artist.isEmpty()) {
+                artist = sceneArtist(f.path);
+                if (!artist.isEmpty()) {
+                    const KnownArtist *k = knownArtist(artist);
+                    if (k)
+                        artist = k->name;
+                    sure = k != nullptr, why = "filename";
+                }
+            }
+            if (artist.isEmpty()) {
+                // "lil wayne freestyle", "BANG BANG-YOUNG JEEZY FEAT. X".
+                QString title = stripWatermark(t.title);
+                static const QRegularExpression bracketed(R"([\(\[\{][^\)\]\}]*[\)\]\}]?)");
+                title.replace(bracketed, " ");
+                const QStringList words = wordsOf(title);
+                const KnownArtist *found = nullptr;
+                for (const KnownArtist &a : known)
+                    if (a.words.size() > 1 && a.words.size() < words.size() && words.mid(0, a.words.size()) == a.words
+                        && (!found || a.words.size() > found->words.size()))
+                        found = &a;
+                if (!found)
+                    if (const int dash = title.lastIndexOf('-'); dash > 0)
+                        found = knownArtist(leadArtist(title.mid(dash + 1)));
+                if (found)
+                    artist = found->name, why = "title";
+            }
+            if (artist.isEmpty() && !d.artist.isEmpty())
+                artist = d.artist, why = "folder-songs";
+            if (artist.isEmpty() && d.named && !namesAnotherArtist(f.path, *d.named, mentioned))
+                artist = d.named->name, why = "folder-name";
+            add(Kind::MissingArtist, artist.isEmpty() ? QString() : "artist", t.artist, artist, sure, why);
+        } else if (const QString lead = leadArtist(artistNow); canonical.contains(key(lead))
+                   && canonical.value(key(lead)) != lead && artistNow.startsWith(lead)) {
+            // The same artist written another way than most of the library
+            // writes it. Capitals and spaces alone are certain; punctuation
+            // ("Lil' Wayne") could be someone else.
+            const QString usual = canonical.value(key(lead));
+            add(Kind::ArtistSpelling, "artist", t.artist, usual + artistNow.mid(lead.size()),
+                usual.toLower().simplified() == lead.toLower().simplified(), "library");
+        } else if (const QString fixed = recased(artistNow); !fixed.isEmpty()) {
+            add(Kind::Case, "artist", t.artist, fixed, false, "case");
+        }
+
+        // The title: watermark, labels and numbering are fixed together.
+        const QString unmarked = stripWatermark(t.title);
+        const QString title = stripLabels(unmarked, false);
+        bool named = false;
+        const bool onlyNumber = isOnlyANumber(title, &named);
+        // From the file's name, without a site's stamp, a video label or the
+        // artist said again.
+        QString fromName = Library::cleanTitle(fromFile, t.artist);
+        if (t.artist.isEmpty())
+            if (const int dash = fromName.indexOf(" - "); dash > 0 && dash + 3 < fromName.size())
+                fromName = fromName.mid(dash + 3).trimmed();
+        if (fromName.compare(t.artist, Qt::CaseInsensitive) == 0 || isOnlyANumber(fromName) || isPlaceholder(fromName))
+            fromName.clear();
+        if (title.isEmpty() || isPlaceholder(title) || (onlyNumber && (named || !fromName.isEmpty()))) {
+            // Failing the file's name, the tag's own words without the stamp.
+            QString better = fromName;
+            if (better.isEmpty() && title.isEmpty())
+                better = withoutSites(t.title);
+            const bool usable = !better.isEmpty() && better != t.title;
+            add(Kind::MissingTitle, usable ? "title" : QString(), t.title, usable ? better : QString(), false, "filename");
         } else {
             QString clean = Library::cleanTitle(title, t.artist);
             // A bare leading number is the track number when the tag says so
@@ -307,40 +612,38 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
             if (const auto m = bare.match(clean); m.hasMatch() && number > 0 && m.captured(1).toInt() == number)
                 clean = Library::cleanTitle(m.captured(2), t.artist);
             if (clean != t.title)
-                out.push_back({clean != title ? Kind::NumberedTitle : Kind::Watermark, f.path, {}, "title", t.title,
-                               clean});
+                add(clean != title ? Kind::NumberedTitle : title != unmarked ? Kind::UploadLabel : Kind::Watermark,
+                    "title", t.title, clean, true, "tag");
+            else if (const QString fixed = recased(t.title); !fixed.isEmpty())
+                add(Kind::Case, "title", t.title, fixed, false, "case");
         }
-        // A tag that is nothing but a site's name counts as missing.
-        const QString artistNow = stripWatermark(t.artist), albumNow = stripWatermark(t.album);
-        if (!artistNow.isEmpty() && artistNow != t.artist)
-            out.push_back({Kind::Watermark, f.path, {}, "artist", t.artist, artistNow});
-        if (!albumNow.isEmpty() && albumNow != t.album)
-            out.push_back({Kind::Watermark, f.path, {}, "album", t.album, albumNow});
-        if (artistNow.isEmpty()) {
-            // The album artist, "Artist - Song" in the file name, a scene
-            // release's "01-artist-song", the artist nearly every other
-            // song in the folder has, or the known artist the folder's name
-            // opens with. Otherwise it is only pointed out.
-            QString artist = hasWatermark(t.albumArtist) ? QString() : t.albumArtist;
-            if (artist.isEmpty()) {
-                const QString name = Library::titleFromFileName(f.path);
-                const int dash = name.indexOf(" - ");
-                if (dash > 0)
-                    artist = stripWatermark(name.left(dash).trimmed());
+
+        // The album. In a pile of loose songs a song without one is a
+        // single, and nothing is wrong with it.
+        QString albumNow = stripWatermark(t.album);
+        if (isPlaceholder(albumNow))
+            albumNow.clear();
+        if (!albumNow.isEmpty() && albumNow != t.album) {
+            add(Kind::Watermark, "album", t.album, albumNow, true, "tag");
+        } else if (albumNow.isEmpty()) {
+            if (!d.loose) {
+                const QString fromFolder = Library::prettyFolderName(QFileInfo(f.path).absolutePath());
+                if (d.albumByMost)
+                    add(Kind::MissingAlbum, "album", t.album, d.album, false, "folder-songs");
+                else
+                    add(Kind::MissingAlbum, fromFolder.isEmpty() ? QString() : "album", t.album, fromFolder, false,
+                        "folder-name");
             }
-            if (artist.isEmpty())
-                artist = sceneArtist(f.path);
-            if (artist.isEmpty())
-                artist = folderArtist.value(QFileInfo(f.path).absolutePath());
-            if (artist.isEmpty())
-                if (const KnownArtist *a = namedFor.value(QFileInfo(f.path).absolutePath());
-                    a && !namesAnotherArtist(f.path, *a, mentioned))
-                    artist = a->name;
-            out.push_back({Kind::MissingArtist, f.path, {}, artist.isEmpty() ? QString() : "artist", t.artist, artist});
+        } else if (!d.loose && !d.album.isEmpty() && albumKey(albumNow) != albumKey(d.album)) {
+            // An album name most of the folder doesn't share (often the
+            // song's own name where the album belongs).
+            add(Kind::MixedAlbum, "album", t.album, d.album, false, "folder-songs");
         }
-        if (albumNow.isEmpty())
-            out.push_back({Kind::MissingAlbum, f.path, {}, "album", t.album,
-                           Library::prettyFolderName(QFileInfo(f.path).absolutePath())});
+
+        // A track number the file's name gives and the tag lacks.
+        if (t.number <= 0 && !d.loose && d.numbered)
+            if (const int n = fileNumber(f.path); n > 0)
+                add(Kind::MissingNumber, "tracknumber", {}, QString::number(n), d.numbers.value(n) == 1, "filename");
     }
 
     // Album artists that disagree inside one folder. Guests don't count as
@@ -348,13 +651,15 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
     // artist of two thirds of the folder's songs is the album's. So is a
     // joint credit ("Juelz Santana & Lil Wayne") when two thirds of the
     // songs are by the pair or by one of them. With neither, the tape is a
-    // compilation: "Various Artists".
-    for (auto it = byFolder.cbegin(); it != byFolder.cend(); ++it) {
+    // compilation: "Various Artists". A pile of loose songs is no album.
+    for (auto it = folders.cbegin(); it != folders.cend(); ++it) {
+        if (it->loose)
+            continue;
         QHash<QString, int> counts;                      // by lead artist, spelling aside
         QHash<QString, QHash<QString, int>> spellings;   // each lead's spellings
         QSet<QString> exact;
         int total = 0;
-        for (const File *f : *it) {
+        for (const File *f : it->files) {
             const QString &a = f->tags.albumArtist;
             if (a.isEmpty() || hasWatermark(a))
                 continue;
@@ -404,9 +709,12 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
                 }
             }
         }
-        for (const File *f : *it)
-            if (!f->tags.albumArtist.isEmpty() && !hasWatermark(f->tags.albumArtist) && f->tags.albumArtist != common)
-                out.push_back({Kind::MixedAlbumArtist, f->path, {}, "albumartist", f->tags.albumArtist, common});
+        for (const File *f : it->files)
+            if (!f->tags.albumArtist.isEmpty() && !hasWatermark(f->tags.albumArtist) && f->tags.albumArtist != common) {
+                Finding x{Kind::MixedAlbumArtist, f->path, {}, "albumartist", f->tags.albumArtist, common};
+                x.why = QStringLiteral("folder-songs");
+                out.push_back(x);
+            }
     }
 
     // The same song twice: same artist and title, lengths within 2 s.
@@ -438,6 +746,10 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
     std::stable_sort(out.begin(), out.end(), [](const Finding &a, const Finding &b) {
         if (a.kind != b.kind)
             return int(a.kind) < int(b.kind);
+        // A folder's findings together, whatever its subfolders are called.
+        const int slashA = a.path.lastIndexOf('/'), slashB = b.path.lastIndexOf('/');
+        if (const int byFolder = QStringView(a.path).left(slashA).compare(QStringView(b.path).left(slashB)); byFolder != 0)
+            return byFolder < 0;
         return a.path < b.path;
     });
     return out;
@@ -452,6 +764,7 @@ const char *propertyName(const QString &field) {
     if (field == "album") return "ALBUM";
     if (field == "albumartist") return "ALBUMARTIST";
     if (field == "comment") return "COMMENT";
+    if (field == "tracknumber") return "TRACKNUMBER";
     return nullptr;
 }
 }
@@ -554,23 +867,82 @@ LibraryDoctor::LibraryDoctor(Library *library, const QString &logFile, QObject *
     loadLog();
 }
 
+namespace {
+bool fixableFinding(const Finding &f) { return !f.field.isEmpty() && f.before != f.after; }
+
+// The field a typed answer goes to, for the kinds that take one.
+QString answerField(Kind kind) {
+    switch (kind) {
+    case Kind::MissingArtist: return "artist";
+    case Kind::MissingAlbum:
+    case Kind::MixedAlbum: return "album";
+    case Kind::MixedAlbumArtist: return "albumartist";
+    default: return {};
+    }
+}
+}
+
+// The findings as the page shows them. Findings are in order of kind, then
+// path, so a folder's are together; the first of each folder carries what
+// its heading needs. Built once per change, not once per read.
 QVariantList LibraryDoctor::findings() const {
-    QVariantList out;
-    for (const Finding &f : m_findings)
-        out.append(QVariantMap{{"kind", kindName(f.kind)},
-                               {"path", f.path},
-                               {"file", QFileInfo(f.path).fileName()},
-                               {"others", f.others},
-                               {"field", f.field},
-                               {"before", f.before},
-                               {"after", f.after},
-                               {"fixable", !f.field.isEmpty() && f.before != f.after}});
+    if (!m_viewStale)
+        return m_view;
+    m_view.clear();
+    m_view.reserve(qsizetype(m_findings.size()));
+    for (size_t i = 0; i < m_findings.size();) {
+        const QString folder = QFileInfo(m_findings[i].path).absolutePath();
+        size_t end = i;
+        int fixes = 0;
+        while (end < m_findings.size() && m_findings[end].kind == m_findings[i].kind
+               && QFileInfo(m_findings[end].path).absolutePath() == folder) {
+            fixes += fixableFinding(m_findings[end]);
+            ++end;
+        }
+        for (size_t n = i; n < end; ++n) {
+            const Finding &f = m_findings[n];
+            m_view.append(QVariantMap{{"kind", kindName(f.kind)},
+                                      {"path", f.path},
+                                      {"file", QFileInfo(f.path).fileName()},
+                                      {"folder", folder},
+                                      {"others", f.others},
+                                      {"field", f.field},
+                                      {"before", f.before},
+                                      {"after", f.after},
+                                      {"fixable", fixableFinding(f)},
+                                      {"sure", f.sure},
+                                      {"why", f.why},
+                                      {"groupFirst", n == i},
+                                      {"groupSize", int(end - i)},
+                                      {"groupFixes", fixes},
+                                      {"answerable", !answerField(f.kind).isEmpty()}});
+        }
+        i = end;
+    }
+    m_viewStale = false;
+    return m_view;
+}
+
+QVariantMap LibraryDoctor::counts() const {
+    QHash<QString, int> n;
+    for (const Finding &f : m_findings) {
+        ++n[kindName(f.kind)];
+        if (f.sure && fixableFinding(f))
+            ++n[kindName(f.kind) + "/sure"];
+    }
+    QVariantMap out;
+    for (auto it = n.cbegin(); it != n.cend(); ++it)
+        out.insert(it.key(), it.value());
     return out;
 }
 
 int LibraryDoctor::fixable() const {
-    return int(std::count_if(m_findings.begin(), m_findings.end(),
-                             [](const Finding &f) { return !f.field.isEmpty() && f.before != f.after; }));
+    return int(std::count_if(m_findings.begin(), m_findings.end(), fixableFinding));
+}
+
+void LibraryDoctor::changedFindings() {
+    m_viewStale = true;
+    emit changed();
 }
 
 void LibraryDoctor::scan() {
@@ -581,16 +953,17 @@ void LibraryDoctor::scan() {
     QStringList paths;
     for (const Track &t : m_library->tracks())
         paths << t.path;
+    const QStringList roots = m_library->folders();
     auto *watcher = new QFutureWatcher<std::vector<Finding>>(this);
     connect(watcher, &QFutureWatcher<std::vector<Finding>>::finished, this, [this, watcher] {
         m_findings = watcher->result();
         watcher->deleteLater();
         m_scanning = false;
-        emit changed();
+        changedFindings();
     });
     // Reading every file's tags takes a few seconds on a large library, so it
     // happens off the GUI thread, at low priority.
-    watcher->setFuture(QtConcurrent::run([paths] {
+    watcher->setFuture(QtConcurrent::run([paths, roots] {
         QThread::currentThread()->setPriority(QThread::LowestPriority);
         std::vector<File> files;
         files.reserve(size_t(paths.size()));
@@ -599,7 +972,7 @@ void LibraryDoctor::scan() {
             if (readTags(p, f.tags))
                 files.push_back(f);
         }
-        return diagnose(files);
+        return diagnose(files, roots);
     }));
 }
 
@@ -640,66 +1013,123 @@ bool LibraryDoctor::apply(const Finding &f) {
         emit message(tr("%1 didn't keep the change; left as it was.").arg(QFileInfo(f.path).fileName()));
         return false;
     }
-    m_log.push_back({f.path, f.field, f.before, f.after, true, all, stored});
+    m_log.push_back({f.path, f.field, f.before, f.after, true, all, stored, m_batch});
     return true;
 }
 
 bool LibraryDoctor::fix(int index) {
     if (index < 0 || index >= int(m_findings.size()))
         return false;
+    ++m_batch;
     const bool ok = apply(m_findings[size_t(index)]);
     if (ok) {
         m_findings.erase(m_findings.begin() + index);
         saveLog();
         if (m_library)
             m_library->rescan();
-        emit changed();
+        changedFindings();
     }
     return ok;
 }
 
+void LibraryDoctor::finishBatch(int done) {
+    if (done <= 0)
+        return;
+    saveLog();
+    if (m_library)
+        m_library->rescan();
+    changedFindings();
+    emit message(tr("Fixed %n tag(s). U in the Doctor undoes them.", "", done));
+}
+
 int LibraryDoctor::fixAll(const QString &kind) {
+    ++m_batch;
     int done = 0;
     for (int i = int(m_findings.size()) - 1; i >= 0; --i)
-        if (kindName(m_findings[size_t(i)].kind) == kind && apply(m_findings[size_t(i)])) {
+        if (m_findings[size_t(i)].sure && kindName(m_findings[size_t(i)].kind) == kind
+            && apply(m_findings[size_t(i)])) {
             m_findings.erase(m_findings.begin() + i);
             ++done;
         }
-    if (done > 0) {
-        saveLog();
-        if (m_library)
-            m_library->rescan();
-        emit changed();
-        emit message(tr("Fixed %n tag(s). U in the Doctor undoes the last.", "", done));
+    finishBatch(done);
+    return done;
+}
+
+int LibraryDoctor::fixGroup(const QString &kind, const QString &folder) {
+    ++m_batch;
+    int done = 0;
+    for (int i = int(m_findings.size()) - 1; i >= 0; --i) {
+        const Finding &f = m_findings[size_t(i)];
+        if (kindName(f.kind) == kind && QFileInfo(f.path).absolutePath() == folder && apply(f)) {
+            m_findings.erase(m_findings.begin() + i);
+            ++done;
+        }
     }
+    finishBatch(done);
+    return done;
+}
+
+int LibraryDoctor::setGroup(const QString &kind, const QString &folder, const QString &value) {
+    // One line of ordinary text, no longer than a tag reasonably is.
+    QString answer;
+    for (const QChar c : value)
+        answer += c.category() == QChar::Other_Control ? QChar(' ') : c;
+    answer = answer.simplified().left(MaxAnswer);
+    if (answer.isEmpty())
+        return 0;
+    ++m_batch;
+    int done = 0;
+    for (int i = int(m_findings.size()) - 1; i >= 0; --i) {
+        Finding f = m_findings[size_t(i)];
+        const QString field = answerField(f.kind);
+        if (field.isEmpty() || kindName(f.kind) != kind || QFileInfo(f.path).absolutePath() != folder)
+            continue;
+        f.field = field;
+        f.after = answer;
+        if (apply(f)) {
+            m_findings.erase(m_findings.begin() + i);
+            ++done;
+        }
+    }
+    finishBatch(done);
     return done;
 }
 
 bool LibraryDoctor::undoLast() {
     if (m_log.empty())
         return false;
-    const Entry e = m_log.back();
-    // The file must still hold what the fix left. An entry from before Halo
-    // logged whole lists is checked, and put back, by its first value.
-    Tags now;
-    QStringList all;
-    // (Copies of a value don't count: writing another field can add one.)
-    const bool same = e.whole ? readValues(e.path, e.field, all) && distinct(all) == distinct(e.afterAll)
-                              : readTags(e.path, now) && field(now, e.field) == e.after;
-    if (!same) {
-        emit message(tr("%1 changed since the fix; not undone.").arg(QFileInfo(e.path).fileName()));
+    // Everything the last press wrote, newest first.
+    const qint64 batch = m_log.back().batch;
+    int undone = 0, left = 0;
+    QString leftFile;
+    do {
+        const Entry e = m_log.back();
         m_log.pop_back();
-        saveLog();
-        emit changed();
-        return false;
-    }
-    const bool ok = e.whole ? writeValues(e.path, e.field, e.beforeAll) : writeField(e.path, e.field, e.before);
-    m_log.pop_back();
+        // The file must still hold what the fix left. An entry from before
+        // Halo logged whole lists is checked, and put back, by its first value.
+        Tags now;
+        QStringList all;
+        // (Copies of a value don't count: writing another field can add one.)
+        const bool same = e.whole ? readValues(e.path, e.field, all) && distinct(all) == distinct(e.afterAll)
+                                  : readTags(e.path, now) && field(now, e.field) == e.after;
+        if (same && (e.whole ? writeValues(e.path, e.field, e.beforeAll) : writeField(e.path, e.field, e.before))) {
+            ++undone;
+        } else {
+            ++left;
+            leftFile = QFileInfo(e.path).fileName();
+        }
+    } while (batch != 0 && !m_log.empty() && m_log.back().batch == batch);
     saveLog();
-    if (ok && m_library)
+    if (left == 1)
+        emit message(tr("%1 changed since the fix; not undone.").arg(leftFile));
+    else if (left > 1)
+        emit message(tr("%n file(s) changed since the fix; not undone.", "", left));
+    else if (undone > 1)
+        emit message(tr("Undid %n fix(es).", "", undone));
+    if (undone > 0 && m_library)
         m_library->rescan();
     emit changed();
-    return ok;
+    return left == 0;
 }
 
 void LibraryDoctor::loadLog() {
@@ -727,6 +1157,8 @@ void LibraryDoctor::loadLog() {
             e.beforeAll << x.toString();
         for (const QJsonValue &x : o.value("afterAll").toArray())
             e.afterAll << x.toString();
+        e.batch = qint64(o.value("batch").toDouble());
+        m_batch = std::max(m_batch, e.batch);
         m_log.push_back(e);
     }
 }
@@ -747,6 +1179,8 @@ void LibraryDoctor::saveLog() const {
             o.insert("beforeAll", QJsonArray::fromStringList(e.beforeAll));
             o.insert("afterAll", QJsonArray::fromStringList(e.afterAll));
         }
+        if (e.batch > 0)
+            o.insert("batch", double(e.batch));
         fixes.append(o);
     }
     f.write(QJsonDocument(QJsonObject{{"fixes", fixes}}).toJson());
