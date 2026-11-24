@@ -46,6 +46,40 @@ const QRegularExpression &siteExpression() {
     return site;
 }
 
+// "Lil Wayne Feat. Bun B" is Lil Wayne's song: the credit before any guest.
+QString leadArtist(const QString &artist) {
+    static const QRegularExpression guest(R"(\s*[\(\[]?\s*\b(feat|ft|featuring)\b\.?.*$)",
+                                          QRegularExpression::CaseInsensitiveOption);
+    QString lead = artist;
+    lead.remove(guest);
+    lead = lead.trimmed();
+    return lead.isEmpty() ? artist.trimmed() : lead;
+}
+
+// Only the sites' names taken out, the other words kept: "DJ Drop
+// Mixtapetrap.com" is "DJ Drop".
+QString withoutSites(const QString &text) {
+    QString s = text;
+    s.remove(siteExpression());
+    static const QRegularExpression emptyBrackets(R"([\(\[\{]\s*[\)\]\}])");
+    s.remove(emptyBrackets);
+    static const QRegularExpression edges(R"(^[\s\-|/~:]+|[\s\-|/~:]+$)");
+    s.remove(edges);
+    return s.simplified();
+}
+
+// A scene release names its files "01-artist_name-song_title-GRP.mp3": the
+// number, then the artist, each closed by a hyphen with no space around it.
+QString sceneArtist(const QString &path) {
+    static const QRegularExpression scene(R"(^\d{1,3}-([^-\s][^-]*)-[^-\s])");
+    const auto m = scene.match(QFileInfo(path).completeBaseName());
+    if (!m.hasMatch())
+        return {};
+    QString artist = m.captured(1);
+    artist.replace('_', ' ');
+    return Library::capitalised(artist.simplified());
+}
+
 QString key(const QString &s) {
     QString out;
     for (const QChar c : s.toLower())
@@ -97,6 +131,32 @@ QString field(const Tags &t, const QString &name) {
 
 std::vector<Finding> diagnose(const std::vector<File> &files) {
     std::vector<Finding> out;
+    QHash<QString, QList<const File *>> byFolder;
+    for (const File &f : files)
+        byFolder[QFileInfo(f.path).absolutePath()].append(&f);
+    // A folder's artist, for the songs in it that have none: the lead artist
+    // of at least two thirds of its songs that name one, when at least half
+    // of the folder does.
+    QHash<QString, QString> folderArtist;
+    for (auto it = byFolder.cbegin(); it != byFolder.cend(); ++it) {
+        QHash<QString, int> counts;
+        QHash<QString, QString> spelling;
+        int named = 0;
+        for (const File *f : *it) {
+            const QString lead = leadArtist(stripWatermark(f->tags.artist));
+            if (lead.isEmpty())
+                continue;
+            ++named;
+            ++counts[key(lead)];
+            if (!spelling.contains(key(lead)))
+                spelling.insert(key(lead), lead);
+        }
+        if (named * 2 < it->size())
+            continue;
+        for (auto c = counts.cbegin(); c != counts.cend(); ++c)
+            if (c.value() * 3 >= named * 2)
+                folderArtist.insert(it.key(), spelling.value(c.key()));
+    }
     for (const File &f : files) {
         const Tags &t = f.tags;
         // At most one finding per field, so fixing one never makes another
@@ -109,7 +169,13 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
         // The title: watermark and numbering are fixed together.
         const QString title = stripWatermark(t.title);
         if (title.isEmpty()) {
-            out.push_back({Kind::MissingTitle, f.path, {}, "title", t.title, Library::titleFromFileName(f.path)});
+            // From the file's name, without a site's stamp or the artist said
+            // again; failing that, the tag's own words without the stamp.
+            QString named = Library::cleanTitle(stripWatermark(Library::titleFromFileName(f.path)), t.artist);
+            if (named.isEmpty() || named.compare(t.artist, Qt::CaseInsensitive) == 0)
+                named = withoutSites(t.title);
+            const bool usable = !named.isEmpty() && named != t.title;
+            out.push_back({Kind::MissingTitle, f.path, {}, usable ? "title" : QString(), t.title, usable ? named : QString()});
         } else {
             QString clean = Library::cleanTitle(title, t.artist);
             // A bare leading number is the track number when the tag says so
@@ -134,14 +200,20 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
         if (!albumNow.isEmpty() && albumNow != t.album)
             out.push_back({Kind::Watermark, f.path, {}, "album", t.album, albumNow});
         if (artistNow.isEmpty()) {
-            // The album artist, or "Artist - Song" in the file name.
-            QString artist = t.albumArtist;
+            // The album artist, "Artist - Song" in the file name, a scene
+            // release's "01-artist-song", or the artist nearly every other
+            // song in the folder has. Otherwise it is only pointed out.
+            QString artist = hasWatermark(t.albumArtist) ? QString() : t.albumArtist;
             if (artist.isEmpty()) {
                 const QString name = Library::titleFromFileName(f.path);
                 const int dash = name.indexOf(" - ");
                 if (dash > 0)
-                    artist = name.left(dash).trimmed();
+                    artist = stripWatermark(name.left(dash).trimmed());
             }
+            if (artist.isEmpty())
+                artist = sceneArtist(f.path);
+            if (artist.isEmpty())
+                artist = folderArtist.value(QFileInfo(f.path).absolutePath());
             out.push_back({Kind::MissingArtist, f.path, {}, artist.isEmpty() ? QString() : "artist", t.artist, artist});
         }
         if (albumNow.isEmpty())
@@ -149,22 +221,67 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
                            Library::prettyFolderName(QFileInfo(f.path).absolutePath())});
     }
 
-    // Album artists that disagree inside one folder: the most common wins.
-    QHash<QString, QList<const File *>> byFolder;
-    for (const File &f : files)
-        byFolder[QFileInfo(f.path).absolutePath()].append(&f);
+    // Album artists that disagree inside one folder. Guests don't count as
+    // a different artist ("Lil Wayne Feat. Bun B" is Lil Wayne's). The lead
+    // artist of two thirds of the folder's songs is the album's. So is a
+    // joint credit ("Juelz Santana & Lil Wayne") when two thirds of the
+    // songs are by the pair or by one of them. With neither, the tape is a
+    // compilation: "Various Artists".
     for (auto it = byFolder.cbegin(); it != byFolder.cend(); ++it) {
-        QHash<QString, int> counts;
-        for (const File *f : *it)
-            if (!f->tags.albumArtist.isEmpty() && !hasWatermark(f->tags.albumArtist))
-                ++counts[f->tags.albumArtist];
-        if (counts.size() < 2)
+        QHash<QString, int> counts;                      // by lead artist, spelling aside
+        QHash<QString, QHash<QString, int>> spellings;   // each lead's spellings
+        QSet<QString> exact;
+        int total = 0;
+        for (const File *f : *it) {
+            const QString &a = f->tags.albumArtist;
+            if (a.isEmpty() || hasWatermark(a))
+                continue;
+            const QString lead = leadArtist(a);
+            ++total;
+            exact.insert(a);
+            ++counts[key(lead)];
+            ++spellings[key(lead)][lead];
+        }
+        if (exact.size() < 2)
             continue;
-        QString common;
-        int best = 0;
-        for (auto c = counts.cbegin(); c != counts.cend(); ++c)
-            if (c.value() > best || (c.value() == best && c.key() < common))
-                best = c.value(), common = c.key();
+        // In a stable order: most songs first, then by name.
+        QStringList leads = counts.keys();
+        std::sort(leads.begin(), leads.end(), [&counts](const QString &x, const QString &y) {
+            return counts[x] != counts[y] ? counts[x] > counts[y] : x < y;
+        });
+        auto spelled = [&spellings](const QString &lead) {
+            QString bestName;
+            int most = 0;
+            const auto &names = spellings[lead];
+            for (auto n = names.cbegin(); n != names.cend(); ++n)
+                if (n.value() > most || (n.value() == most && n.key() < bestName))
+                    most = n.value(), bestName = n.key();
+            return bestName;
+        };
+        QString common = QStringLiteral("Various Artists");
+        if (counts[leads.first()] * 3 >= total * 2) {
+            common = spelled(leads.first());
+        } else {
+            static const QRegularExpression joiner(R"(\s*(?:&|,|/|\band\b|\bx\b)\s*)",
+                                                   QRegularExpression::CaseInsensitiveOption);
+            for (const QString &lead : leads) {
+                const QString name = spelled(lead);
+                const QStringList members = name.split(joiner, Qt::SkipEmptyParts);
+                if (members.size() < 2)
+                    continue;
+                int support = counts[lead];
+                QSet<QString> seen{lead};
+                for (const QString &m : members)
+                    if (!seen.contains(key(m))) {
+                        seen.insert(key(m));
+                        support += counts.value(key(m));
+                    }
+                if (support * 3 >= total * 2) {
+                    common = name;
+                    break;
+                }
+            }
+        }
         for (const File *f : *it)
             if (!f->tags.albumArtist.isEmpty() && !hasWatermark(f->tags.albumArtist) && f->tags.albumArtist != common)
                 out.push_back({Kind::MixedAlbumArtist, f->path, {}, "albumartist", f->tags.albumArtist, common});
@@ -467,7 +584,20 @@ void LibraryDoctor::loadLog() {
     QFile f(m_logFile);
     if (!f.open(QIODevice::ReadOnly))
         return;
-    for (const QJsonValue &v : QJsonDocument::fromJson(f.read(8 * 1024 * 1024)).object().value("fixes").toArray()) {
+    // A log Halo can't read (far too large, or not what it wrote) is set
+    // aside under another name, never cut short and written over: it is the
+    // only record of what the tags said before.
+    const QByteArray bytes = f.read(MaxLogBytes + 1);
+    f.close();
+    QJsonParseError error;
+    const QJsonDocument doc = QJsonDocument::fromJson(bytes, &error);
+    if (bytes.size() > MaxLogBytes || (!bytes.trimmed().isEmpty() && (error.error != QJsonParseError::NoError || !doc.isObject()))) {
+        const QString aside = m_logFile + ".unreadable";
+        QFile::remove(aside);
+        QFile::rename(m_logFile, aside);
+        return;
+    }
+    for (const QJsonValue &v : doc.object().value("fixes").toArray()) {
         const QJsonObject o = v.toObject();
         Entry e{o.value("path").toString(), o.value("field").toString(), o.value("before").toString(),
                 o.value("after").toString(), o.contains("beforeAll") && o.contains("afterAll"), {}, {}};
@@ -485,7 +615,11 @@ void LibraryDoctor::saveLog() const {
     if (!f.open(QIODevice::WriteOnly))
         return;
     QJsonArray fixes;
-    for (const Entry &e : m_log) {
+    // The newest MaxLogEntries fixes are kept, so the file stays well inside
+    // what loadLog will read back.
+    const size_t first = m_log.size() > MaxLogEntries ? m_log.size() - MaxLogEntries : 0;
+    for (size_t i = first; i < m_log.size(); ++i) {
+        const Entry &e = m_log[i];
         QJsonObject o{{"path", e.path}, {"field", e.field}, {"before", e.before}, {"after", e.after}};
         if (e.whole) {
             o.insert("beforeAll", QJsonArray::fromStringList(e.beforeAll));

@@ -108,4 +108,8 @@ private:
     };
     std::vector<Entry> m_log;
     bool m_scanning = false;
+    // The undo log on disk: at most this many fixes (the newest), and never
+    // read past this size. 50,000 fixes of ordinary tags is about 15 MiB.
+    static constexpr size_t MaxLogEntries = 50000;
+    static constexpr qint64 MaxLogBytes = 64 * 1024 * 1024;
 };

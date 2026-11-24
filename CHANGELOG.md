@@ -3,6 +3,37 @@
 Halo follows [semantic versioning](https://semver.org). Each release has
 notes on its GitHub release page as well.
 
+## Unreleased
+
+Library Doctor, after a run over a real mixtape collection.
+
+- **Album names from folders named like web addresses.** A folder such as
+  `lil-wayne-tear-drop-tune-part-3-2010` was read as "lil - wayne - tear -
+  drop - tune - part - 3 (2010)". It is now "Lil Wayne Tear Drop Tune Part 3
+  (2010)", an archive's date stamp on the end (`_202511`) is dropped, and a
+  name written all in small letters gets its capitals. The Albums page uses
+  the same names for albums without a tag.
+- **More missing artists can be filled in.** From a scene release's file
+  names (`02-dj_drama_and_lil_wayne-getem.mp3` gives "DJ Drama And Lil
+  Wayne"), or from the folder when at least two thirds of its other songs
+  share one lead artist. Names the Doctor can't be sure of are still only
+  pointed out.
+- **Album artists: guests, pairs and split tapes.** "Lil Wayne Feat. Bun B"
+  now counts as Lil Wayne. The Doctor used to give the whole folder to
+  whichever name appeared most, even at 15 songs against 13. Now one artist
+  needs two thirds of the folder; a joint credit ("Juelz Santana & Lil
+  Wayne") wins when the songs are by the pair or by one of them; anything
+  else is proposed as "Various Artists".
+- **A title that is only a site's stamp.** "DJ Drop Mixtapetrap.com" was
+  proposed as "Young Jeezy - DJ Drop Mixtapetrap.com", stamp and all. It is
+  now "DJ Drop"; when nothing usable is left, the song is pointed out with no
+  fix offered.
+- **The undo log can't be lost to its own size.** Halo read at most 8 MiB of
+  the log; a longer one would have failed to load and been replaced by an
+  empty log at the next fix. It now reads up to 64 MiB, keeps the newest
+  50,000 fixes, and a log it can't read is set aside as
+  `doctor.json.unreadable`, not written over.
+
 ## 1.0.2 (2026-11-23)
 
 - **The bar icon dances.** While a song plays, the note in the bar becomes

@@ -897,6 +897,121 @@ private slots:
         QVERIFY(dup->field.isEmpty());
     }
 
+    // What the Doctor proposes for the tapes people really have: folders
+    // named like web addresses, scene file names, guests in the album artist.
+    void doctorReadsMixtapeNames() {
+        using namespace Doctor;
+        QCOMPARE(Library::prettyFolderName("/m/lil-wayne-tear-drop-tune-part-3-2010"),
+                 QString("Lil Wayne Tear Drop Tune Part 3 (2010)"));
+        QCOMPARE(Library::prettyFolderName("/m/the-cartel-lil-wayne-drake-the-carter-meets-the-cartel-ii-2009"),
+                 QString("The Cartel Lil Wayne Drake The Carter Meets The Cartel II (2009)"));
+        QCOMPARE(Library::prettyFolderName("/m/lil-wayne-gone-til-november-2010_202511"),
+                 QString("Lil Wayne Gone Til November (2010)"));
+        QCOMPARE(Library::prettyFolderName("/m/djwhiteowl_lil_wayne_-_new_orlens_nightmare_pt_9"),
+                 QString("Djwhiteowl Lil Wayne - New Orlens Nightmare Pt 9"));
+        // Names with capitals or spaces are left as written.
+        QCOMPARE(Library::prettyFolderName("/m/Young_Dolph_-_16_Zips-2015"), QString("Young Dolph - 16 Zips (2015)"));
+        QCOMPARE(Library::prettyFolderName("/m/OK Computer"), QString("OK Computer"));
+        QCOMPARE(Library::prettyFolderName("/m/Jay-Z"), QString("Jay - Z"));
+        QCOMPARE(Library::capitalised("dj drama and 2pac"), QString("DJ Drama And 2pac"));
+        QCOMPARE(Library::capitalised("eMOTIONAL"), QString("eMOTIONAL"));
+
+        std::vector<File> files;
+        auto add = [&](const QString &path, Tags t) { files.push_back({path, t}); };
+        // a scene release with no artist tags at all
+        add("/m/Dedication_2-2007-RAGEMP3/01-dj_drama_and_lil_wayne-the_best_in_the_business.mp3", {"The Best", "", "D2", "", "", 1, 100});
+        add("/m/Dedication_2-2007-RAGEMP3/02-dj_drama_and_lil_wayne-getem.mp3", {"Getem", "", "D2", "", "", 2, 101});
+        // title-then-artist names are not guessed at
+        add("/m/Versus/02.HOW DEEZ HOES BE-GUCCI MANE.mp3", {"How Deez", "", "Versus", "", "", 2, 102});
+        // a folder where nearly everyone is one artist
+        add("/m/home/01 A.mp3", {"A", "Lil Wayne", "Home", "", "", 1, 110});
+        add("/m/home/02 B.mp3", {"B", "Lil Wayne Feat. Rick Ross", "Home", "", "", 2, 111});
+        add("/m/home/03 C.mp3", {"C", "lil wayne", "Home", "", "", 3, 112});
+        add("/m/home/04 D.mp3", {"D", "", "Home", "", "", 4, 113});
+        // a folder with no clear artist
+        add("/m/mix/01 A.mp3", {"E", "One", "Mix", "", "", 1, 120});
+        add("/m/mix/02 B.mp3", {"F", "Two", "Mix", "", "", 2, 121});
+        add("/m/mix/03 C.mp3", {"G", "", "Mix", "", "", 3, 122});
+        // album artists: guests are the same artist; the lead of most songs wins
+        add("/m/drought/01.mp3", {"H", "x", "Drought", "Lil Wayne", "", 1, 130});
+        add("/m/drought/02.mp3", {"I", "x", "Drought", "Lil Wayne Feat.Currency", "", 2, 131});
+        add("/m/drought/03.mp3", {"J", "x", "Drought", "Lil Wayne Feat. Bun B", "", 3, 132});
+        add("/m/drought/04.mp3", {"K", "x", "Drought", "Jadakiss", "", 4, 133});
+        add("/m/drought/05.mp3", {"L", "x", "Drought", "Jadakiss", "", 5, 134});
+        add("/m/drought/06.mp3", {"L2", "x", "Drought", "Lil Wayne", "", 6, 135});
+        // two artists share a tape about evenly: nobody's album
+        add("/m/split/01.mp3", {"P", "x", "Split", "Lil Wayne", "", 1, 150});
+        add("/m/split/02.mp3", {"Q", "x", "Split", "Lil Wayne", "", 2, 151});
+        add("/m/split/03.mp3", {"R", "x", "Split", "Jadakiss", "", 3, 152});
+        add("/m/split/04.mp3", {"S", "x", "Split", "Jadakiss", "", 4, 153});
+        add("/m/split/05.mp3", {"T", "x", "Split", "Jadakiss", "", 5, 154});
+        // a tape by a pair, some songs by one of them alone
+        add("/m/face/01.mp3", {"U", "x", "Face", "Juelz Santana  Lil Wayne", "", 1, 160});
+        add("/m/face/02.mp3", {"V", "x", "Face", "Juelz Santana & Lil Wayne", "", 2, 161});
+        add("/m/face/03.mp3", {"W", "x", "Face", "Juelz Santana & Lil Wayne", "", 3, 162});
+        add("/m/face/04.mp3", {"X", "x", "Face", "Lil Wayne Ft. Young Buck", "", 4, 163});
+        add("/m/face/05.mp3", {"Y", "x", "Face", "Juelz Santana", "", 5, 164});
+        add("/m/face/06.mp3", {"Z", "x", "Face", "Juelz Santana & Bezel", "", 6, 165});
+        // no artist leads: a compilation
+        add("/m/comp/01.mp3", {"M", "x", "Comp", "One", "", 1, 140});
+        add("/m/comp/02.mp3", {"N", "x", "Comp", "Two", "", 2, 141});
+        add("/m/comp/03.mp3", {"O", "x", "Comp", "Three", "", 3, 142});
+        // a title that is only a site's stamp
+        add("/m/jeezy/09. Young Jeezy - DJ Drop Mixtapetrap.com.mp3", {"DJ Drop Mixtapetrap.com", "Young Jeezy", "Mr 17.5", "", "", 9, 20});
+        add("/m/jeezy/10. www.site.net.mp3", {"www.site.net", "Young Jeezy", "Mr 17.5", "", "", 10, 21});
+        const auto found = diagnose(files);
+        auto find = [&](Kind k, const QString &path) -> const Finding * {
+            for (const Finding &f : found)
+                if (f.kind == k && f.path == path)
+                    return &f;
+            return nullptr;
+        };
+        QCOMPARE(find(Kind::MissingArtist, "/m/Dedication_2-2007-RAGEMP3/02-dj_drama_and_lil_wayne-getem.mp3")->after,
+                 QString("DJ Drama And Lil Wayne"));
+        const Finding *versus = find(Kind::MissingArtist, "/m/Versus/02.HOW DEEZ HOES BE-GUCCI MANE.mp3");
+        QVERIFY(versus && versus->field.isEmpty() && versus->after.isEmpty());
+        QCOMPARE(find(Kind::MissingArtist, "/m/home/04 D.mp3")->after, QString("Lil Wayne"));
+        QVERIFY(find(Kind::MissingArtist, "/m/mix/03 C.mp3")->field.isEmpty());
+        QCOMPARE(find(Kind::MixedAlbumArtist, "/m/drought/04.mp3")->after, QString("Lil Wayne"));
+        QCOMPARE(find(Kind::MixedAlbumArtist, "/m/drought/02.mp3")->after, QString("Lil Wayne"));
+        QVERIFY(!find(Kind::MixedAlbumArtist, "/m/drought/01.mp3"));
+        QCOMPARE(find(Kind::MixedAlbumArtist, "/m/comp/02.mp3")->after, QString("Various Artists"));
+        QCOMPARE(find(Kind::MixedAlbumArtist, "/m/split/01.mp3")->after, QString("Various Artists"));
+        QCOMPARE(find(Kind::MixedAlbumArtist, "/m/split/05.mp3")->after, QString("Various Artists"));
+        QCOMPARE(find(Kind::MixedAlbumArtist, "/m/face/01.mp3")->after, QString("Juelz Santana & Lil Wayne"));
+        QCOMPARE(find(Kind::MixedAlbumArtist, "/m/face/05.mp3")->after, QString("Juelz Santana & Lil Wayne"));
+        QVERIFY(!find(Kind::MixedAlbumArtist, "/m/face/02.mp3"));
+        QCOMPARE(find(Kind::MissingTitle, "/m/jeezy/09. Young Jeezy - DJ Drop Mixtapetrap.com.mp3")->after, QString("DJ Drop"));
+        // nothing usable anywhere: pointed out, with no fix offered
+        const Finding *bare = find(Kind::MissingTitle, "/m/jeezy/10. www.site.net.mp3");
+        QVERIFY(bare && bare->field.isEmpty());
+    }
+
+    // A log that can't be read is set aside, not replaced by an empty one.
+    void doctorKeepsAnUnreadableLog() {
+        QTemporaryDir state;
+        const QString log = state.filePath("doctor.json");
+        {
+            QFile f(log);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("{\"fixes\": [ {\"path\": \"/a\", \"field\": \"title\", \"before\": \"x\"");   // cut short
+        }
+        LibraryDoctor doctor(nullptr, log);
+        QCOMPARE(doctor.undoable(), 0);
+        QVERIFY(!QFile::exists(log));
+        QFile aside(log + ".unreadable");
+        QVERIFY(aside.open(QIODevice::ReadOnly));
+        QVERIFY(aside.readAll().contains("\"before\": \"x\""));
+        // a good log still loads
+        {
+            QFile f(log);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("{\"fixes\": [ {\"path\": \"/a\", \"field\": \"title\", \"before\": \"x\", \"after\": \"y\"} ]}");
+        }
+        LibraryDoctor again(nullptr, log);
+        QCOMPARE(again.undoable(), 1);
+    }
+
     void doctorFixesRealFilesAndUndoes() {
         QTemporaryDir music, state;
         const QString song = music.filePath("01_Song.mp3");

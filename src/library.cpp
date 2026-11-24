@@ -356,14 +356,50 @@ QString Library::titleFromFileName(const QString &fileName) {
     return name.simplified();
 }
 
+// "Young_Dolph_-_16_Zips-2015" reads as "Young Dolph - 16 Zips (2015)", and
+// a web address made into a folder, "lil-wayne-tear-drop-tune-part-3-2010",
+// as "Lil Wayne Tear Drop Tune Part 3 (2010)".
 QString Library::prettyFolderName(const QString &folder) {
     QString name = QFileInfo(folder).fileName();
+    // An archive's own date stamp after the name: "..._202511".
+    static const QRegularExpression stamp("_20\\d{2}(0[1-9]|1[0-2])$");
+    name.remove(stamp);
+    // With no space or underscore anywhere, the hyphens are the spaces.
+    const bool slug = !name.contains(' ') && !name.contains('_') && name.count('-') >= 2;
     name.replace('_', ' ');
     static const QRegularExpression scene("-(\\d{4})(-[A-Za-z0-9]+)?$");
     name.replace(scene, " (\\1)");
-    static const QRegularExpression dashes("\\s*-\\s*");
-    name.replace(dashes, " - ");
-    return name.simplified();
+    if (slug) {
+        name.replace('-', ' ');
+    } else {
+        static const QRegularExpression dashes("\\s*-\\s*");
+        name.replace(dashes, " - ");
+    }
+    return capitalised(name.simplified());
+}
+
+// A name written all in small letters gets a capital on each word ("lil
+// wayne" reads as "Lil Wayne", "dj" as "DJ"); any other name is left as its
+// writer had it.
+QString Library::capitalised(const QString &name) {
+    for (const QChar c : name)
+        if (c.isUpper())
+            return name;
+    QStringList words = name.split(' ', Qt::SkipEmptyParts);
+    for (QString &w : words) {
+        if (w == "dj" || w == "mc" || w == "ii" || w == "iii" || w == "iv") {
+            w = w.toUpper();
+            continue;
+        }
+        for (int i = 0; i < w.size(); ++i)
+            if (w[i].isLetter()) {
+                w[i] = w[i].toUpper();
+                break;
+            } else if (w[i].isDigit()) {
+                break; // "2pac", "50cent": a word that starts with a number stays
+            }
+    }
+    return words.join(' ');
 }
 
 Track Library::readTrack(const QString &path) {
