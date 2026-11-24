@@ -3,6 +3,17 @@
 Halo follows [semantic versioning](https://semver.org). Each release has
 notes on its GitHub release page as well.
 
+## Unreleased
+
+- **Library Doctor: a missing artist from the folder's name.** A folder
+  whose name opens with an artist your library already knows (a lead artist
+  on three songs or more) gives that artist to its songs that have none:
+  `lil-wayne-homecoming-2011` proposes "Lil Wayne". A one-word name counts
+  only when a dash sets it apart (`Drake - So Far Gone`). A song whose own
+  file name credits someone else (`14. Pandemonium Rick Ross.mp3`,
+  `14 Erykah Badu-Jump Up.mp3`) is still only pointed out; guests in
+  brackets don't count.
+
 ## 1.0.3 (2026-11-24)
 
 - **A first-run setup.** The first time Halo opens it asks where your music

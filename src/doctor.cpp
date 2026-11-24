@@ -80,6 +80,75 @@ QString sceneArtist(const QString &path) {
     return Library::capitalised(artist.simplified());
 }
 
+// A name as its words, small letters and digits only: "Jay-Z" is jay, z.
+QStringList wordsOf(const QString &text) {
+    static const QRegularExpression gap(R"([^\p{L}\p{N}]+)");
+    return text.toLower().split(gap, Qt::SkipEmptyParts);
+}
+
+// Where `part` sits whole inside `all`, or -1.
+int findWords(const QStringList &all, const QStringList &part, int from = 0) {
+    for (int i = from; i + part.size() <= all.size(); ++i)
+        if (all.mid(i, part.size()) == part)
+            return i;
+    return -1;
+}
+
+// An artist the library already knows: named by the tags of several songs.
+struct KnownArtist {
+    QStringList words;
+    QString name;
+    int songs = 0;
+};
+
+// The known artist a folder's name opens with: "lil-wayne-homecoming-2011"
+// is Lil Wayne's once other songs carry that name. The longest name wins.
+// A one-word name could as well be the album's first word ("Future
+// Nostalgia"), so it counts only when a dash sets it apart ("Drake - So Far
+// Gone") or it is the whole name.
+const KnownArtist *folderNameArtist(const QString &folder, const QList<KnownArtist> &known) {
+    QString name = QFileInfo(folder).fileName();
+    name.replace('_', ' ');
+    const QStringList words = wordsOf(name);
+    static const QRegularExpression dashed(R"(^\s*\S+\s+-\s+\S)");
+    const bool setApart = dashed.match(name).hasMatch();
+    const KnownArtist *best = nullptr;
+    for (const KnownArtist &a : known) {
+        if (a.words.size() > words.size() || words.mid(0, a.words.size()) != a.words)
+            continue;
+        if (a.words.size() == 1 && words.size() > 1 && !setApart)
+            continue;
+        if (!best || a.words.size() > best->words.size()
+            || (a.words.size() == best->words.size() && a.songs > best->songs))
+            best = &a;
+    }
+    return best;
+}
+
+// Whether a file's own name credits someone else: a name the library's tags
+// mention ("14. Pandemonium Rick Ross.mp3" in a Lil Wayne folder), or an
+// "Artist-Song" pair where neither side is the folder's artist ("14 Erykah
+// Badu-Jump Up In The Air"). Guests in brackets don't count.
+bool namesAnotherArtist(const QString &path, const KnownArtist &own, const QList<QStringList> &mentioned) {
+    QString base = QFileInfo(path).completeBaseName();
+    static const QRegularExpression bracketed(R"([\(\[\{][^\)\]\}]*[\)\]\}]?)");
+    base.replace(bracketed, " ");
+    static const QRegularExpression number(R"(^\s*\d{1,3}[\s.\-_]+)");
+    base.remove(number);
+    if (const int dash = base.indexOf('-'); dash >= 0
+        && wordsOf(base.left(dash)) != own.words && wordsOf(base.mid(dash + 1)) != own.words)
+        return true;
+    QStringList words = wordsOf(base);
+    for (int at = findWords(words, own.words); at >= 0; at = findWords(words, own.words, at)) {
+        words.remove(at, own.words.size());
+        words.insert(at, QString()); // so the words on either side don't join
+    }
+    for (const QStringList &name : mentioned)
+        if (name != own.words && findWords(words, name) >= 0)
+            return true;
+    return false;
+}
+
 QString key(const QString &s) {
     QString out;
     for (const QChar c : s.toLower())
@@ -157,6 +226,54 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
             if (c.value() * 3 >= named * 2)
                 folderArtist.insert(it.key(), spelling.value(c.key()));
     }
+    // The artists this library knows: a lead artist on at least three songs.
+    // A folder whose name opens with one of them is taken as that artist's.
+    QList<KnownArtist> known;
+    {
+        QHash<QString, int> at;
+        for (const File &f : files) {
+            const QString lead = leadArtist(stripWatermark(f.tags.artist));
+            const QStringList words = wordsOf(lead);
+            if (words.isEmpty())
+                continue;
+            const QString k = words.join(' ');
+            if (!at.contains(k)) {
+                at.insert(k, int(known.size()));
+                known.append({words, lead, 0});
+            }
+            ++known[at.value(k)].songs;
+        }
+        known.removeIf([](const KnownArtist &a) { return a.songs < 3; });
+    }
+    // Every name the artist tags mention, guests and partners too, to tell
+    // when a file's own name credits someone other than its folder's artist.
+    // A one-word name is as likely a word of the title, so it needs three
+    // mentions.
+    QList<QStringList> mentioned;
+    {
+        static const QRegularExpression joiner(
+            R"(\s*(?:&|,|/|;|\(|\)|\[|\]|\b(?:and|x|with|feat|ft|featuring)\b\.?)\s*)",
+            QRegularExpression::CaseInsensitiveOption);
+        QHash<QString, int> count;
+        QHash<QString, QStringList> wordsFor;
+        for (const File &f : files)
+            for (const QString &part : stripWatermark(f.tags.artist).split(joiner, Qt::SkipEmptyParts)) {
+                const QStringList words = wordsOf(part);
+                if (words.isEmpty())
+                    continue;
+                const QString k = words.join(' ');
+                ++count[k];
+                wordsFor.insert(k, words);
+            }
+        for (auto it = count.cbegin(); it != count.cend(); ++it)
+            if (it.value() >= 3 || wordsFor.value(it.key()).size() > 1)
+                mentioned.append(wordsFor.value(it.key()));
+    }
+    QHash<QString, const KnownArtist *> namedFor;
+    for (auto it = byFolder.cbegin(); it != byFolder.cend(); ++it)
+        if (!folderArtist.contains(it.key()))
+            if (const KnownArtist *a = folderNameArtist(it.key(), known))
+                namedFor.insert(it.key(), a);
     for (const File &f : files) {
         const Tags &t = f.tags;
         // At most one finding per field, so fixing one never makes another
@@ -201,8 +318,9 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
             out.push_back({Kind::Watermark, f.path, {}, "album", t.album, albumNow});
         if (artistNow.isEmpty()) {
             // The album artist, "Artist - Song" in the file name, a scene
-            // release's "01-artist-song", or the artist nearly every other
-            // song in the folder has. Otherwise it is only pointed out.
+            // release's "01-artist-song", the artist nearly every other
+            // song in the folder has, or the known artist the folder's name
+            // opens with. Otherwise it is only pointed out.
             QString artist = hasWatermark(t.albumArtist) ? QString() : t.albumArtist;
             if (artist.isEmpty()) {
                 const QString name = Library::titleFromFileName(f.path);
@@ -214,6 +332,10 @@ std::vector<Finding> diagnose(const std::vector<File> &files) {
                 artist = sceneArtist(f.path);
             if (artist.isEmpty())
                 artist = folderArtist.value(QFileInfo(f.path).absolutePath());
+            if (artist.isEmpty())
+                if (const KnownArtist *a = namedFor.value(QFileInfo(f.path).absolutePath());
+                    a && !namesAnotherArtist(f.path, *a, mentioned))
+                    artist = a->name;
             out.push_back({Kind::MissingArtist, f.path, {}, artist.isEmpty() ? QString() : "artist", t.artist, artist});
         }
         if (albumNow.isEmpty())

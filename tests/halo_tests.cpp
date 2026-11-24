@@ -932,6 +932,23 @@ private slots:
         add("/m/mix/01 A.mp3", {"E", "One", "Mix", "", "", 1, 120});
         add("/m/mix/02 B.mp3", {"F", "Two", "Mix", "", "", 2, 121});
         add("/m/mix/03 C.mp3", {"G", "", "Mix", "", "", 3, 122});
+        // folders named for an artist the library knows (three songs or more)
+        add("/m/lil-wayne-homecoming-2011/01. If I Die Today (Feat. Rick Ross).mp3", {"If I Die Today", "", "Homecoming", "", "", 1, 170});
+        add("/m/lil-wayne-homecoming-2011/14. Pandemonium (Feat. Wale) Rick Ross.mp3", {"Pandemonium", "", "Homecoming", "", "", 14, 171});
+        add("/m/lil-wayne-homecoming-2011/16. Can A Drummer Get Some Lil Wayne.mp3", {"Drummer", "", "Homecoming", "", "", 16, 172});
+        add("/m/lil-wayne-homecoming-2011/15 Erykah Badu-Jump Up (Feat Lil Wayne).mp3", {"Jump Up", "", "Homecoming", "", "", 15, 183});
+        add("/m/lil-wayne-homecoming-2011/17. Faded (Feat. Red Cafe) Bun B.mp3", {"Faded", "", "Homecoming", "", "", 17, 184});
+        add("/m/lil-wayne-homecoming-2011/Lil wayne-Peoples Champ.mp3", {"Peoples Champ", "", "Homecoming", "", "", 0, 185});
+        add("/m/the-cartel-lil-wayne-rikers-2010/02 Uptown.mp3", {"Uptown", "", "Rikers", "", "", 2, 173});
+        add("/m/ross/01 R.mp3", {"R1", "Rick Ross Feat. Bun B", "Ross", "", "", 1, 174});
+        add("/m/ross/02 R.mp3", {"R2", "Rick Ross", "Ross", "", "", 2, 175});
+        add("/m/ross/03 R.mp3", {"R3", "Rick Ross", "Ross", "", "", 3, 176});
+        add("/m/Drake - So Far Gone/01 Lust.mp3", {"Lust", "", "So Far Gone", "", "", 1, 177});
+        add("/m/drake-in-the-morning/01 Song.mp3", {"Song", "", "Morning", "", "", 1, 178});
+        add("/m/drakes/01 D.mp3", {"D1", "Drake", "D", "", "", 1, 179});
+        add("/m/drakes/02 D.mp3", {"D2", "Drake", "D", "", "", 2, 180});
+        add("/m/drakes/03 D.mp3", {"D3", "Drake", "D", "", "", 3, 181});
+        add("/m/one-two-three/01 Song.mp3", {"Song", "", "OTT", "", "", 1, 182});
         // album artists: guests are the same artist; the lead of most songs wins
         add("/m/drought/01.mp3", {"H", "x", "Drought", "Lil Wayne", "", 1, 130});
         add("/m/drought/02.mp3", {"I", "x", "Drought", "Lil Wayne Feat.Currency", "", 2, 131});
@@ -972,6 +989,24 @@ private slots:
         QVERIFY(versus && versus->field.isEmpty() && versus->after.isEmpty());
         QCOMPARE(find(Kind::MissingArtist, "/m/home/04 D.mp3")->after, QString("Lil Wayne"));
         QVERIFY(find(Kind::MissingArtist, "/m/mix/03 C.mp3")->field.isEmpty());
+        // the folder's name opens with a known artist; a guest in brackets is fine
+        QCOMPARE(find(Kind::MissingArtist, "/m/lil-wayne-homecoming-2011/01. If I Die Today (Feat. Rick Ross).mp3")->after,
+                 QString("Lil Wayne"));
+        QCOMPARE(find(Kind::MissingArtist, "/m/lil-wayne-homecoming-2011/16. Can A Drummer Get Some Lil Wayne.mp3")->after,
+                 QString("Lil Wayne"));
+        // a file that credits another known artist is left alone
+        QVERIFY(find(Kind::MissingArtist, "/m/lil-wayne-homecoming-2011/14. Pandemonium (Feat. Wale) Rick Ross.mp3")->field.isEmpty());
+        // so is one whose name pairs another artist with the song, or ends in a
+        // name the tags only mention as a guest
+        QVERIFY(find(Kind::MissingArtist, "/m/lil-wayne-homecoming-2011/15 Erykah Badu-Jump Up (Feat Lil Wayne).mp3")->field.isEmpty());
+        QVERIFY(find(Kind::MissingArtist, "/m/lil-wayne-homecoming-2011/17. Faded (Feat. Red Cafe) Bun B.mp3")->field.isEmpty());
+        QCOMPARE(find(Kind::MissingArtist, "/m/lil-wayne-homecoming-2011/Lil wayne-Peoples Champ.mp3")->after, QString("Lil Wayne"));
+        // the artist must open the name, and a rarely seen name is not known
+        QVERIFY(find(Kind::MissingArtist, "/m/the-cartel-lil-wayne-rikers-2010/02 Uptown.mp3")->field.isEmpty());
+        QVERIFY(find(Kind::MissingArtist, "/m/one-two-three/01 Song.mp3")->field.isEmpty());
+        // a one-word name needs the dash that sets it apart
+        QCOMPARE(find(Kind::MissingArtist, "/m/Drake - So Far Gone/01 Lust.mp3")->after, QString("Drake"));
+        QVERIFY(find(Kind::MissingArtist, "/m/drake-in-the-morning/01 Song.mp3")->field.isEmpty());
         QCOMPARE(find(Kind::MixedAlbumArtist, "/m/drought/04.mp3")->after, QString("Lil Wayne"));
         QCOMPARE(find(Kind::MixedAlbumArtist, "/m/drought/02.mp3")->after, QString("Lil Wayne"));
         QVERIFY(!find(Kind::MixedAlbumArtist, "/m/drought/01.mp3"));
