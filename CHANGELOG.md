@@ -5,6 +5,16 @@ notes on its GitHub release page as well.
 
 ## Unreleased
 
+- **A first-run setup.** The first time Halo opens it asks where your music
+  is: your music folder, Downloads and a Music folder on any plugged-in
+  drive are listed with a live count of the songs in each; tick the ones to
+  play, or add your own. A second step turns Blend, Drift, even loudness and
+  online lyrics on or off, each with a line on what it does; a third reads
+  the library and shows the keys worth knowing. All of it works from the
+  keyboard (arrows, Space, Enter; Esc skips). Before, Halo asked only when it
+  found no music at all. **Ctrl+,** opens the setup again at any time, which
+  is now also how you take a folder out of the library.
+
 Library Doctor, after a run over a real mixtape collection.
 
 - **Album names from folders named like web addresses.** A folder such as

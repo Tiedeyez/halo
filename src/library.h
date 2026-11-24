@@ -57,6 +57,7 @@ class Library : public QObject {
     Q_PROPERTY(int trackCount READ trackCount NOTIFY changed)
     Q_PROPERTY(int albumCount READ albumCount NOTIFY changed)
     Q_PROPERTY(QStringList folders READ folders NOTIFY changed)
+    Q_PROPERTY(bool foldersPinned READ foldersPinned CONSTANT)
 
 public:
     explicit Library(const QStringList &folders = {}, const QString &cacheDirectory = {},
@@ -83,6 +84,24 @@ public:
     // Adds a music folder (a path or a file:// URL from the folder dialog)
     // to ~/.config/halo/folders and scans it. False if it isn't a folder.
     Q_INVOKABLE bool addFolder(const QString &folder);
+    // The setup screen. folderChoices: the folders Halo reads now, then the
+    // usual places it could (the desktop's music folder, ~/Music,
+    // ~/Downloads, a Music folder on a plugged-in drive), each as
+    // {path, chosen, kind}; kind is "music", "downloads", "drive" or "yours".
+    Q_INVOKABLE QVariantList folderChoices() const;
+    // Makes these the music folders: writes ~/.config/halo/folders with
+    // exactly them and scans. False (and nothing written) when none of them
+    // is a folder, or when HALO_MUSIC decides the folders (foldersPinned).
+    Q_INVOKABLE bool setFolders(const QStringList &folders);
+    bool foldersPinned() const;
+    // How many songs a folder holds, counted off the GUI thread by the
+    // scan's own rules; the answer arrives as songsCounted. Counting stops
+    // at CountLimit files looked at, and says so with more = true.
+    Q_INVOKABLE void countSongs(const QString &folder);
+    static int countAudioFiles(const QString &folder, bool *more = nullptr, const std::atomic<bool> *stop = nullptr);
+    static constexpr int CountLimit = 300000;
+    // A path as the user gave it (a file:// URL, "~/Music") made absolute.
+    static QString localPath(const QString &folder);
     static QString foldersFile();
     void loadCache();
 
@@ -122,6 +141,7 @@ signals:
     void changed();
     void scanningChanged();
     void scanProgress();
+    void songsCounted(const QString &folder, int songs, bool more);
 
 private:
     void adopt(std::vector<Track> tracks);
@@ -138,6 +158,8 @@ private:
     QHash<QString, int> m_byAlbum;
     bool m_scanning = false;
     bool m_rescanAgain = false;
+    std::atomic<bool> m_stopCounting{false};
+    QList<QFutureWatcher<void> *> m_counting;
     std::atomic<int> m_counter{0};
     QTimer m_progress;
     QFutureWatcher<std::vector<Track>> m_watcher;

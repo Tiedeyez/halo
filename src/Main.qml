@@ -36,6 +36,14 @@ ApplicationWindow {
         else if (which === "edit" && playlistId.length) smartRules.openFor(playlistId)
         else if (which === "new") newPlaylist([])
         else if (which === "rename" && playlistId.length) PlaylistUi.rename(playlistId)
+        // "setup", "setup1", "setup2": the setup screen, at that step.
+        else if (which === "setupnext") welcome.next()
+        else if (which === "setupdone") welcome.finished()
+        else if (which.startsWith("setuptick")) welcome.toggleChoice(Number(which.slice(9)) || 0)
+        else if (which.startsWith("setup")) {
+            setupOpen = true
+            Qt.callLater(() => { welcome.step = Math.max(0, Math.min(2, Number(which.slice(5)) || 0)) })
+        }
     }
     function newPlaylist(paths) {
         namePrompt.ask(qsTr("New playlist"), qsTr("Create"), "", name => {
@@ -58,31 +66,26 @@ ApplicationWindow {
     property bool helpVisible: false
 
     // ---- first run ----
-    // Halo looks in the music folder by itself; only when that finds
-    // nothing does the welcome screen ask where the music is. Music found
-    // any way at all counts as onboarded, so the screen never comes back.
-    property bool scannedOnce: library.trackCount > 0
-    readonly property bool welcoming: !player.onboarded && scannedOnce && library.trackCount === 0
-    function chooseMusicFolder() { folderPicker.open() }
-    Connections {
-        target: library
-        function onScanningChanged() { if (!library.scanning) win.scannedOnce = true }
-        function onChanged() { if (library.trackCount > 0) player.onboarded = true }
+    // The setup (Welcome.qml) opens the first time Halo runs, and again on
+    // Ctrl+, or from an empty library's button. Finishing or skipping it
+    // counts as onboarded, so it never opens by itself again.
+    property bool setupOpen: false
+    readonly property bool welcoming: !player.onboarded || setupOpen
+    function chooseMusicFolder() { setupOpen = true }
+    function closeSetup() {
+        player.onboarded = true
+        setupOpen = false
+        Qt.callLater(() => { if (pages.currentItem) pages.currentItem.forceActiveFocus() })
     }
     FolderDialog {
         id: folderPicker
-        title: qsTr("Choose your music folder")
+        title: qsTr("Choose a music folder")
         currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
-        onAccepted: {
-            const folder = selectedFolder.toString()
-            const ok = library.addFolder(folder)
-            welcome.rejected = !ok
-            welcome.chosen = ok ? decodeURIComponent(folder.replace(/^file:\/\//, "")) : ""
-        }
+        onAccepted: welcome.addChoice(decodeURIComponent(selectedFolder.toString().replace(/^file:\/\//, "")))
     }
 
     readonly property bool typing: sidebar.search.activeFocus
-    readonly property bool free: !typing && !helpVisible && !eq.visible
+    readonly property bool free: !typing && !helpVisible && !eq.visible && !welcoming
 
     function show(v) {
         // A playlist page with no playlist opens the first one.
@@ -137,7 +140,7 @@ ApplicationWindow {
     Shortcut { sequence: "Shift+Left"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: player.seekBy(-10) }
     Shortcut { sequence: "-"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.volume = player.volume - 0.05 }
     Shortcut { sequences: ["=", "+"]; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.volume = player.volume + 0.05 }
-    Shortcut { sequences: ["/", "Ctrl+F"]; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: { win.nowPlaying = false; sidebar.search.forceActiveFocus(); sidebar.search.selectAll() } }
+    Shortcut { sequences: ["/", "Ctrl+F"]; context: Qt.ApplicationShortcut; enabled: !win.typing && !win.welcoming; onActivated: { win.nowPlaying = false; sidebar.search.forceActiveFocus(); sidebar.search.selectAll() } }
     Shortcut { sequence: "1"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(0) }
     Shortcut { sequence: "2"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(2) }
     Shortcut { sequence: "3"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(3) }
@@ -146,7 +149,7 @@ ApplicationWindow {
     Shortcut { sequence: "6"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(6) }
     Shortcut { sequence: "7"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.show(7) }
     Shortcut { sequence: "8"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.showPlaylists() }
-    Shortcut { sequence: "Ctrl+N"; context: Qt.ApplicationShortcut; enabled: !win.typing && !namePrompt.visible; onActivated: win.newPlaylist([]) }
+    Shortcut { sequence: "Ctrl+N"; context: Qt.ApplicationShortcut; enabled: !win.typing && !namePrompt.visible && !win.welcoming; onActivated: win.newPlaylist([]) }
     Shortcut { sequence: "F"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.nowPlaying = !win.nowPlaying }
     // L opens the lyrics, in Now Playing; again hides them.
     Shortcut {
@@ -169,12 +172,13 @@ ApplicationWindow {
     Shortcut { sequence: "D"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.drift = !player.drift }
     Shortcut { sequence: "S"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.shuffle = !player.shuffle }
     Shortcut { sequence: "R"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.cycleRepeat() }
-    Shortcut { sequence: "E"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: eq.visible ? eq.close() : eq.open() }
+    Shortcut { sequence: "E"; context: Qt.ApplicationShortcut; enabled: !win.typing && !win.welcoming; onActivated: eq.visible ? eq.close() : eq.open() }
     Shortcut { sequence: "Z"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.cycleSleep() }
     Shortcut { sequence: "V"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.visualStyle = (player.visualStyle + 1) % 12 }
     Shortcut { sequence: "Shift+V"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.visualStyle = (player.visualStyle + 11) % 12 }
     Shortcut { sequence: "C"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.calm = !player.calm }
     Shortcut { sequence: "Ctrl+R"; context: Qt.ApplicationShortcut; onActivated: library.rescan() }
+    Shortcut { sequence: "Ctrl+,"; context: Qt.ApplicationShortcut; enabled: !win.welcoming; onActivated: win.setupOpen = true }
     Shortcut { sequences: [StandardKey.Undo]; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: player.undo() }
     Shortcut { sequences: [StandardKey.Redo, "Ctrl+Shift+Z"]; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: player.redo() }
     Shortcut { sequence: "?"; context: Qt.ApplicationShortcut; enabled: !win.typing; onActivated: win.helpVisible = !win.helpVisible }
@@ -657,15 +661,20 @@ ApplicationWindow {
         Welcome {
             id: welcome
             anchors.fill: parent
+            firstRun: !player.onboarded
             opacity: win.welcoming ? 1 : 0
             visible: opacity > 0
             enabled: win.welcoming
             Behavior on opacity {
                 NumberAnimation { duration: Style.motion ? Style.smooth : 0; easing.type: Easing.OutCubic }
             }
-            onVisibleChanged: if (visible) forceActiveFocus()
-            onChooseFolder: win.chooseMusicFolder()
-            onDismissed: player.onboarded = true
+            // Fresh choices and counts each time it opens.
+            property bool wasOpen: false
+            readonly property bool open: win.welcoming
+            onOpenChanged: if (open && !wasOpen) { wasOpen = true; begin() } else if (!open) wasOpen = false
+            Component.onCompleted: if (open) { wasOpen = true; begin() }
+            onPickFolder: folderPicker.open()
+            onFinished: win.closeSetup()
         }
 
         HelpOverlay {

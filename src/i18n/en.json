@@ -254,5 +254,25 @@
   },
   "%1 changed since the fix; not undone.": "",
   "Albums, Songs, Queue, Moments, Most played, Lost & Found, Library Doctor": "",
-  "Album": ""
+  "Album": "",
+  "%n song(s)": {
+    "one": "%n song",
+    "other": "%n songs"
+  },
+  "%n album(s)": {
+    "one": "%n album",
+    "other": "%n albums"
+  },
+  "%n folder(s)": {
+    "one": "%n folder",
+    "other": "%n folders"
+  },
+  "%n file(s) so far. You can start now; albums appear as Halo reads them.": {
+    "one": "%n file so far. You can start now; albums appear as Halo reads them.",
+    "other": "%n files so far. You can start now; albums appear as Halo reads them."
+  },
+  "Counting the songs in %n folder(s).": {
+    "one": "Counting the songs in %n folder.",
+    "other": "Counting the songs in %n folders."
+  }
 }

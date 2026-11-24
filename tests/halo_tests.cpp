@@ -1692,6 +1692,90 @@ private slots:
         qputenv("HOME", oldHome);
     }
 
+    // The setup screen's side of the library: the folders it offers, the
+    // songs it counts in them, and the folders file it writes.
+    void setupOffersCountsAndSavesFolders() {
+        QTemporaryDir home, config, cache, state, drive;
+        const QByteArray oldMusic = qgetenv("HALO_MUSIC"), oldConfig = qgetenv("XDG_CONFIG_HOME"), oldHome = qgetenv("HOME");
+        qunsetenv("HALO_MUSIC");
+        qputenv("XDG_CONFIG_HOME", config.path().toUtf8());
+        qputenv("HOME", home.path().toUtf8());
+        auto touch = [](const QString &path) {
+            QDir().mkpath(QFileInfo(path).absolutePath());
+            QFile f(path);
+            return f.open(QIODevice::WriteOnly) && f.write("x") == 1;
+        };
+        const QString music = home.filePath("Music"), downloads = home.filePath("Downloads");
+        QVERIFY(touch(music + "/Album/01.mp3"));
+        QVERIFY(touch(music + "/Album/02.flac"));
+        QVERIFY(touch(music + "/Album/cover.jpg"));
+        QVERIFY(touch(music + "/.trash/gone.mp3"));          // hidden folders don't count
+        QVERIFY(touch(music + "/Ringtones/.nomedia"));
+        QVERIFY(touch(music + "/Ringtones/ring.mp3"));       // nor a folder marked .nomedia
+        QVERIFY(touch(downloads + "/mix.ogg"));
+        QVERIFY(touch(drive.filePath("Tapes/a.mp3")));
+
+        bool more = true;
+        QCOMPARE(Library::countAudioFiles(music, &more), 2);
+        QVERIFY(!more);
+        QCOMPARE(Library::countAudioFiles(downloads), 1);
+        QCOMPARE(Library::countAudioFiles(home.filePath("nowhere")), 0);
+        QCOMPARE(Library::localPath("~/Music"), music);
+        QCOMPARE(Library::localPath(QUrl::fromLocalFile(music).toString()), music);
+
+        Library library({}, cache.path(), state.path());
+        QVERIFY(!library.foldersPinned());
+        // What it reads now comes first and is ticked; Downloads is offered, unticked.
+        const QVariantList choices = library.folderChoices();
+        QCOMPARE(choices.first().toMap().value("path").toString(), music);
+        QVERIFY(choices.first().toMap().value("chosen").toBool());
+        QCOMPARE(choices.first().toMap().value("kind").toString(), QString("music"));
+        bool offeredDownloads = false;
+        for (const QVariant &c : choices)
+            if (c.toMap().value("path").toString() == downloads) {
+                offeredDownloads = true;
+                QVERIFY(!c.toMap().value("chosen").toBool());
+            }
+        QVERIFY(offeredDownloads);
+
+        // Counting answers by signal, for a folder and for something that isn't one.
+        QSignalSpy counted(&library, &Library::songsCounted);
+        library.countSongs(music);
+        library.countSongs(home.filePath("nowhere"));
+        QTRY_COMPARE_WITH_TIMEOUT(counted.size(), 2, 10000);
+        QHash<QString, int> answers;
+        for (const auto &c : counted)
+            answers.insert(c.at(0).toString(), c.at(1).toInt());
+        QCOMPARE(answers.value(music), 2);
+        QCOMPARE(answers.value(home.filePath("nowhere")), -1);
+
+        // Nothing usable: refused, and no file is written.
+        QVERIFY(!library.setFolders({}));
+        QVERIFY(!library.setFolders({home.filePath("nowhere"), ""}));
+        QVERIFY(!QFile::exists(Library::foldersFile()));
+
+        // Exactly the folders chosen, once each, missing ones dropped.
+        QSignalSpy scanned(&library, &Library::scanningChanged);
+        QVERIFY(library.setFolders({drive.filePath("Tapes"), "~/Downloads", drive.filePath("Tapes") + "/", home.filePath("nowhere")}));
+        QCOMPARE(library.folders(), (QStringList{drive.filePath("Tapes"), downloads}));
+        QCOMPARE(Library::defaultFolders(), (QStringList{drive.filePath("Tapes"), downloads}));
+        while (library.scanning() || scanned.isEmpty())
+            QVERIFY(scanned.wait(10000));
+        // ~/Music is no longer read: only the two songs in the chosen folders.
+        QCOMPARE(library.trackCount(), 2);
+        QVERIFY(!library.folderChoices().first().toMap().value("path").toString().isEmpty());
+
+        // HALO_MUSIC decides the folders: nothing can be saved over it.
+        qputenv("HALO_MUSIC", music.toUtf8());
+        QVERIFY(library.foldersPinned());
+        QVERIFY(!library.setFolders({music}));
+        QCOMPARE(Library::defaultFolders(), QStringList{music});
+
+        if (oldMusic.isEmpty()) qunsetenv("HALO_MUSIC"); else qputenv("HALO_MUSIC", oldMusic);
+        if (oldConfig.isEmpty()) qunsetenv("XDG_CONFIG_HOME"); else qputenv("XDG_CONFIG_HOME", oldConfig);
+        qputenv("HOME", oldHome);
+    }
+
     // ---- lyrics ----
 
     void lrcParsesStampsOffsetsAndWords() {

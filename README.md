@@ -166,10 +166,15 @@ checked against the source.
 
 ## Your music
 
-Halo reads your music folder (`XDG_MUSIC_DIR`, usually `~/Music`). When it
-finds nothing there, it says so and asks where your music is; the folder
-you choose is saved, with the ones it found, one per line in
-`~/.config/halo/folders`, and you can list more there. A folder is an album, which is how mixtapes, rips
+The first time Halo opens, a short setup asks three things. **Where your
+music is:** it lists your music folder (`XDG_MUSIC_DIR`, usually `~/Music`),
+`~/Downloads` and a `Music` folder on any drive that is plugged in, each
+with a count of the songs in it, and you tick the ones to play or add your
+own. **How it should play:** Blend, Drift, even loudness and online lyrics,
+each on or off. Then it reads the library and shows the few keys worth
+knowing. Enter moves on, Esc skips it, and Ctrl+, brings it back whenever
+you want to change folders. Your choice is saved one per line in
+`~/.config/halo/folders`, which you can also edit by hand. A folder is an album, which is how mixtapes, rips
 and downloads are laid out; a `CD1` or `Disc 2` folder joins its parent.
 Covers come from an image in the folder or from the files' tags. Files
 shorter than ten seconds (drum one-shots, sample packs) stay out of the
@@ -207,6 +212,7 @@ Halo never changes, moves or deletes a music file.
 | Alt+Up, Alt+Down | Move a song in the queue |
 | Ctrl+Z, Ctrl+Shift+Z | Undo and redo queue changes |
 | Ctrl+R | Look for new music |
+| Ctrl+, | Music folders and setup |
 | ? | Show every shortcut |
 | Q | Quit |
 
@@ -278,7 +284,7 @@ for your password once so pacman can install it.
 ```sh
 sudo pacman -Rns halo                        # the app, its icon and launcher entry
 rm -rf ~/.local/state/halo ~/.cache/halo     # your queue, play history, lyrics and caches
-rm -rf ~/.config/halo                        # only if you made a folders file there
+rm -rf ~/.config/halo                        # your music folders list
 rm -rf ~/.agents/skills/halo ~/.claude/skills/halo   # only if you ran `halo skill install`
 ```
 

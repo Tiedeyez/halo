@@ -226,6 +226,9 @@ Library::Library(const QStringList &folders, const QString &cacheDirectory, cons
 }
 
 Library::~Library() {
+    m_stopCounting = true;
+    for (QFutureWatcher<void> *w : std::as_const(m_counting))
+        w->waitForFinished();
     if (m_watcher.isRunning())
         m_watcher.waitForFinished();
     flush();
@@ -300,6 +303,131 @@ bool Library::addFolder(const QString &folder) {
     else
         rescan();
     return true;
+}
+
+QString Library::localPath(const QString &folder) {
+    QString path = folder.startsWith("file:") ? QUrl(folder).toLocalFile() : folder;
+    if (path == "~" || path.startsWith("~/"))
+        path = QDir::homePath() + path.mid(1);
+    if (path.isEmpty())
+        return {};
+    return QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+}
+
+bool Library::foldersPinned() const { return !qEnvironmentVariableIsEmpty("HALO_MUSIC"); }
+
+QVariantList Library::folderChoices() const {
+    QVariantList out;
+    QSet<QString> listed;
+    auto offer = [&out, &listed](const QString &path, bool chosen, const char *kind) {
+        if (path.isEmpty() || listed.contains(path) || (!chosen && !QFileInfo(path).isDir()))
+            return;
+        listed.insert(path);
+        out.append(QVariantMap{{"path", path}, {"chosen", chosen}, {"kind", QString::fromLatin1(kind)}});
+    };
+    const QString xdg = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::MusicLocation));
+    const QString home = QDir::cleanPath(QDir::homePath() + "/Music");
+    const QString downloads = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::DownloadLocation));
+    for (const QString &f : m_folders)
+        offer(f, true, f == xdg || f == home ? "music" : f == downloads ? "downloads" : "yours");
+    offer(xdg, false, "music");
+    offer(home, false, "music");
+    // A Music folder on a drive that is plugged in (at most 16 looked at).
+    const QString user = qEnvironmentVariable("USER");
+    if (!user.isEmpty() && !user.contains('/')) {
+        int looked = 0;
+        for (const QString &base : {"/run/media/" + user, "/media/" + user})
+            for (const QFileInfo &drive : QDir(base).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
+                if (++looked > 16)
+                    break;
+                for (const char *name : {"Music", "music"})
+                    offer(QDir::cleanPath(drive.absoluteFilePath() + "/" + name), false, "drive");
+            }
+    }
+    if (downloads != QDir::cleanPath(QDir::homePath()))
+        offer(downloads, false, "downloads");
+    return out;
+}
+
+bool Library::setFolders(const QStringList &folders) {
+    if (foldersPinned())
+        return false;
+    QStringList wanted;
+    for (const QString &f : folders) {
+        const QString path = localPath(f);
+        // One per line in the file, so a name with a line break can't be kept.
+        if (!path.isEmpty() && !path.contains('\n') && QFileInfo(path).isDir() && !wanted.contains(path))
+            wanted << path;
+    }
+    if (wanted.isEmpty())
+        return false;
+    QByteArray text = "# Halo's music folders, one per line. Halo reads everything inside them.\n";
+    for (const QString &f : std::as_const(wanted))
+        text += f.toUtf8() + '\n';
+    const QString listFile = foldersFile();
+    QDir().mkpath(QFileInfo(listFile).absolutePath());
+    QSaveFile file(listFile);
+    if (!file.open(QIODevice::WriteOnly) || file.write(text) != text.size() || !file.commit())
+        return false;
+    if (wanted != m_folders) {
+        m_folders = wanted;
+        emit changed();
+    }
+    if (m_scanning)
+        m_rescanAgain = true;
+    else
+        rescan();
+    return true;
+}
+
+// The scan's own rules (scanFolders), without reading a tag.
+int Library::countAudioFiles(const QString &folder, bool *more, const std::atomic<bool> *stop) {
+    int songs = 0, looked = 0;
+    if (more)
+        *more = false;
+    QHash<QString, bool> ignoredDirectories;
+    QDirIterator it(folder, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        if (stop && stop->load())
+            break;
+        const QString path = it.next();
+        if (++looked > CountLimit) {
+            if (more)
+                *more = true;
+            break;
+        }
+        if (!isAudioFile(path) || path.mid(folder.size()).contains("/."))
+            continue;
+        const QString directory = QFileInfo(path).absolutePath();
+        auto ignored = ignoredDirectories.constFind(directory);
+        if (ignored == ignoredDirectories.constEnd())
+            ignored = ignoredDirectories.insert(directory, QFileInfo::exists(directory + "/.haloignore") ||
+                                                               QFileInfo::exists(directory + "/.nomedia"));
+        if (!ignored.value())
+            ++songs;
+    }
+    return songs;
+}
+
+void Library::countSongs(const QString &folder) {
+    const QString path = localPath(folder);
+    if (path.isEmpty() || !QFileInfo(path).isDir()) {
+        emit songsCounted(folder, -1, false);
+        return;
+    }
+    auto *watcher = new QFutureWatcher<void>(this);
+    m_counting.append(watcher);
+    auto result = std::make_shared<std::pair<int, bool>>(0, false);
+    connect(watcher, &QFutureWatcher<void>::finished, this, [this, watcher, result, folder] {
+        m_counting.removeAll(watcher);
+        watcher->deleteLater();
+        if (!m_stopCounting)
+            emit songsCounted(folder, result->first, result->second);
+    });
+    const std::atomic<bool> *stop = &m_stopCounting;
+    watcher->setFuture(QtConcurrent::run([path, result, stop] {
+        result->first = countAudioFiles(path, &result->second, stop);
+    }));
 }
 
 bool Library::isAudioFile(const QString &path) {

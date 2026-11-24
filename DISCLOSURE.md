@@ -18,8 +18,8 @@ program. It talks to PipeWire through Qt to play sound.
 
 | Path | What | When |
 | --- | --- | --- |
-| `~/.local/state/halo/state.json` | The queue, position, volume, settings, equalizer, moments, and whether the welcome screen was seen | As they change, and on quit |
-| `~/.config/halo/folders` | Your music folders, one per line (the ones Halo found, plus the one you chose) | Only when you choose a folder with "Choose your music folder" |
+| `~/.local/state/halo/state.json` | The queue, position, volume, settings, equalizer, moments, and whether the setup was finished or skipped | As they change, and on quit |
+| `~/.config/halo/folders` | Your music folders, one per line: exactly the ones ticked in the setup | Only when you press Next on the setup's folders step |
 | `~/.local/state/halo/stats.json` | Play counts and last-played times per file | After you hear half a song |
 | `~/.local/state/halo/headphones.json` | Outputs you turned headphone correction off for, by name | When you turn it off or on |
 | Your music files' tags (title, artist, album, album artist, comment) | The fix shown in the Library Doctor | Only when you press Fix, Fix all or U (undo) there |
@@ -67,9 +67,17 @@ Omarchy or Hyprland configuration.
   `$XDG_CONFIG_HOME` when set) for the language, and
   `$OMARCHY_PATH/default/i18n/locales.json` for number formats.
 
-It reads nothing else in your home folder. The "Choose your music folder"
-window is a folder picker that lists folders as you browse them; Halo keeps
-only the folder you pick.
+- While the setup is open (the first run, and Ctrl+, after that): the names
+  of the files in the folders it offers, to count the songs in each. Those
+  are your music folders, `~/Downloads`, a `Music` folder on a drive mounted
+  under `/run/media/<you>` or `/media/<you>` (at most 16 drives looked at),
+  and any folder you add there. Only names are read, never contents; the
+  count stops after 300,000 files; and a folder you don't tick is not read
+  again.
+
+It reads nothing else in your home folder. The setup's "Add a folder" window
+is a folder picker that lists folders as you browse them; Halo keeps only
+the folder you pick.
 
 ## Processes it starts
 
