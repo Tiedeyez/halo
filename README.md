@@ -248,6 +248,9 @@ a bar widget with the song playing, play/pause, next and previous. Install
 it from the Omarchy Marketplace, then add the Halo widget to the bar. It
 needs the Halo app above. Left click opens Halo, middle click plays or
 pauses, the wheel skips, right click shows the song with its controls.
+While a song plays, the bar icon is three small bars that dance; paused, it
+is the note again (`"equalizer": false` in the widget's settings keeps the
+note).
 
 The widget only runs `/usr/bin/halo` (`status`, `toggle`, `next`,
 `previous`, `open`) with a fixed argument list. It writes no files, changes

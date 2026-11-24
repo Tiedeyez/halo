@@ -3,6 +3,14 @@
 Halo follows [semantic versioning](https://semver.org). Each release has
 notes on its GitHub release page as well.
 
+## Unreleased
+
+- **The bar icon dances.** While a song plays, the note in the bar becomes
+  three small pixel bars that keep moving, and it is the still note again
+  when you pause. `"equalizer": false` in the widget's settings keeps the
+  note; Omarchy's reduce-motion setting does too. The bars are decoration:
+  the widget still runs only the five `halo` commands and reads no audio.
+
 ## 1.0.1 (2026-11-23)
 
 Fixes from the Marketplace review of 1.0.0.

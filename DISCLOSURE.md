@@ -139,7 +139,9 @@ It runs only `/usr/bin/halo` with one of five fixed argument lists
 polls `status` every 3 to 15 seconds (every second while its popup is open),
 reads at most 64 KiB of a reply, and stops a command after five seconds.
 It writes no files, changes no settings, and opens no network connection.
-What it shows (title, artist, album) is drawn as plain text.
+What it shows (title, artist, album) is drawn as plain text. While a song
+plays, its bar icon is three small bars that move on a timer; they are
+decoration, drawn from a fixed pattern, and the widget reads no audio.
 
 ## How to check this yourself
 

@@ -34,6 +34,25 @@ BarWidget {
   readonly property bool showTitle: setting("showTitle", true) !== false
   readonly property int maxLabelChars: Math.max(8, Math.min(80, Number(setting("maxTitleLength", 32)) || 32))
 
+  // While a song plays, the note in the bar becomes three pixel bars that
+  // keep moving. Decoration only: the widget hears nothing, it knows a song
+  // is playing and no more. `"equalizer": false` in the widget's settings
+  // keeps the note, and so does Omarchy's reduce-motion setting.
+  readonly property bool showEqualizer: setting("equalizer", true) !== false && !Style.reduceMotion
+  readonly property bool dancing: playing && showEqualizer
+  readonly property var eqLevels: [
+    [2, 4, 6, 4, 3, 1, 3, 5, 6, 3, 2, 4, 5, 3, 1, 4],
+    [6, 5, 3, 2, 4, 5, 6, 4, 2, 4, 6, 5, 2, 3, 6, 3],
+    [1, 3, 4, 6, 5, 3, 2, 3, 5, 6, 4, 2, 6, 4, 3, 2]
+  ]
+  property int eqStep: 0
+  Timer {
+    interval: 170
+    repeat: true
+    running: root.dancing && root.visible
+    onTriggered: root.eqStep = (root.eqStep + 1) % 16
+  }
+
   readonly property string songLine: state.title + (state.artist ? "  ·  " + state.artist : "")
   readonly property string barLabel: {
     if (!showTitle || vertical || !hasSong) return ""
@@ -172,6 +191,7 @@ BarWidget {
     anchors.fill: parent
     bar: root.bar
     text: "\u{f075a}"   // nf-md-music_note
+    iconComponent: root.dancing ? equalizer : null
     labelText: root.barLabel
     // BarIconButton is one icon slot wide unless told otherwise, and a
     // song title would spill out of both sides of it.
@@ -189,6 +209,34 @@ BarWidget {
       if (!root.hasSong) return
       if (delta > 0) root.request("previous")
       else if (delta < 0) root.request("next")
+    }
+  }
+
+  // Three bars on whole pixels, in a box as big as the note it replaces (the
+  // box keeps the icon's measured size steady while the bars move).
+  Component {
+    id: equalizer
+    Rectangle {
+      id: box
+      readonly property int side: Math.max(5, Math.round(button.visualIconSize))
+      readonly property int bw: Math.max(1, Math.round(side / 5))
+      readonly property int gap: Math.max(1, Math.floor(bw / 2))
+      readonly property int inset: Math.floor((side - bw * 3 - gap * 2) / 2)
+      width: side
+      height: side
+      color: "transparent"
+      Repeater {
+        model: 3
+        Rectangle {
+          required property int index
+          x: box.inset + index * (box.bw + box.gap)
+          width: box.bw
+          height: Math.max(box.bw, Math.round(box.side * root.eqLevels[index][root.eqStep] / 6))
+          y: box.side - height
+          color: button.foreground
+          antialiasing: false
+        }
+      }
     }
   }
 

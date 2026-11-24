@@ -93,11 +93,13 @@ ShellRoot {
       check("playing", w.kind === "playing", w.kind)
       check("bar label is title and artist", w.barLabel === "Night Drive  ·  Tape Deck", w.barLabel)
       check("glyph escapes decode", String.fromCodePoint(0xf075a) === "\u{f075a}", "")
+      check("the bar icon dances while a song plays", w.dancing === true, String(w.dancing))
       w.request("toggle")
     }],
     [1500, function() {}, function() {
       check("toggle ran `halo toggle --json`", lastCall.indexOf("toggle --json") >= 0, lastCall)
       check("toggle's own reply updates the state (paused)", w.kind === "paused", w.kind)
+      check("paused: the bar icon is the still note", w.dancing === false, String(w.dancing))
       w.request("next")
     }],
     [1500, function() {}, function() {
