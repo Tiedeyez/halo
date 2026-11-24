@@ -3,7 +3,7 @@
 Halo follows [semantic versioning](https://semver.org). Each release has
 notes on its GitHub release page as well.
 
-## Unreleased
+## 1.0.3 (2026-11-24)
 
 - **A first-run setup.** The first time Halo opens it asks where your music
   is: your music folder, Downloads and a Music folder on any plugged-in

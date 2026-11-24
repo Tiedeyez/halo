@@ -3,7 +3,7 @@
 # pkgbuild/PKGBUILD). Install with:  makepkg -si   (in this folder)
 # Maintainer: Tiedeyez <84999823+Tiedeyez@users.noreply.github.com>
 pkgname=halo
-pkgver=1.0.2
+pkgver=1.0.3
 pkgrel=1
 pkgdesc='A music player for Omarchy: your library, mixed like a DJ would'
 arch=('x86_64' 'aarch64')
@@ -14,7 +14,7 @@ makedepends=('git' 'gcc' 'make' 'qt6-shadertools')
 # Pinned to the release tag. After tagging, the tag's commit goes in
 # _commit in a follow-up commit (a commit can't hold its own hash), and
 # prepare() refuses to build if the tag ever points anywhere else.
-_commit='a269ff70605bb30d84090d0cb0d464a558ff2a29'
+_commit=''
 source=("halo::git+$url.git#tag=v$pkgver")
 sha256sums=('SKIP')
 
