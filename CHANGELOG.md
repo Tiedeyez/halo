@@ -3,7 +3,7 @@
 Halo follows [semantic versioning](https://semver.org). Each release has
 notes on its GitHub release page as well.
 
-## Unreleased
+## 1.0.2 (2026-11-23)
 
 - **The bar icon dances.** While a song plays, the note in the bar becomes
   three small pixel bars that keep moving, and it is the still note again

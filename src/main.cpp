@@ -35,7 +35,7 @@
 #include "visual.h"
 #include "visualizers.h"
 
-static constexpr const char *Version = "1.0.1";
+static constexpr const char *Version = "1.0.2";
 
 int main(int argc, char *argv[]) {
     // Before anything is written: Halo's files are private to you.
