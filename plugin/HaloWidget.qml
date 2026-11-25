@@ -46,6 +46,7 @@ BarWidget {
   //   showTitle       false hides the song in the bar            (true)
   //   maxTitleLength  the longest bar label, 8 to 80             (32)
   //   equalizer       false keeps the still note while playing   (true)
+  //   artwork         false hides the album cover in the bar     (true)
   //   progress        false hides the line under the bar label   (true)
   //   lyrics          false hides the line being sung            (true)
   //   click           "open" makes a click open Halo and a right
@@ -54,6 +55,7 @@ BarWidget {
   //                   volume; "track" skips songs                ("track")
   readonly property bool showTitle: setting("showTitle", true) !== false
   readonly property int maxLabelChars: Math.max(8, Math.min(80, Number(setting("maxTitleLength", 32)) || 32))
+  readonly property bool showArtwork: setting("artwork", true) !== false
   readonly property bool showProgress: setting("progress", true) !== false
   readonly property bool showLyrics: setting("lyrics", true) !== false
   readonly property bool clickOpensHalo: setting("click", "player") === "open"
@@ -105,6 +107,14 @@ BarWidget {
     var text = songLine
     return text.length > maxLabelChars ? text.slice(0, maxLabelChars - 1) + "…" : text
   }
+  // The cover Halo cached for the album, as a link to the local file; empty
+  // when there is none (or Halo is too old to name it).
+  readonly property string coverUrl: hasSong && state.cover !== ""
+    ? "file://" + state.cover.split("/").map(encodeURIComponent).join("/") : ""
+  // The cover sits before the label in a horizontal bar, once it has loaded.
+  readonly property bool artShown: showArtwork && !vertical && coverUrl !== "" && barArt.status === Image.Ready
+  readonly property int artSide: Math.max(12, Math.min(barSize - Style.space(6), Style.bar.iconSlot - Style.space(5)))
+  readonly property int artRoom: artShown ? artSide + Style.spacing.md : 0
   readonly property bool progressShown: showProgress && hasSong && state.duration > 0 && !vertical
 
   // Tempo and loudness, when Halo has analysed the song; then the place in
@@ -321,12 +331,59 @@ BarWidget {
   // ---- the bar ------------------------------------------------------------
 
   visible: true
-  implicitWidth: button.implicitWidth
+  implicitWidth: button.implicitWidth + (vertical ? 0 : artRoom)
   implicitHeight: button.implicitHeight
+
+  function pressedWith(mouseButton) {
+    if (mouseButton === Qt.MiddleButton) { if (root.hasSong) root.request("toggle") }
+    else if ((mouseButton === Qt.RightButton) !== root.clickOpensHalo) root.openHalo()
+    else root.popupOpen = !root.popupOpen
+  }
+
+  function wheeled(delta) {
+    if (delta === 0) return
+    if (root.scrollVolume) {
+      if (root.reachable && root.state.volume >= 0) root.setVolume(root.state.volume + (delta > 0 ? 5 : -5))
+      return
+    }
+    if (!root.hasSong) return
+    if (delta > 0) root.request("previous")
+    else root.request("next")
+  }
+
+  // The album cover, when Halo has one: a small square before the song. It
+  // takes clicks and the wheel the same as the rest of the widget.
+  Item {
+    id: artBox
+    visible: root.artShown
+    x: Style.spacing.sm
+    width: root.artSide
+    height: root.artSide
+    anchors.verticalCenter: parent.verticalCenter
+    opacity: root.playing ? 1.0 : 0.7
+
+    SizedImage {
+      id: barArt
+      anchors.fill: parent
+      crop: true
+      url: root.showArtwork && !root.vertical ? root.coverUrl : ""
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+      cursorShape: Qt.PointingHandCursor
+      onPressed: function(mouse) { root.pressedWith(mouse.button) }
+      onWheel: function(wheel) { root.wheeled(wheel.angleDelta.y) }
+    }
+  }
 
   BarIconButton {
     id: button
-    anchors.fill: parent
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    anchors.right: parent.right
+    width: parent.width - (vertical ? 0 : root.artRoom)
     bar: root.bar
     text: "\u{f075a}"   // nf-md-music_note
     iconComponent: root.dancing ? equalizer : null
@@ -338,21 +395,8 @@ BarWidget {
       : Math.ceil(canvasSize + labelMetrics.advanceWidth + Style.space(4) + Style.spacing.controlPaddingX * 2)
     dimmed: !root.reachable
     tooltipText: root.hasSong ? root.songLine : root.stateLine
-    onPressed: function(mouseButton) {
-      if (mouseButton === Qt.MiddleButton) { if (root.hasSong) root.request("toggle") }
-      else if ((mouseButton === Qt.RightButton) !== root.clickOpensHalo) root.openHalo()
-      else root.popupOpen = !root.popupOpen
-    }
-    onWheelMoved: function(delta) {
-      if (delta === 0) return
-      if (root.scrollVolume) {
-        if (root.reachable && root.state.volume >= 0) root.setVolume(root.state.volume + (delta > 0 ? 5 : -5))
-        return
-      }
-      if (!root.hasSong) return
-      if (delta > 0) root.request("previous")
-      else root.request("next")
-    }
+    onPressed: function(mouseButton) { root.pressedWith(mouseButton) }
+    onWheelMoved: function(delta) { root.wheeled(delta) }
   }
 
   // How far the song is, as a line along the bottom of the widget.
@@ -471,8 +515,7 @@ BarWidget {
             anchors.margins: Math.max(1, Style.space(1))
             crop: true
             visible: coverBox.pictured
-            url: root.hasSong && root.state.cover !== ""
-              ? "file://" + root.state.cover.split("/").map(encodeURIComponent).join("/") : ""
+            url: root.coverUrl
           }
         }
 

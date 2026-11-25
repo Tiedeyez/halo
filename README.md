@@ -277,7 +277,8 @@ the song playing in your bar, with a small player behind it. Install it
 from the Omarchy Marketplace, then add the Halo widget to the bar. It needs
 the Halo app above.
 
-In the bar: the song and artist, a thin line showing how far the song is,
+In the bar: the album cover when the song has one, the song and artist, a
+thin line showing how far the song is,
 and an icon of three small bars that dance while it plays (paused, it is
 the note again). Click for the player, right click to bring the Halo window
 up, middle click to play or pause, and turn the wheel to skip.
@@ -288,8 +289,9 @@ scroll; shuffle, previous, play/pause, next and repeat; Blend, Drift, the
 sleep timer (15, 30, 60, 90 minutes, then off) and a button that saves a
 moment; Halo's own volume; the line being sung and the one coming, when the
 song has lyrics with times; what plays next; and a button that switches the
-visual in the Halo window. The cover needs Halo newer than 1.0.3; with an
-older Halo the widget shows the note in its place.
+visual in the Halo window. The cover, in the bar and in the player, needs
+Halo newer than 1.0.3; with an older Halo the bar has none and the player
+shows the note in its place.
 
 Settings, all optional, in the widget's entry in `~/.config/omarchy/shell.json`:
 
@@ -298,6 +300,7 @@ Settings, all optional, in the widget's entry in `~/.config/omarchy/shell.json`:
 | `showTitle` | `false` hides the song in the bar | `true` |
 | `maxTitleLength` | The longest bar label, 8 to 80 characters | `32` |
 | `equalizer` | `false` keeps the still note while a song plays | `true` |
+| `artwork` | `false` hides the album cover in the bar | `true` |
 | `progress` | `false` hides the line under the label | `true` |
 | `lyrics` | `false` hides the line being sung | `true` |
 | `click` | `"open"`: click opens Halo, right click the player | `"player"` |

@@ -13,8 +13,9 @@ The bar widget grows into a small player.
   and loudness, its place in the queue, and a button that switches the
   visual. The clock runs smoothly between replies, and a change shows at
   once instead of after the next poll.
-- **In the bar itself**, a thin line shows how far the song is
-  (`"progress": false` hides it), and the wheel can change the volume
+- **In the bar itself**, the album cover sits before the song when there
+  is one (`"artwork": false` hides it), a thin line shows how far the song
+  is (`"progress": false` hides it), and the wheel can change the volume
   instead of skipping (`"scroll": "volume"`).
 - **Click now opens the player and right click opens Halo**, the reverse
   of before; `"click": "open"` in the widget's settings puts it back.

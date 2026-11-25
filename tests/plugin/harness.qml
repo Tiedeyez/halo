@@ -97,6 +97,7 @@ ShellRoot {
       check("status carries volume, tempo, place and cover", w.state.volume === 50 && w.state.bpm === 99
             && w.state.queueIndex === 3 && w.state.cover === shell.dir + "/cover.png", JSON.stringify(w.state))
       check("the progress line shows under the label", w.progressShown === true, String(w.progressShown))
+      check("the album cover shows in the bar", w.artShown === true && w.implicitWidth > w.artSide, String(w.artShown))
       w.setVolume(70)
     }],
     [1500, function() {}, function() {
@@ -144,6 +145,9 @@ ShellRoot {
       check("toggle ran `halo toggle --json`", lastCall.indexOf("toggle --json") >= 0, lastCall)
       check("toggle's own reply updates the state (paused)", w.kind === "paused", w.kind)
       check("paused: the bar icon is the still note", w.dancing === false, String(w.dancing))
+      w.settings = ({ artwork: false })
+      check("\"artwork\": false takes the cover out of the bar", w.artShown === false && w.artRoom === 0, String(w.artShown))
+      w.settings = ({})
       w.request("next")
     }],
     [1500, function() {}, function() {
@@ -152,6 +156,7 @@ ShellRoot {
     }],
     [300, function() { w.request("status") }, null],
     [1500, function() {}, function() {
+      check("a song with no cover has none in the bar", w.artShown === false, String(w.artShown))
       check("markup-shaped title stays literal text", w.state.title === "<b>bold</b><img src=\"https://example.invalid/x\">", w.state.title)
       check("long label is cut to 32 characters", w.barLabel.length <= 32, w.barLabel.length)
       writeMode("flood")
