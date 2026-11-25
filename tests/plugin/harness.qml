@@ -94,6 +94,50 @@ ShellRoot {
       check("bar label is title and artist", w.barLabel === "Night Drive  ·  Tape Deck", w.barLabel)
       check("glyph escapes decode", String.fromCodePoint(0xf075a) === "\u{f075a}", "")
       check("the bar icon dances while a song plays", w.dancing === true, String(w.dancing))
+      check("status carries volume, tempo, place and cover", w.state.volume === 50 && w.state.bpm === 99
+            && w.state.queueIndex === 3 && w.state.cover === shell.dir + "/cover.png", JSON.stringify(w.state))
+      check("the progress line shows under the label", w.progressShown === true, String(w.progressShown))
+      w.setVolume(70)
+    }],
+    [1500, function() {}, function() {
+      check("volume ran `halo volume 70 --json`", lastCall.indexOf("volume 70 --json") >= 0, lastCall)
+      check("the reply holds the new volume", w.state.volume === 70, w.state.volume)
+      check("the clock runs between replies", w.shownPosition > w.state.position, w.shownPosition + " vs " + w.state.position)
+      w.seekTo(100.4)
+    }],
+    [1500, function() {}, function() {
+      check("seek ran `halo seek 100 --json`", lastCall.indexOf("seek 100 --json") >= 0, lastCall)
+      check("the song is where it was sent", w.state.position === 100, w.state.position)
+      w.setMode("shuffle", true)
+    }],
+    [1500, function() {}, function() {
+      check("shuffle ran `halo shuffle on --json`", lastCall.indexOf("shuffle on --json") >= 0, lastCall)
+      check("shuffle is on", w.state.shuffle === true, String(w.state.shuffle))
+      w.cycleRepeat()
+    }],
+    [1500, function() {}, function() {
+      check("repeat ran `halo repeat all --json`", lastCall.indexOf("repeat all --json") >= 0 && w.state.repeat === "all", lastCall)
+      w.cycleSleep()
+    }],
+    [1500, function() {}, function() {
+      check("sleep ran `halo sleep 15 --json`", lastCall.indexOf("sleep 15 --json") >= 0, lastCall)
+      check("the sleep timer counts down", w.sleepLeft > 800 && w.sleepLeft <= 900, w.sleepLeft)
+      w.request("visual", "next")
+    }],
+    [1500, function() {}, function() {
+      check("visual ran `halo visual next --json`", lastCall.indexOf("visual next --json") >= 0, lastCall)
+      check("a reply without a status leaves the song showing", w.kind === "playing" && w.state.title === "Night Drive", w.kind)
+      w.request("lyrics")
+    }],
+    [1500, function() {}, function() {
+      check("lyrics: the line being sung and the next", w.lyrics.line === "Second line" && w.lyrics.next === "Third line", JSON.stringify(w.lyrics))
+      w.request("volume", "50; rm -rf /")
+      w.request("playlist", "delete")
+      w.request("seek", "+1e9")
+    }],
+    [1500, function() {}, function() {
+      check("values and commands off the list never run", lastCall.indexOf("rm") < 0 && lastCall.indexOf("playlist") < 0
+            && lastCall.indexOf("e9") < 0 && w.state.volume === 70, lastCall)
       w.request("toggle")
     }],
     [1500, function() {}, function() {
@@ -139,13 +183,26 @@ ShellRoot {
       writeMode("playing")
       w.request("status")
     }],
-    [1500, function() {}, function() {
-      var grabbing = backdrop.grabToImage(function(result) {
-        result.saveToFile(shell.dir + "/bar.png")
-        console.log("GRAB " + shell.dir + "/bar.png")
-        console.log("DONE " + shell.checks + " " + shell.failures)
-      })
-      if (!grabbing) console.log("DONE " + shell.checks + " " + shell.failures)
+    [1500, function() { w.popupOpen = true }, function() {
+      check("the player opens", w.popupOpen === true, String(w.popupOpen))
+      check("the player has a height", w.playerContent.implicitHeight > 100, w.playerContent.implicitHeight)
+      // The player's own window may not draw offscreen; the picture is a bonus.
+      var done = function() {
+        var grabbing = backdrop.grabToImage(function(result) {
+          result.saveToFile(shell.dir + "/bar.png")
+          console.log("GRAB " + shell.dir + "/bar.png")
+          console.log("DONE " + shell.checks + " " + shell.failures)
+        })
+        if (!grabbing) console.log("DONE " + shell.checks + " " + shell.failures)
+      }
+      var player = false
+      try {
+        player = w.playerContent.grabToImage(function(result) {
+          result.saveToFile(shell.dir + "/player.png")
+          done()
+        })
+      } catch (e) { player = false }
+      if (!player) done()
     }]
   ]
 

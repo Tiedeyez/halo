@@ -5,6 +5,25 @@ notes on its GitHub release page as well.
 
 ## Unreleased
 
+The bar widget grows into a small player.
+
+- **A player in the bar.** Click the Halo widget for the cover, a seek bar
+  you can drag, shuffle and repeat, Blend and Drift, the sleep timer, a
+  moment button, Halo's own volume, the line being sung, the song's tempo
+  and loudness, its place in the queue, and a button that switches the
+  visual. The clock runs smoothly between replies, and a change shows at
+  once instead of after the next poll.
+- **In the bar itself**, a thin line shows how far the song is
+  (`"progress": false` hides it), and the wheel can change the volume
+  instead of skipping (`"scroll": "volume"`).
+- **Click now opens the player and right click opens Halo**, the reverse
+  of before; `"click": "open"` in the widget's settings puts it back.
+- **`halo status --json` names the cover** (`cover`, the cached picture's
+  path) once the album's art is cached, for the widget and for scripts.
+- The widget still runs only `/usr/bin/halo` with a fixed list of commands.
+  The values it passes are whole numbers in a range and a few fixed words;
+  the list and the checks are in `plugin/HaloStatus.js` and are tested.
+
 Library Doctor, made to hold up on a badly kept library.
 
 - **`halo doctor`, for the terminal and for your agent.** `halo doctor`

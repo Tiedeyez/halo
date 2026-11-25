@@ -147,16 +147,30 @@ or save a picture of the window to a new `.png` file.
 
 ## The bar widget (Halo Player plugin)
 
-The repository is also an Omarchy plugin, `tiedeyez.halo`, a bar widget.
-It runs only `/usr/bin/halo` with one of five fixed argument lists
-(`status --json`, `toggle --json`, `next --json`, `previous --json`,
-`open`), never through a shell and never with text from a song in them. It
-polls `status` every 3 to 15 seconds (every second while its popup is open),
-reads at most 64 KiB of a reply, and stops a command after five seconds.
-It writes no files, changes no settings, and opens no network connection.
-What it shows (title, artist, album) is drawn as plain text. While a song
-plays, its bar icon is three small bars that move on a timer; they are
-decoration, drawn from a fixed pattern, and the widget reads no audio.
+The repository is also an Omarchy plugin, `tiedeyez.halo`, a bar widget
+with a small player in a popup. It runs only `/usr/bin/halo`, never through
+a shell, with one of a fixed list of commands: `status`, `toggle`, `next`,
+`previous`, `moment`, `lyrics`, `seek`, `volume`, `shuffle`, `blend`,
+`drift`, `repeat`, `sleep`, `visual` (each with `--json`) and `open`. The
+only values it passes are whole numbers in a range (a second to seek to, a
+volume, sleep minutes) and a few fixed words (`on`, `off`, `all`, `one`,
+`next`, `previous`); text from a song, a setting or a reply is never part
+of a command. So from the bar you can do what those commands do: play,
+pause, skip, seek, change Halo's volume and modes, start or stop the sleep
+timer, save a moment and switch the visual. It cannot add or remove songs,
+touch playlists, write tags or change any other setting.
+
+It polls `status` every 3 to 15 seconds (every 2 while the player is open),
+asks for the lyrics once a second only while the player is open and the
+song has lyrics with times, reads at most 64 KiB of a reply, and stops a
+command after five seconds. Asking for the lyrics reads what Halo already
+has; it does not turn online lyrics on or start a lookup of its own. It
+shows the cover Halo already cached in `~/.cache/halo`, and only opens it
+if it is a local `.jpg` or `.png`. It writes no files, changes no
+settings, and opens no network connection. What it shows (title, artist,
+album, lyric lines) is drawn as plain text. While a song plays, its bar
+icon is three small bars that move on a timer; they are decoration, drawn
+from a fixed pattern, and the widget reads no audio.
 
 ## How to check this yourself
 

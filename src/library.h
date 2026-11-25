@@ -42,6 +42,9 @@ void setSources(QHash<QString, Source> sources);
 // Path of a cached JPEG of the album's cover at `size` px, made on demand;
 // empty when the album has no art.
 QString ensure(const QString &albumId, int size = 512);
+// The same path, only if the cover is already cached: one look at the disk,
+// nothing decoded or written.
+QString cached(const QString &albumId, int size = 512);
 QImage load(const QString &albumId, int size);
 }
 

@@ -5,7 +5,7 @@
   "version": "1.0.3",
   "author": "Tiedeyez",
   "license": "MIT",
-  "description": "Halo in your bar: the song playing in the native Halo music player, with play/pause, next and previous, and a click that brings the Halo window up. The widget only runs the installed /usr/bin/halo command (status, toggle, next, previous, open); it writes no files, edits no configuration and opens no network connection. Needs the Halo app, installed from this repository.",
+  "description": "Halo in your bar: the song playing in the native Halo music player, with a small player behind it: cover, seek bar, play/pause, next and previous, shuffle and repeat, Blend, Drift, the sleep timer, moments, Halo's volume and the line being sung. The widget only runs the installed /usr/bin/halo command with a fixed list of commands (status, toggle, next, previous, seek, volume, shuffle, repeat, blend, drift, sleep, moment, visual, lyrics, open); it writes no files, edits no configuration and opens no network connection. Needs the Halo app, installed from this repository.",
   "kinds": [
     "bar-widget"
   ],
@@ -14,7 +14,7 @@
   },
   "barWidget": {
     "displayName": "Halo",
-    "description": "Now playing in Halo, with play/pause, next and previous",
+    "description": "Now playing in Halo, with a player: cover, seek, volume, shuffle, repeat, Blend, Drift, sleep timer and lyrics",
     "category": "Media",
     "allowMultiple": false,
     "defaultSection": "center"

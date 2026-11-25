@@ -185,6 +185,13 @@ QImage load(const QString &albumId, int size) {
     return image;
 }
 
+QString cached(const QString &albumId, int size) {
+    if (albumId.isEmpty())
+        return {};
+    const QString file = QString("%1/%2-%3.jpg").arg(coverCacheDirectory(), albumId).arg(size);
+    return QFileInfo::exists(file) ? file : QString();
+}
+
 QString ensure(const QString &albumId, int size) {
     const QString cached = QString("%1/%2-%3.jpg").arg(coverCacheDirectory(), albumId).arg(size);
     if (QFileInfo::exists(cached))

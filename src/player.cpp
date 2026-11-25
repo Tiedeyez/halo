@@ -317,6 +317,11 @@ QJsonObject Player::status() const {
                                      {"path", m_nextTrack.path}});
     if (!m_problem.isEmpty())
         o.insert("problem", m_problem);
+    // The album's cover, once it is cached (the same file MPRIS announces),
+    // for remotes that show one: the bar widget.
+    const QString cover = Covers::cached(albumId());
+    if (!cover.isEmpty())
+        o.insert("cover", cover);
     return o;
 }
 

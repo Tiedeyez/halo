@@ -273,17 +273,43 @@ Halo is then in the app launcher (Super+Space).
 ### Halo in the bar
 
 The repository is also an Omarchy plugin, **Halo Player** (`tiedeyez.halo`):
-a bar widget with the song playing, play/pause, next and previous. Install
-it from the Omarchy Marketplace, then add the Halo widget to the bar. It
-needs the Halo app above. Left click opens Halo, middle click plays or
-pauses, the wheel skips, right click shows the song with its controls.
-While a song plays, the bar icon is three small bars that dance; paused, it
-is the note again (`"equalizer": false` in the widget's settings keeps the
-note).
+the song playing in your bar, with a small player behind it. Install it
+from the Omarchy Marketplace, then add the Halo widget to the bar. It needs
+the Halo app above.
 
-The widget only runs `/usr/bin/halo` (`status`, `toggle`, `next`,
-`previous`, `open`) with a fixed argument list. It writes no files, changes
-no settings and opens no network connection.
+In the bar: the song and artist, a thin line showing how far the song is,
+and an icon of three small bars that dance while it plays (paused, it is
+the note again). Click for the player, right click to bring the Halo window
+up, middle click to play or pause, and turn the wheel to skip.
+
+The player has the cover, title, artist and album, the song's tempo and
+loudness and its place in the queue; a seek bar you can drag, click or
+scroll; shuffle, previous, play/pause, next and repeat; Blend, Drift, the
+sleep timer (15, 30, 60, 90 minutes, then off) and a button that saves a
+moment; Halo's own volume; the line being sung and the one coming, when the
+song has lyrics with times; what plays next; and a button that switches the
+visual in the Halo window. The cover needs Halo newer than 1.0.3; with an
+older Halo the widget shows the note in its place.
+
+Settings, all optional, in the widget's entry in `~/.config/omarchy/shell.json`:
+
+| Setting | What it does | Default |
+| --- | --- | --- |
+| `showTitle` | `false` hides the song in the bar | `true` |
+| `maxTitleLength` | The longest bar label, 8 to 80 characters | `32` |
+| `equalizer` | `false` keeps the still note while a song plays | `true` |
+| `progress` | `false` hides the line under the label | `true` |
+| `lyrics` | `false` hides the line being sung | `true` |
+| `click` | `"open"`: click opens Halo, right click the player | `"player"` |
+| `scroll` | `"volume"`: the wheel changes Halo's volume | `"track"` |
+
+The widget only runs `/usr/bin/halo`, with one of a fixed list of commands
+(`status`, `toggle`, `next`, `previous`, `seek`, `volume`, `shuffle`,
+`repeat`, `blend`, `drift`, `sleep`, `moment`, `visual`, `lyrics`, `open`).
+The only values it passes are whole numbers in a range and a few fixed
+words, never text from a song or a setting. It shows the cover Halo already
+cached (a local picture), writes no files, changes no settings and opens no
+network connection.
 
 ## Build
 

@@ -1751,6 +1751,10 @@ private slots:
         const QJsonObject status = remote.handle({{"cmd", "status"}});
         QVERIFY(status.value("ok").toBool());
         QVERIFY(status.value("status").toObject().contains("playing"));
+        // A cover is only named when a song with cached art is loaded.
+        QVERIFY(!status.value("status").toObject().contains("cover"));
+        QVERIFY(Covers::cached(QString()).isEmpty());
+        QVERIFY(Covers::cached("no-such-album-0000").isEmpty());
         QVERIFY(!remote.handle({{"cmd", "volume"}, {"args", QJsonArray{"150"}}}).value("ok").toBool());
         QVERIFY(remote.handle({{"cmd", "volume"}, {"args", QJsonArray{"40"}}}).value("ok").toBool());
         QCOMPARE(player.volume(), 0.4);
