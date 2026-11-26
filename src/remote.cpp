@@ -444,7 +444,7 @@ QJsonObject Remote::handle(const QJsonObject &request) {
     if (cmd == "visual") {
         static const QStringList names{"ring", "bars", "kaleidoscope", "skyline", "phosphor",
                                        "pulsar", "waterfall", "warp", "aurora", "halo", "turntable",
-                                       "hologram"};
+                                       "hologram", "cymatics"};
         if (!args.isEmpty()) {
             const QString v = args.first().toLower();
             bool number = false;
@@ -453,7 +453,7 @@ QJsonObject Remote::handle(const QJsonObject &request) {
                             : v == "previous" ? (m_player->visualStyle() + int(names.size()) - 1) % int(names.size())
                             : number ? n : int(names.indexOf(v));
             if (index < 0 || index >= int(names.size()))
-                return {{"ok", false}, {"error", "visual takes next, previous, 0 to 9 or a name: " + names.join(", ")}};
+                return {{"ok", false}, {"error", "visual takes next, previous, 0 to 12 or a name: " + names.join(", ")}};
             m_player->setVisualStyle(index);
         }
         return {{"ok", true}, {"visual", names.value(m_player->visualStyle())}};

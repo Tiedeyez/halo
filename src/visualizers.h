@@ -4,6 +4,7 @@
 #include <QImage>
 #include <QQuickPaintedItem>
 #include <QStringList>
+#include <algorithm>
 #include <array>
 #include <vector>
 
@@ -29,6 +30,10 @@ class PixelVisual : public QQuickPaintedItem {
     // accent, cyan, blue, magenta, bright, foreground (Style.paletteColour order)
     Q_PROPERTY(QStringList palette READ palette WRITE setPalette NOTIFY changed)
     Q_PROPERTY(QColor window READ window WRITE setWindow NOTIFY changed)
+    // Where across the item (0..1) the visuals with a middle put it: the
+    // Skyline's bass, the Pulsar's peak, the Warp's vanishing point. Half
+    // by default; Now Playing moves it onto the song's side of a wide window.
+    Q_PROPERTY(double middle READ middle WRITE setMiddle NOTIFY changed)
 
 public:
     enum Mode { Skyline, Scope, Ridges, Waterfall, Warp, Aurora, Ring, Count };
@@ -45,6 +50,19 @@ public:
     void setPalette(const QStringList &palette);
     QColor window() const { return m_window; }
     void setWindow(const QColor &window);
+    double middle() const { return m_middle; }
+    void setMiddle(double middle);
+
+    // A band as the visuals draw it. The spectrum is on a decibel scale, so
+    // a loud, compressed master holds every band near the top and a visual
+    // drawn from it straight is one solid block; taking off a floor that
+    // follows the music's own average gives the peaks room to stand out.
+    // Quiet music has a low average, so it is barely changed.
+    static double shaped(double band, double floor) {
+        return floor >= 0.99 ? 0.0 : std::clamp((band - floor) / (1.0 - floor), 0.0, 1.0);
+    }
+    // The floor for a spectrum whose bands average `mean`.
+    static double floorFor(double mean) { return std::clamp(mean, 0.0, 1.0) * 0.6; }
 
     // dt seconds, and the eased beat, loudness, bass, mids and treble (0..1).
     Q_INVOKABLE void step(double dt, double pulse, double level, double low, double mid, double high);
@@ -87,6 +105,7 @@ private:
     std::vector<float> m_glowHue;                    // per cell, the ramp position of its trail
     std::vector<std::vector<float>> m_history;       // past spectra, newest last
     double m_time = 0, m_scroll = 0, m_flash = 0;
+    double m_middle = 0.5, m_floor = 0;
     std::vector<float> m_caps, m_capFall;
     struct Star {
         float x, y, z, px, py;

@@ -174,8 +174,8 @@ ApplicationWindow {
     Shortcut { sequence: "R"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.cycleRepeat() }
     Shortcut { sequence: "E"; context: Qt.ApplicationShortcut; enabled: !win.typing && !win.welcoming; onActivated: eq.visible ? eq.close() : eq.open() }
     Shortcut { sequence: "Z"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: win.cycleSleep() }
-    Shortcut { sequence: "V"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.visualStyle = (player.visualStyle + 1) % 12 }
-    Shortcut { sequence: "Shift+V"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.visualStyle = (player.visualStyle + 11) % 12 }
+    Shortcut { sequence: "V"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.visualStyle = (player.visualStyle + 1) % 13 }
+    Shortcut { sequence: "Shift+V"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.visualStyle = (player.visualStyle + 12) % 13 }
     Shortcut { sequence: "C"; context: Qt.ApplicationShortcut; enabled: win.free; onActivated: player.calm = !player.calm }
     Shortcut { sequence: "Ctrl+R"; context: Qt.ApplicationShortcut; onActivated: library.rescan() }
     Shortcut { sequence: "Ctrl+,"; context: Qt.ApplicationShortcut; enabled: !win.welcoming; onActivated: win.setupOpen = true }
@@ -208,12 +208,14 @@ ApplicationWindow {
         layer.effect: GlitchEffect { amount: bootGlitch.amount; seed: bootGlitch.seed }
         Timer { interval: 60; running: true; onTriggered: bootGlitch.kick(1) }
 
-        // The living pixel field behind the library; its main beat ring
-        // starts in the centre while smaller drops float elsewhere.
-        PixelField {
+        // Behind the library: sand on a plate, shaken into figures by the
+        // music (cymatics), dim enough to read over.
+        Cymatics {
             anchors.fill: parent
             cell: Math.max(3, Math.round(6 / Style.pixelDensity))
-            origin: Qt.point(width * 0.5, height * 0.5)
+            // One plate is three quarters of the window's short side, so a
+            // few figures tile across a wide window.
+            plate: Math.min(width, height) * 0.75
             visible: nowPlayingView.opacity < 1
         }
 

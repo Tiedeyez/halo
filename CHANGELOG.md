@@ -5,6 +5,29 @@ notes on its GitHub release page as well.
 
 ## Unreleased
 
+Cymatics, and a pass over the visuals.
+
+- **Cymatics, a thirteenth visual** (`halo visual cymatics`). Sand on a
+  plate that the music shakes into Chladni's figures: the music's pitch
+  picks the figure, it changes every two beats, the sand is thrown up and
+  settles on the new lines, and the plate glows under it with the bass.
+- **The window's background is cymatics too**, in place of the water: the
+  same figures, dim and in the accent, changing every eight beats. A click
+  throws the sand round the pointer. Text over it still reads at 7:1.
+- **Loud masters no longer fill the pixel visuals solid.** Ring, Skyline,
+  Pulsar, Waterfall and Aurora now measure each band against the music's
+  own average, so a compressed master shows its peaks instead of one block.
+- **Ring**: each ray runs from the accent at the cover to the theme's cyan
+  at its end, with a hot tip on the ones that reach far.
+- **Bars**: the cover stands on top of the bars instead of behind them.
+- **Skyline**: coloured by height, deep blue at the street and the accent
+  only on its towers, each with one hot cell at its tip.
+- **Pulsar**: steep slopes are joined lines, not scattered dots, and the
+  peaks carry the light instead of the flat run beside them.
+- **Skyline, Pulsar and Warp** put their middle on the song's side of a
+  wide window instead of under the text.
+- **Phosphor** shows a shorter slice of sound, so a note's shape reads.
+
 The bar widget grows into a small player.
 
 - **A player in the bar.** Click the Halo widget for the cover, a seek bar

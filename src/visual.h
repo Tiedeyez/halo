@@ -42,6 +42,8 @@ class Spectrum : public QObject {
     Q_PROPERTY(double low READ low NOTIFY updated)
     Q_PROPERTY(double mid READ mid NOTIFY updated)
     Q_PROPERTY(double high READ high NOTIFY updated)
+    // Where the sound's weight sits, 0 (all bass) to 1 (all treble).
+    Q_PROPERTY(double centroid READ centroid NOTIFY updated)
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 
 public:
@@ -57,6 +59,16 @@ public:
     double low() const { return average(0, 10); }
     double mid() const { return average(10, 36); }
     double high() const { return average(36, Bands); }
+    double centroid() const { return centroidOf(m_bands); }
+    // The bands' centre of mass, 0..1; 0.5 for silence.
+    static double centroidOf(const std::vector<float> &bands) {
+        double sum = 0, weighted = 0;
+        for (size_t i = 0; i < bands.size(); ++i) {
+            sum += bands[i];
+            weighted += bands[i] * double(i);
+        }
+        return sum > 1e-6 && bands.size() > 1 ? weighted / sum / double(bands.size() - 1) : 0.5;
+    }
     bool active() const { return m_active; }
     void setActive(bool active);
     // The average of bands [from, to), for visuals drawn in QML shaders.

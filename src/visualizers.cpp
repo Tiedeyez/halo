@@ -95,6 +95,16 @@ void PixelVisual::setWindow(const QColor &window) {
     update();
 }
 
+void PixelVisual::setMiddle(double middle) {
+    middle = std::clamp(middle, 0.1, 0.9);
+    if (std::abs(middle - m_middle) < 1e-4)
+        return;
+    m_middle = middle;
+    m_stars.clear();
+    m_history.clear();
+    emit changed();
+}
+
 void PixelVisual::ensureSize() {
     const int w = std::max(1, int(width())), h = std::max(1, int(height()));
     if (m_image.width() == w && m_image.height() == h)
@@ -121,7 +131,7 @@ float PixelVisual::band(double u) const {
     const double at = std::clamp(u, 0.0, 1.0) * (Spectrum::Bands - 1);
     const int i = int(at);
     const double f = at - i;
-    return float(b[size_t(i)] * (1 - f) + b[size_t(std::min(i + 1, Spectrum::Bands - 1))] * f);
+    return float(shaped(b[size_t(i)] * (1 - f) + b[size_t(std::min(i + 1, Spectrum::Bands - 1))] * f, m_floor));
 }
 
 // After dithering the ramp has only Steps + 1 shades, so they are blended
@@ -177,6 +187,15 @@ void PixelVisual::step(double dt, double pulse, double level, double low, double
     m_time += dt;
     // A beat lights everything for a moment, then lets go quickly.
     m_flash = std::max(m_flash * std::exp(-dt / 0.12), pulse > 0.5 ? 1.0 : 0.0);
+    // The floor under the bands follows the music's average over about a
+    // second (see shaped()).
+    if (m_spectrum && dt > 0) {
+        double mean = 0;
+        for (float b : m_spectrum->bands())
+            mean += b;
+        mean /= Spectrum::Bands;
+        m_floor += (floorFor(mean) - m_floor) * (1 - std::exp(-dt / 0.8));
+    }
     const In in{dt, pulse, level, low, mid, high};
     switch (m_mode) {
     case Skyline: drawSkyline(in); break;
@@ -202,13 +221,17 @@ void PixelVisual::drawSkyline(const In &in) {
     const int w = m_image.width(), h = m_image.height();
     m_image.fill(Qt::transparent);
     const int horizon = int(h * 0.68);
-    const int centre = w / 2;
+    const double centre = w * m_middle;
+    // The spectrum runs out from the middle over the nearer edge's distance;
+    // past that (the far side of an off-centre skyline) it dies away.
+    const double half = std::max(1.0, std::min(centre, w - centre));
     const double maxH = horizon - h * 0.08;
     for (int x = 0; x < w; ++x) {
         // Distance from the centre picks the band: bass in the middle.
-        const double u = std::abs(x - centre + 0.5) / std::max(1.0, w / 2.0);
+        const double reach = std::abs(x - centre + 0.5) / half;
+        const double u = std::min(1.0, reach);
         const int bi = std::clamp(int(u * (Spectrum::Bands - 1)), 0, Spectrum::Bands - 1);
-        const double v = std::pow(band(u), 1.35);
+        const double v = std::pow(band(u), 1.35) * std::clamp(1.0 - (reach - 1.0) * 2.5, 0.0, 1.0);
         const int top = horizon - int(std::lround(v * maxH));
         // Caps fall slowly after the bar drops away.
         float &cap = m_caps[size_t(bi)];
@@ -220,9 +243,13 @@ void PixelVisual::drawSkyline(const In &in) {
             fall += float(in.dt * 0.9);
             cap = std::max(float(v), cap - fall * float(in.dt) * 6);
         }
+        // Coloured by how high a cell stands, not by how tall its bar is:
+        // the city is deep blue at the street and only its towers reach
+        // the accent, each with one hot cell at its tip.
         for (int y = top; y < horizon; ++y) {
-            const double t = 0.25 + 0.75 * double(horizon - y) / maxH;
-            plot(x, y, ramp(t * (0.55 + 0.45 * v) + 0.12 * m_flash, x, y));
+            const double height = double(horizon - y) / maxH;
+            const double tip = y == top && v > 0.12 ? 0.22 : 0.0;
+            plot(x, y, ramp(0.22 + 0.56 * height + tip + 0.10 * m_flash, x, y));
         }
         // The cap, in the accent, a hair above the bar.
         const int capY = horizon - 2 - int(std::lround(cap * maxH));
@@ -258,7 +285,9 @@ void PixelVisual::drawScope(const In &in) {
                 start = i;
                 break;
             }
-        const size_t span = std::min<size_t>(wave.size() - start, 1200);
+        // About 15 ms of sound across the screen: a bass note's shape reads,
+        // where a longer slice is a jagged band.
+        const size_t span = std::min<size_t>(wave.size() - start, 720);
         // Automatic gain: the window's own peak fills about 80% of the height,
         // eased so the trace doesn't jump in size from one frame to the next.
         float peak = 0.02f;
@@ -321,7 +350,7 @@ void PixelVisual::drawRidges(const In &in) {
         for (int x = 0; x < w; ++x) {
             // Bass in the middle, falling off toward the edges like the plot,
             // with a little grain so quiet lines aren't ruler-flat.
-            const double u = std::abs((x + 0.5) / w - 0.5) * 2;
+            const double u = std::abs((x + 0.5) / w - m_middle) / std::min(m_middle, 1 - m_middle);
             const double bell = std::exp(-std::pow(u * 2.4, 2));
             const double grain = 0.05 * random01();
             row[size_t(x)] = float((std::pow(band(u * 0.8), 1.6) * 1.3 + grain) * bell);
@@ -337,7 +366,9 @@ void PixelVisual::drawRidges(const In &in) {
         return;
     const double spacing = (h * 0.70) / double(std::max<size_t>(n, 12));
     const double amp = spacing * 7.0;
-    const int margin = w / 7;
+    // The lines span the peak's own width either side of it.
+    const double halfSpan = std::min(m_middle, 1 - m_middle) * 0.86 * w;
+    const int left = std::max(0, int(w * m_middle - halfSpan)), right = std::min(w, int(w * m_middle + halfSpan));
     std::vector<int> floor(size_t(w), h);   // lowest visible row per column, front lines first
     for (size_t k = 0; k < n; ++k) {
         // k = 0 is the newest, at the front (bottom).
@@ -345,15 +376,25 @@ void PixelVisual::drawRidges(const In &in) {
         const int base = int(h * 0.92 - k * spacing);
         const double depth = 1.0 - double(k) / double(n);
         const bool newest = k == 0;
-        for (int x = margin; x < w - margin; ++x) {
-            const int y = base - int(std::lround(row[size_t(x)] * amp));
-            if (y >= floor[size_t(x)])
-                continue;   // hidden behind a nearer line
+        int before = -1;
+        for (int x = left; x < right; ++x) {
+            const double lifted = row[size_t(x)] * amp;
+            const int y = base - int(std::lround(lifted));
+            // The peaks carry the light; the flat run either side is faint.
+            const double rise = std::clamp(lifted / (spacing * 2.2), 0.0, 1.0);
             const QRgb c = newest ? mixRgb(m_palette[5].rgb(), m_palette[0].rgb(), 0.4 + 0.6 * m_flash)
-                                  : mixRgb(m_palette[2].rgb(), m_palette[5].rgb(), depth * 0.8);
-            plot(x, y, tint(c, 0.25 + 0.75 * depth, x, y));
+                                  : mixRgb(m_palette[2].rgb(), mixRgb(m_palette[0].rgb(), m_palette[5].rgb(), 0.5), rise * depth);
+            const double bright = (0.16 + 0.84 * rise) * (0.3 + 0.7 * depth) + (newest ? 0.25 : 0.0);
+            // Joined to the last column, so a steep slope is a line and not
+            // a scatter of dots.
+            const int from = before < 0 ? y : std::min(y, before + (y > before ? 1 : 0));
+            const int to = before < 0 ? y : std::max(y, before - (y < before ? 1 : 0));
+            for (int yy = from; yy <= to; ++yy)
+                if (yy < floor[size_t(x)])   // not hidden behind a nearer line
+                    plot(x, yy, tint(c, std::min(1.0, bright), x, yy));
+            before = y;
             // What lies under this line hides everything further back.
-            floor[size_t(x)] = y;
+            floor[size_t(x)] = std::min(floor[size_t(x)], from);
         }
     }
 }
@@ -376,7 +417,7 @@ void PixelVisual::drawWaterfall(const In &in) {
     }
     for (int r = 0; r < rows; ++r)
         for (int x = 0; x < w; ++x) {
-            m_glow[size_t(r) * size_t(w) + size_t(x)] = std::pow(band((x + 0.5) / w), 2.4f) * 1.15f;
+            m_glow[size_t(r) * size_t(w) + size_t(x)] = std::pow(band((x + 0.5) / w), 2.4f) * 0.9f;
             m_glowHue[size_t(r) * size_t(w) + size_t(x)] = float(m_flash > 0.8 ? 1 : 0);
         }
     for (int y = 0; y < h; ++y)
@@ -401,7 +442,7 @@ void PixelVisual::drawWarp(const In &in) {
             m_stars.push_back({random01() * 2 - 1, random01() * 2 - 1, random01() * 0.95f + 0.05f, -1, -1});
     fade(std::exp(-in.dt / 0.09));
     const double speed = 0.18 + 1.1 * in.level + 1.8 * in.pulse;
-    const double cx = w * 0.5, cy = h * 0.5, scale = std::min(w, h) * 0.5;
+    const double cx = w * m_middle, cy = h * 0.5, scale = std::min(w, h) * 0.5;
     for (auto &s : m_stars) {
         s.z -= float(speed * in.dt);
         if (s.z <= 0.02f) {
@@ -558,9 +599,16 @@ void PixelVisual::drawRing(const In &in) {
             const double v = calm ? 0.15 : band(double(b) / (bands - 1));
             const double reach = r0 + 1 + v * (span - 2) * (0.75 + in.pulse * 0.25);
             if (r >= r0 && r <= reach) {
-                // Brighter towards the cover, like light leaving it.
-                const double fade = 1.0 - (r - r0) / std::max(1.0, reach - r0) * 0.6;
-                row[x] = tint(accent, std::clamp(0.3 + v * 0.6 + fade * 0.4, 0.0, 1.0), x, y);
+                // Light leaving the cover: the accent at its foot, cooling
+                // to the theme's cyan and dimming as it goes out, with a
+                // hot cell at the tip of every ray that reaches far.
+                const double along = (r - r0) / std::max(1.0, reach - r0);
+                if (r > reach - 1.2 && v > 0.3) {
+                    row[x] = mixRgb(accent, m_palette[5].rgb(), 0.35 + 0.5 * v);
+                } else {
+                    const QRgb colour = mixRgb(accent, m_palette[1].rgb(), along * 0.8);
+                    row[x] = tint(colour, std::clamp(0.95 - along * 0.6 + in.pulse * 0.15, 0.0, 1.0), x, y);
+                }
             } else {
                 // The glow: dim and smooth (dithering a faint glow only
                 // makes a checkerboard), fading out to the rim.

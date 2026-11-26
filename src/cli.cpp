@@ -41,7 +41,7 @@ Control a running Halo:
   repeat <off|all|one>
   visual [next|previous|name]  Switch the visual: ring, bars, kaleidoscope, skyline,
                                phosphor, pulsar, waterfall, warp, aurora, halo,
-                               turntable, hologram
+                               turntable, hologram, cymatics
   sleep <minutes|off>          Fade out and pause after N minutes
   lyrics [--json]              The current song's lyrics, the line being sung marked
   lyrics online <on|off>       Look lyrics up on lrclib.net (sends title, artist,

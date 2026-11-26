@@ -58,13 +58,29 @@ checked against the source.
   deck made of light and energy: every edge a line of light with faint
   x-ray lines of the parts behind, the grooves carrying the spectrum, a
   shockwave on each beat, the album cover turning on the label as light,
-  and the tonearm following the song).
+  and the tonearm following the song). And **Cymatics**: sand on a square
+  plate that the music shakes, as in Chladni's experiment. A plate ringing
+  at one pitch stands still along certain lines and the sand collects on
+  them, so every pitch draws its own figure: a bass line a few broad
+  curves, cymbals and voices a fine lattice. Halo picks the figure from how
+  bright the music sounds, measured against the range the song itself
+  covers, and changes it every two beats, never to one it has just shown.
+  A change throws the sand into the air and it settles on the new lines;
+  loud music packs it tight; under it the plate's two halves glow in turn
+  with the bass.
   In Now Playing, the active visual fills the window behind the song and
   lyrics; a soft window-colour scrim keeps the text at WCAG AAA contrast.
   Ring, Bars, Kaleidoscope, Turntable and Hologram grow beyond the window
   edges, while Halo and the six square-pixel visuals fill the whole window.
-  Cover art stays in the centre of Ring, Bars and Kaleidoscope, and on the
-  label of Turntable and Hologram.
+  In a wide window the visuals with a middle (Skyline's bass, Pulsar's
+  peak, Warp's vanishing point, the Cymatics plate) put it on the song's
+  side, clear of the text.
+  Cover art stays in the centre of Ring and Kaleidoscope, stands on top of
+  the Bars, and turns on the label of Turntable and Hologram.
+  The spectrum is measured in decibels, so a loud, compressed master holds
+  every band near the top; the pixel visuals take off a floor that follows
+  the music's own average, so its peaks still stand out instead of the
+  picture filling to a solid block.
   The pixel visuals are lit like a wall of LEDs in a dark room: each cell
   brighter in its middle, the hottest burning white, light blooming onto
   their neighbours and lifting on the kick. Bars stand on a glossy floor
@@ -75,14 +91,13 @@ checked against the source.
   drop the needle anywhere on the record to move through the song.
   Visuals crossfade as V switches them, and the name shows for a moment.
   C keeps any of them still. `halo visual <name>` switches from a terminal.
-- **The library is water.** Behind the library views lies a pond of square pixels
-  with drifting caustics. Every beat drops a main ripple from the centre and
-  another floater somewhere on the surface. Every click anywhere in the
-  window drops one where you clicked, and the pointer leaves a soft wake.
-  The rings spread, cross and fade, and bend the stars and rain under them. It is kept dim
-  enough that the faintest text over it still reads at 7:1, it rests when
-  nothing is playing or rippling, and C stills it. Now Playing gives that
-  background to the active music visual instead.
+- **The library is a plate of sand.** Behind the library views the same
+  cymatics run dim, in your accent: the figure repeats across the window,
+  keeps to the broad shapes, and changes every eight beats, the plate
+  swelling faintly with the bass. A click anywhere throws the sand round
+  the pointer. It is kept dim enough that the faintest text over it still
+  reads at 7:1, it rests when nothing is playing or settling, and C stills
+  it. Now Playing gives that background to the active music visual instead.
 - **Smooth motion.** Everything moves on the display's own frame clock with
   eased curves: pages surface with a fade and a lift, Now Playing and the
   shortcut sheet rise and settle, covers fade up as they load and crossfade
@@ -168,7 +183,7 @@ checked against the source.
   `halo analyze <file> --json` and more; `halo skill install` teaches coding
   agents how.
 
-![The album grid, with a song playing and the water behind it](docs/albums.png)
+![The album grid, with a song playing](docs/albums.png)
 
 ![The Turntable visual: a record player seen face up, the album cover spinning as its label](docs/turntable.png)
 
@@ -232,7 +247,7 @@ halo status                     # what is playing and the library scan; --json f
 halo add song.flac ; halo playnext ~/Music/Other
 halo next ; halo pause ; halo seek +30 ; halo volume 60
 halo blend on ; halo drift off ; halo repeat all ; halo sleep 30
-halo visual hologram            # switch the visual (next, previous, or one of the twelve by name)
+halo visual hologram            # switch the visual (next, previous, or one of the thirteen by name)
 halo lyrics                     # the words of the song playing, the sung line marked
 halo lyrics online on           # look lyrics up on lrclib.net (off by default)
 halo lyrics offset +0.3         # this song's lyrics 0.3 s earlier

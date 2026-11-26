@@ -457,7 +457,7 @@ void Player::setOnboarded(bool on) {
 void Player::setVisualStyle(int style) {
     if (style == m_visualStyle)
         return;
-    m_visualStyle = std::clamp(style, 0, 11);
+    m_visualStyle = std::clamp(style, 0, 12);
     emit settingsChanged();
     scheduleSave();
 }
@@ -1257,7 +1257,7 @@ void Player::restore() {
     m_normalize = settings.value("normalize").toBool(true);
     m_calm = settings.value("calm").toBool(false);
     m_onboarded = settings.value("onboarded").toBool(false);
-    m_visualStyle = std::clamp(settings.value("visual").toInt(0), 0, 11);
+    m_visualStyle = std::clamp(settings.value("visual").toInt(0), 0, 12);
     const QJsonObject eq = root.value("eq").toObject();
     m_eqEnabled = eq.value("enabled").toBool(false);
     const QJsonArray gains = eq.value("gains").toArray();

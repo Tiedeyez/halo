@@ -21,7 +21,7 @@ Rectangle {
     readonly property bool showWords: lyricsOn && hasWords
     readonly property bool wide: width >= 1080 && height >= 560
     readonly property var visualNames: [qsTr("RING"), qsTr("BARS"), qsTr("KALEIDOSCOPE"), qsTr("SKYLINE"),
-        qsTr("PHOSPHOR"), qsTr("PULSAR"), qsTr("WATERFALL"), qsTr("WARP"), qsTr("AURORA"), qsTr("HALO"), qsTr("TURNTABLE"), qsTr("HOLOGRAM")]
+        qsTr("PHOSPHOR"), qsTr("PULSAR"), qsTr("WATERFALL"), qsTr("WARP"), qsTr("AURORA"), qsTr("HALO"), qsTr("TURNTABLE"), qsTr("HOLOGRAM"), qsTr("CYMATICS")]
     readonly property real gutter: Math.max(16, Math.min(48, Math.min(width, height) * 0.05))
 
     // The cover's colours wash the background, softly: only its colours.
@@ -105,6 +105,9 @@ Rectangle {
             anchors.fill: parent
             cell: Math.max(3, Math.ceil(Math.max(root.width, root.height) / (128 * Style.pixelDensity)))
             mode: Math.max(0, player.visualStyle - 3)
+            // Skyline, Pulsar and Warp have a middle: on the song, not
+            // under the text.
+            middle: focusPoint.x / Math.max(1, stage.width)
             opacity: player.visualStyle >= 3 && player.visualStyle <= 8 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
@@ -129,6 +132,18 @@ Rectangle {
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
+        // Cymatics: a square plate of sand, the music's pitch drawing its
+        // figure, centred on the song like the round visuals.
+        Cymatics {
+            anchors.fill: parent
+            vivid: true
+            origin: Qt.point(focusPoint.x, focusPoint.y)
+            plate: Math.min(stage.focusH * 0.9, stage.focusW * 0.94)
+            cell: Math.max(3, Math.round(plate / (150 * Style.pixelDensity)))
+            opacity: player.visualStyle === 12 ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
+        }
         // The turntable: a square render with the deck across about 80% of
         // it, so it is drawn a little larger than the round visuals.
         TurntableVisual {
@@ -141,24 +156,28 @@ Rectangle {
         }
         CoverArt {
             anchors.centerIn: focusPoint
+            // Over the bars the cover stands on them, clear of the lights.
+            anchors.verticalCenterOffset: player.visualStyle === 1 ? barsVisual.y - 18 - height / 2 - focusPoint.y : 0
+            Behavior on anchors.verticalCenterOffset { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
             glitchOnChange: true
             visible: player.visualStyle <= 2
             // Inside the halo's ring; small in the kaleidoscope so the
-            // fractal leads; a little larger over the bars.
+            // fractal leads; as large over the bars as the room above them.
             width: player.visualStyle === 0 ? stage.haloSide * 0.46
-                 : player.visualStyle === 2 ? stage.shortSide * 0.28 : stage.shortSide * 0.40
+                 : player.visualStyle === 2 ? stage.shortSide * 0.28
+                 : Math.max(96, Math.min(stage.shortSide * 0.40, barsVisual.y - 18 - root.gutter))
             height: width
             albumId: player.albumId
             title: player.album
             size: 640
             scale: player.calm || player.visualStyle !== 0 ? 1 : 1 + spectrumSource.pulse * 0.015
         }
-        // The bars, with their floor below: the bars keep their place
-        // (centred on the song), the reflection hangs beneath them.
+        // The bars, with their floor below: under the cover, in the lower
+        // half of the song's side, the reflection hanging beneath them.
         BarsVisual {
             id: barsVisual
             x: focusPoint.x - width / 2
-            y: focusPoint.y - barsHeight / 2
+            y: focusPoint.y + stage.focusH * 0.16 - barsHeight / 2
             width: stage.focusW
             barsHeight: Math.min(stage.focusH * 0.52, Math.max(72, stage.focusW * 0.2))
             height: barsHeight * 1.55

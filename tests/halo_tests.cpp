@@ -42,6 +42,7 @@
 #include "lyrics.h"
 #include "doctor.h"
 #include "headphones.h"
+#include "cymatics.h"
 #include "kaleidopilot.h"
 #include "player.h"
 #include "playlists.h"
@@ -674,6 +675,101 @@ private slots:
         QVERIFY(secrets);
         QCOMPARE(secrets->property("siege").toBool(), false);
         QVERIFY(secrets->property("best").toInt() >= game->property("score").toInt());
+    }
+
+    void cymaticsFiguresRiseInPitch() {
+        using namespace Cymatics;
+        const auto &all = modes();
+        QVERIFY(all.size() >= 40);
+        for (size_t i = 0; i < all.size(); ++i) {
+            // n == m would be a flat plate (or the same wave twice).
+            QVERIFY(all[i].n < all[i].m);
+            QVERIFY(all[i].sign == 1 || all[i].sign == -1);
+            if (i)
+                QVERIFY(all[i].pitch() >= all[i - 1].pitch());
+            // Every figure has sand lines: the plate goes both above and below zero.
+            double lo = 0, hi = 0;
+            for (int y = 0; y <= 20; ++y)
+                for (int x = 0; x <= 20; ++x) {
+                    const double f = height(all[i], x / 20.0, y / 20.0);
+                    QVERIFY(std::fabs(f) <= 2.0 + 1e-9);
+                    lo = std::min(lo, f);
+                    hi = std::max(hi, f);
+                }
+            QVERIFY2(lo < -0.5 && hi > 0.5, qPrintable(QString::number(i)));
+        }
+        // The spectrum's centre of mass: bass low, treble high, silence in the middle.
+        std::vector<float> bands(size_t(Spectrum::Bands), 0.0f);
+        QCOMPARE(Spectrum::centroidOf(bands), 0.5);
+        bands[4] = 1;
+        const double bass = Spectrum::centroidOf(bands);
+        bands[4] = 0;
+        bands[56] = 1;
+        const double treble = Spectrum::centroidOf(bands);
+        QVERIFY(bass < 0.1 && treble > 0.85);
+    }
+
+    void cymaticsChangeOnTheBeat() {
+        using namespace Cymatics;
+        Pilot pilot;
+        pilot.setBeatsPerChange(4);
+        // 120 BPM at 60 frames a second: a one-frame pulse every 30 frames.
+        const auto play = [&pilot](int frames, double tone, double level = 0.6) {
+            for (int f = 0; f < frames; ++f)
+                pilot.step(1.0 / 60, f % 30 == 0 ? 1.0 : 0.0, level, tone);
+        };
+        // Three beats in: nothing has changed, the figure holds.
+        const int first = pilot.index();
+        play(89, 0.3);
+        QCOMPARE(pilot.beats(), 3);
+        QCOMPARE(pilot.changes(), 0);
+        QCOMPARE(pilot.index(), first);
+        QVERIFY(!pilot.morphing());
+        // The fourth beat starts a change, to a different figure.
+        play(2, 0.3);
+        QCOMPARE(pilot.beats(), 4);
+        QCOMPARE(pilot.changes(), 1);
+        QVERIFY(pilot.morphing());
+        QVERIFY(pilot.to() != pilot.from());
+        // Half way through, the sand is in the air; then it settles and holds.
+        play(int(Pilot::MorphSeconds * 30), 0.3);
+        QVERIFY2(pilot.agitation() > 0.8, qPrintable(QString::number(pilot.agitation())));
+        play(27 - int(Pilot::MorphSeconds * 30), 0.3);
+        QVERIFY(!pilot.morphing());
+        QCOMPARE(pilot.morph(), 0.0);
+        QVERIFY(pilot.agitation() < 0.05);
+        // A steady tone still changes every four beats, and walks round
+        // several figures instead of flipping between two.
+        int last = pilot.index();
+        QSet<int> shown;
+        for (int bar = 0; bar < 6; ++bar) {
+            play(120, 0.3);
+            QVERIFY(pilot.index() != last);
+            last = pilot.index();
+            shown.insert(last);
+        }
+        QVERIFY2(shown.size() >= 5, qPrintable(QString::number(shown.size())));
+        QCOMPARE(pilot.changes(), 7);
+        // Brighter music draws a finer figure.
+        const int dark = pilot.to().pitch();
+        play(480, 0.9);
+        QVERIFY2(pilot.to().pitch() > dark, qPrintable(QString("%1 vs %2").arg(pilot.to().pitch()).arg(dark)));
+        // The background's reach keeps it to the broad figures.
+        Pilot calm;
+        calm.setReach(0.42);
+        for (int f = 0; f < 3600; ++f)
+            calm.step(1.0 / 60, f % 30 == 0 ? 1.0 : 0.0, 0.6, 0.2 + 0.7 * ((f / 240) % 2));
+        QVERIFY(calm.changes() > 10);
+        QVERIFY(calm.index() < int(std::lround(double(modes().size()) * 0.42)));
+        // Music with no beat to count still moves on; silence holds.
+        Pilot drone;
+        for (int f = 0; f < 1200; ++f)
+            drone.step(1.0 / 60, 0, 0.5, 0.4);
+        QVERIFY(drone.changes() >= 1);
+        Pilot silent;
+        for (int f = 0; f < 1200; ++f)
+            silent.step(1.0 / 60, 0, 0, 0.5);
+        QCOMPARE(silent.changes(), 0);
     }
 
     void kaleidoscopeComesFromTheFile() {
@@ -1769,11 +1865,13 @@ private slots:
         QCOMPARE(player.visualStyle(), 10);
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("hologram"));
         QCOMPARE(player.visualStyle(), 11);
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("cymatics"));
+        QCOMPARE(player.visualStyle(), 12);
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("ring"));
-        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"previous"}}}).value("visual").toString(), QString("hologram"));
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"previous"}}}).value("visual").toString(), QString("cymatics"));
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"3"}}}).value("visual").toString(), QString("skyline"));
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"10"}}}).value("visual").toString(), QString("turntable"));
-        QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"12"}}}).value("ok").toBool());
+        QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"13"}}}).value("ok").toBool());
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"3"}}}).value("visual").toString(), QString("skyline"));
         QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"mandelbrot"}}}).value("ok").toBool());
         QCOMPARE(remote.handle({{"cmd", "visual"}}).value("visual").toString(), QString("skyline"));
@@ -1809,6 +1907,38 @@ private slots:
             if (mode != PixelVisual::Waterfall)
                 QVERIFY2(lit > 20, qPrintable(PixelVisual::modeName(mode) + " drew almost nothing"));
         }
+    }
+
+    void pixelVisualsKeepTheirPeaksOnLoudMasters() {
+        // A loud, compressed master: every band near the top. Drawn straight
+        // it is one solid block; with the floor taken off, the difference
+        // between its bands is most of the picture.
+        const double floor = PixelVisual::floorFor(0.85);
+        const double quieter = PixelVisual::shaped(0.75, floor), louder = PixelVisual::shaped(0.95, floor);
+        QVERIFY2(louder - quieter > 0.35, qPrintable(QString::number(louder - quieter)));
+        QVERIFY(louder < 1.0 && quieter > 0.0);
+        // Quiet music is barely changed, silence not at all, and nothing
+        // leaves 0..1.
+        QVERIFY(std::fabs(PixelVisual::shaped(0.3, PixelVisual::floorFor(0.15)) - 0.3) < 0.08);
+        QCOMPARE(PixelVisual::shaped(0.4, PixelVisual::floorFor(0)), 0.4);
+        QCOMPARE(PixelVisual::shaped(0.2, 0.5), 0.0);
+        QCOMPARE(PixelVisual::shaped(1.0, 0.5), 1.0);
+        QCOMPARE(PixelVisual::shaped(1.0, 1.0), 0.0);
+        // The middle moves with `middle`: the Skyline's tallest tower and
+        // the Warp's stars follow it to the song's side.
+        PixelVisual v;
+        v.setWidth(96);
+        v.setHeight(40);
+        v.setMode(PixelVisual::Warp);
+        v.setMiddle(0.3);
+        for (int i = 0; i < 240; ++i)
+            v.step(1.0 / 60, i % 30 == 0 ? 1.0 : 0.2, 0.7, 0.7, 0.5, 0.4);
+        int leftHalf = 0, rightHalf = 0;
+        for (int y = 0; y < 40; ++y)
+            for (int x = 0; x < 96; ++x)
+                if (qAlpha(v.frame().pixel(x, y)))
+                    (x < 48 ? leftHalf : rightHalf)++;
+        QVERIFY2(leftHalf > rightHalf, qPrintable(QString("%1 vs %2").arg(leftHalf).arg(rightHalf)));
     }
 
     void themeAccentFallsBack() {

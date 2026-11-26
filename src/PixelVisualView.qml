@@ -11,6 +11,8 @@ Item {
     id: root
     property int mode: 0
     property int cell: 6
+    // Where across the item (0..1) a visual with a middle puts it.
+    property real middle: 0.5
     readonly property bool supported: GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property bool moving: Style.motion && player.playing && visible
                                    && root.Window.window && root.Window.window.visibility !== Window.Minimized
@@ -26,6 +28,7 @@ Item {
         width: Math.max(1, Math.ceil(root.width / root.cell))
         height: Math.max(1, Math.ceil(root.height / root.cell))
         mode: root.mode
+        middle: root.middle
         spectrum: spectrumSource
         window: Style.window
         palette: [Style.paletteColour(0), Style.paletteColour(1), Style.paletteColour(2),

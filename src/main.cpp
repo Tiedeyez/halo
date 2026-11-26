@@ -18,6 +18,7 @@
 
 #include "doctor.h"
 #include "headphones.h"
+#include "cymatics.h"
 #include "kaleidopilot.h"
 #include "pointer.h"
 #include "analysis.h"
@@ -148,6 +149,7 @@ int main(int argc, char *argv[]) {
     Spectrum spectrum(&player.engine());
     qmlRegisterType<HaloView>("Halo", 1, 0, "HaloView");
     qmlRegisterType<KaleidoPilot>("Halo", 1, 0, "KaleidoPilot");
+    qmlRegisterType<CymaticsPilot>("Halo", 1, 0, "CymaticsPilot");
     qmlRegisterType<PixelVisual>("Halo", 1, 0, "PixelVisual");
     qmlRegisterSingletonType(QUrl("qrc:/Style.qml"), "Halo", 1, 0, "Style");
     qmlRegisterSingletonType(QUrl("qrc:/Secrets.qml"), "Halo", 1, 0, "Secrets");
