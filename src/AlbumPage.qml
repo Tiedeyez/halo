@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // One album: its cover large, what it is, and its songs.
 FocusScope {

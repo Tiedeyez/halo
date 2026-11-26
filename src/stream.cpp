@@ -36,7 +36,7 @@ Stream::~Stream() {
 
 void Stream::start() {
     if (m_ffmpeg.isEmpty()) {
-        fail(QCoreApplication::translate("Stream", "ffmpeg isn't installed, so Halo can't decode audio."));
+        fail(QCoreApplication::translate("Stream", "ffmpeg isn't installed, so CymtX can't decode audio."));
         return;
     }
     m_thread = std::thread([this] { run(); });

@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // The glitch shader as a layer effect, driven by a GlitchDriver:
 //   GlitchDriver { id: g }

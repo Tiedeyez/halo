@@ -129,7 +129,7 @@ QMutex coverLock;
 QHash<QString, Covers::Source> coverSources;
 
 QString coverCacheDirectory() {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/halo/covers";
+    return QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/cymtx/covers";
 }
 
 }
@@ -205,10 +205,10 @@ Library::Library(const QStringList &folders, const QString &cacheDirectory, cons
                  QObject *parent)
     : QObject(parent), m_folders(folders.isEmpty() ? defaultFolders() : folders) {
     const QString cache = cacheDirectory.isEmpty()
-                              ? QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/halo"
+                              ? QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/cymtx"
                               : cacheDirectory;
     const QString state = stateDirectory.isEmpty()
-                              ? QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/halo"
+                              ? QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/cymtx"
                               : stateDirectory;
     m_cacheFile = cache + "/library.json";
     m_statsFile = state + "/stats.json";
@@ -242,16 +242,16 @@ Library::~Library() {
 }
 
 QString Library::foldersFile() {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/halo/folders";
+    return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/cymtx/folders";
 }
 
-// The folders listed one per line in ~/.config/halo/folders; without that
+// The folders listed one per line in ~/.config/cymtx/folders; without that
 // file, the desktop's music folder (XDG_MUSIC_DIR, which Qt reads from
 // user-dirs.dirs) and ~/Music, the ones that exist.
 QStringList Library::defaultFolders() {
     QStringList folders;
-    if (!qEnvironmentVariableIsEmpty("HALO_MUSIC"))
-        return qEnvironmentVariable("HALO_MUSIC").split(':', Qt::SkipEmptyParts);
+    if (!qEnvironmentVariableIsEmpty("CYMTX_MUSIC"))
+        return qEnvironmentVariable("CYMTX_MUSIC").split(':', Qt::SkipEmptyParts);
     QFile config(foldersFile());
     if (config.open(QIODevice::ReadOnly))
         for (const QString &line : QString::fromUtf8(config.readAll()).split('\n')) {
@@ -281,7 +281,7 @@ bool Library::addFolder(const QString &folder) {
         return false;
     path = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
     if (!m_folders.contains(path)) {
-        // The first folder chosen by hand keeps the ones Halo found, so
+        // The first folder chosen by hand keeps the ones CymtX found, so
         // nothing that was in the library drops out of it.
         const QString listFile = foldersFile();
         const bool fresh = !QFileInfo::exists(listFile);
@@ -321,7 +321,7 @@ QString Library::localPath(const QString &folder) {
     return QDir::cleanPath(QFileInfo(path).absoluteFilePath());
 }
 
-bool Library::foldersPinned() const { return !qEnvironmentVariableIsEmpty("HALO_MUSIC"); }
+bool Library::foldersPinned() const { return !qEnvironmentVariableIsEmpty("CYMTX_MUSIC"); }
 
 QVariantList Library::folderChoices() const {
     QVariantList out;
@@ -368,7 +368,7 @@ bool Library::setFolders(const QStringList &folders) {
     }
     if (wanted.isEmpty())
         return false;
-    QByteArray text = "# Halo's music folders, one per line. Halo reads everything inside them.\n";
+    QByteArray text = "# CymtX's music folders, one per line. CymtX reads everything inside them.\n";
     for (const QString &f : std::as_const(wanted))
         text += f.toUtf8() + '\n';
     const QString listFile = foldersFile();
@@ -408,7 +408,8 @@ int Library::countAudioFiles(const QString &folder, bool *more, const std::atomi
         const QString directory = QFileInfo(path).absolutePath();
         auto ignored = ignoredDirectories.constFind(directory);
         if (ignored == ignoredDirectories.constEnd())
-            ignored = ignoredDirectories.insert(directory, QFileInfo::exists(directory + "/.haloignore") ||
+            ignored = ignoredDirectories.insert(directory, QFileInfo::exists(directory + "/.cymtxignore") ||
+                                                               QFileInfo::exists(directory + "/.haloignore") ||
                                                                QFileInfo::exists(directory + "/.nomedia"));
         if (!ignored.value())
             ++songs;
@@ -581,13 +582,14 @@ std::vector<Track> Library::scanFolders(const QStringList &folders, const QHash<
             if (!isAudioFile(path) || seen.contains(path))
                 continue;
             // Hidden folders (a .trash, a sync tool's staging area) are skipped,
-            // and so is a folder holding a .haloignore or .nomedia file.
+            // and so is a folder holding a .cymtxignore or .nomedia file.
             if (path.mid(folder.size()).contains("/."))
                 continue;
             const QString directory = QFileInfo(path).absolutePath();
             auto ignored = ignoredDirectories.constFind(directory);
             if (ignored == ignoredDirectories.constEnd())
-                ignored = ignoredDirectories.insert(directory, QFileInfo::exists(directory + "/.haloignore") ||
+                ignored = ignoredDirectories.insert(directory, QFileInfo::exists(directory + "/.cymtxignore") ||
+                                                               QFileInfo::exists(directory + "/.haloignore") ||
                                                                    QFileInfo::exists(directory + "/.nomedia"));
             if (ignored.value())
                 continue;

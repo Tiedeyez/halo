@@ -1,11 +1,11 @@
-// Tests for plugin/HaloStatus.js, the bar widget's reply parser.
+// Tests for plugin/CymtXStatus.js, the bar widget's reply parser.
 // Run: node tests/plugin/status-test.mjs
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import assert from "node:assert/strict";
 
-const source = readFileSync(fileURLToPath(new URL("../../plugin/HaloStatus.js", import.meta.url)), "utf8")
+const source = readFileSync(fileURLToPath(new URL("../../plugin/CymtXStatus.js", import.meta.url)), "utf8")
   .replace(/^\.pragma library\s*$/m, "");
 const H = {};
 vm.runInNewContext(source + "\nfor (const n of ['parse','parseLyrics','clock','argv','replyKind','emptyState','emptyLyrics','withChange','nextSleep','nextRepeat','coverPath','MaxReplyBytes','MaxField','MaxPath']) this[n] = eval(n);", H);
@@ -43,8 +43,8 @@ test("running with nothing loaded is idle", () => {
   assert.equal(H.parse(JSON.stringify({ ok: true }), 0).kind, "idle");
 });
 
-test("Halo not running: the CLI's own error", () => {
-  const s = H.parse(JSON.stringify({ ok: false, error: "Halo isn't running. Start it with `halo open`." }) + "\n", 1);
+test("CymtX not running: the CLI's own error", () => {
+  const s = H.parse(JSON.stringify({ ok: false, error: "CymtX isn't running. Start it with `cymtx open`." }) + "\n", 1);
   assert.equal(s.kind, "offline");
   assert.match(s.message, /isn't running/);
 });
@@ -94,7 +94,7 @@ test("clock", () => {
   assert.equal(H.clock("junk"), "0:00");
 });
 
-test("what Halo is set to: volume, modes, sleep, tempo, loudness, place in the queue", () => {
+test("what CymtX is set to: volume, modes, sleep, tempo, loudness, place in the queue", () => {
   const s = H.parse(reply({ playing: true, path: "/m/a.flac", title: "Song", position: 5, duration: 100,
     volume: 62, shuffle: true, repeat: "one", blend: true, drift: false, sleep: 840.9, index: 2, queue: 9,
     analysis: { bpm: 99.3, lufs: -11.72 }, problem: "couldn't play b.flac" }), 0);
@@ -113,7 +113,7 @@ test("what Halo is set to: volume, modes, sleep, tempo, loudness, place in the q
   assert.equal(s.key, "/m/a.flac");
 });
 
-test("an older Halo, or wrong types: those fields fall back, never a crash", () => {
+test("an older CymtX, or wrong types: those fields fall back, never a crash", () => {
   const s = H.parse(reply({ playing: true, path: "/a", volume: "loud", shuffle: "yes", repeat: "forever",
     sleep: -3, index: 12, queue: 4, analysis: { bpm: "fast", lufs: 3 }, problem: 5 }), 0);
   assert.equal(s.volume, -1);
@@ -138,7 +138,7 @@ test("idle keeps the settings (the controls still work with nothing loaded)", ()
 });
 
 test("the cover is a local picture or nothing", () => {
-  assert.equal(H.coverPath("/home/u/.cache/halo/covers/ab12-512.jpg"), "/home/u/.cache/halo/covers/ab12-512.jpg");
+  assert.equal(H.coverPath("/home/u/.cache/cymtx/covers/ab12-512.jpg"), "/home/u/.cache/cymtx/covers/ab12-512.jpg");
   assert.equal(H.coverPath("/c/x.PNG"), "/c/x.PNG");
   for (const bad of ["https://example.invalid/x.jpg", "file:///c/x.jpg", "covers/x.jpg", "/c/../etc/x.jpg",
     "/c/x.svg", "/c/x.jpg\n", "/c/x", "", 7, null, undefined, { a: 1 }, "/" + "x".repeat(2000) + ".jpg"])
@@ -147,7 +147,7 @@ test("the cover is a local picture or nothing", () => {
   assert.equal(H.parse(reply({ playing: true, path: "/a", cover: "http://x/a.jpg" }), 0).cover, "");
 });
 
-test("a change shown before Halo answers leaves the old state alone", () => {
+test("a change shown before CymtX answers leaves the old state alone", () => {
   const s = H.parse(reply({ playing: true, path: "/a", volume: 10 }), 0);
   const t = H.withChange(s, { volume: 55 });
   assert.equal(s.volume, 10);
@@ -202,11 +202,11 @@ test("the sleep button walks 15, 30, 60, 90, off; repeat walks off, all, one", (
 });
 
 test("only the fixed commands map to an argv", () => {
-  const a = (...args) => { const v = H.argv("/usr/bin/halo", ...args); return v === null ? null : Array.from(v); };
-  assert.deepEqual(a("status"), ["/usr/bin/halo", "status", "--json"]);
-  assert.deepEqual(a("toggle"), ["/usr/bin/halo", "toggle", "--json"]);
-  assert.deepEqual(a("moment"), ["/usr/bin/halo", "moment", "--json"]);
-  assert.deepEqual(a("lyrics"), ["/usr/bin/halo", "lyrics", "--json"]);
+  const a = (...args) => { const v = H.argv("/usr/bin/cymtx", ...args); return v === null ? null : Array.from(v); };
+  assert.deepEqual(a("status"), ["/usr/bin/cymtx", "status", "--json"]);
+  assert.deepEqual(a("toggle"), ["/usr/bin/cymtx", "toggle", "--json"]);
+  assert.deepEqual(a("moment"), ["/usr/bin/cymtx", "moment", "--json"]);
+  assert.deepEqual(a("lyrics"), ["/usr/bin/cymtx", "lyrics", "--json"]);
   assert.equal(a("open ~; rm -rf /"), null);
   assert.equal(a("constructor"), null);
   assert.equal(a("__proto__"), null);
@@ -218,17 +218,17 @@ test("only the fixed commands map to an argv", () => {
 });
 
 test("values are whole numbers in range or one of a few words, nothing else", () => {
-  const a = (...args) => { const v = H.argv("/usr/bin/halo", ...args); return v === null ? null : Array.from(v); };
-  assert.deepEqual(a("seek", 61.4), ["/usr/bin/halo", "seek", "61", "--json"]);
-  assert.deepEqual(a("seek", 0), ["/usr/bin/halo", "seek", "0", "--json"]);
-  assert.deepEqual(a("volume", 55), ["/usr/bin/halo", "volume", "55", "--json"]);
-  assert.deepEqual(a("volume", "40"), ["/usr/bin/halo", "volume", "40", "--json"]);
-  assert.deepEqual(a("shuffle", "on"), ["/usr/bin/halo", "shuffle", "on", "--json"]);
-  assert.deepEqual(a("blend", "off"), ["/usr/bin/halo", "blend", "off", "--json"]);
-  assert.deepEqual(a("repeat", "one"), ["/usr/bin/halo", "repeat", "one", "--json"]);
-  assert.deepEqual(a("sleep", "30"), ["/usr/bin/halo", "sleep", "30", "--json"]);
-  assert.deepEqual(a("sleep", "off"), ["/usr/bin/halo", "sleep", "off", "--json"]);
-  assert.deepEqual(a("visual", "next"), ["/usr/bin/halo", "visual", "next", "--json"]);
+  const a = (...args) => { const v = H.argv("/usr/bin/cymtx", ...args); return v === null ? null : Array.from(v); };
+  assert.deepEqual(a("seek", 61.4), ["/usr/bin/cymtx", "seek", "61", "--json"]);
+  assert.deepEqual(a("seek", 0), ["/usr/bin/cymtx", "seek", "0", "--json"]);
+  assert.deepEqual(a("volume", 55), ["/usr/bin/cymtx", "volume", "55", "--json"]);
+  assert.deepEqual(a("volume", "40"), ["/usr/bin/cymtx", "volume", "40", "--json"]);
+  assert.deepEqual(a("shuffle", "on"), ["/usr/bin/cymtx", "shuffle", "on", "--json"]);
+  assert.deepEqual(a("blend", "off"), ["/usr/bin/cymtx", "blend", "off", "--json"]);
+  assert.deepEqual(a("repeat", "one"), ["/usr/bin/cymtx", "repeat", "one", "--json"]);
+  assert.deepEqual(a("sleep", "30"), ["/usr/bin/cymtx", "sleep", "30", "--json"]);
+  assert.deepEqual(a("sleep", "off"), ["/usr/bin/cymtx", "sleep", "off", "--json"]);
+  assert.deepEqual(a("visual", "next"), ["/usr/bin/cymtx", "visual", "next", "--json"]);
   for (const [name, value] of [["seek", -1], ["seek", "+10"], ["seek", "1e3"], ["seek", NaN], ["seek", 1e9],
     ["seek", undefined], ["volume", 101], ["volume", -5], ["volume", "50; rm"], ["volume", "--json"],
     ["volume", null], ["volume", [50]], ["shuffle", "yes"], ["shuffle", true], ["drift", ""], ["repeat", "two"],

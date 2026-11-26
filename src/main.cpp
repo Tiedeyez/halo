@@ -1,4 +1,4 @@
-// Halo: a music player for Omarchy. Your library, mixed like a DJ would.
+// CymtX: a music player for Omarchy. Your library, mixed like a DJ would.
 
 #include <QCoreApplication>
 #include <QFileInfo>
@@ -18,7 +18,6 @@
 
 #include "doctor.h"
 #include "headphones.h"
-#include "cymatics.h"
 #include "kaleidopilot.h"
 #include "pointer.h"
 #include "analysis.h"
@@ -29,6 +28,7 @@
 #include "player.h"
 #include "playlists.h"
 #include "remote.h"
+#include "sandplate.h"
 #include "safety.h"
 #include "stream.h"
 #include "theme.h"
@@ -39,7 +39,9 @@
 static constexpr const char *Version = "1.0.3";
 
 int main(int argc, char *argv[]) {
-    // Before anything is written: Halo's files are private to you.
+    // CymtX was Halo: the first start takes a copy of what Halo kept.
+    Safety::adoptOldFolders(Safety::ownRoots());
+    // Before anything is written: CymtX's files are private to you.
     Safety::makePrivate(Safety::ownFolders());
     QStringList arguments;
     for (int i = 0; i < argc; ++i)
@@ -49,12 +51,12 @@ int main(int argc, char *argv[]) {
     if (Cli::isCommand(arguments)) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
         QCoreApplication app(argc, argv);
-        app.setApplicationName("halo");
+        app.setApplicationName("cymtx");
         app.setApplicationVersion(Version);
         return Cli::run(arguments);
     }
 
-    // "halo open a.flac", "halo a.flac" (the launcher's %F), or nothing.
+    // "cymtx open a.flac", "cymtx a.flac" (the launcher's %F), or nothing.
     QStringList files = arguments.mid(1);
     if (!files.isEmpty() && files.first() == "open")
         files.removeFirst();
@@ -71,21 +73,21 @@ int main(int argc, char *argv[]) {
                                         QByteArray::number(Stream::SampleRate));
 
     QGuiApplication app(argc, argv);
-    app.setApplicationName("halo");
+    app.setApplicationName("cymtx");
     app.setApplicationVersion(Version);
-    app.setDesktopFileName("halo");
-    app.setWindowIcon(QIcon::fromTheme("halo"));
+    app.setDesktopFileName("cymtx");
+    app.setWindowIcon(QIcon::fromTheme("cymtx"));
     QQuickStyle::setStyle("Material");
 
-    // One Halo at a time: a second launch (a song double-clicked in the file
-    // manager while Halo plays) hands its files to the first and exits,
+    // One CymtX at a time: a second launch (a song double-clicked in the file
+    // manager while CymtX plays) hands its files to the first and exits,
     // before it reads the library or the saved queue, so it is quick and
-    // never writes over the running Halo's state.
+    // never writes over the running CymtX's state.
     auto handOver = [&files] {
         QJsonArray list;
         for (const QString &f : files)
             list.append(f);
-        // Generous: the request is queued even if that Halo is busy.
+        // Generous: the request is queued even if that CymtX is busy.
         Remote::send({{"cmd", "open"}, {"args", list}}, nullptr, 8000);
     };
     if (Remote::running()) {
@@ -95,9 +97,9 @@ int main(int argc, char *argv[]) {
 
     Translator translator;
     app.installTranslator(&translator);
-    // HALO_THEME_DIR points Halo at one theme's folder (one with a
+    // CYMTX_THEME_DIR points CymtX at one theme's folder (one with a
     // colors.toml), to check how it looks without switching Omarchy to it.
-    Theme theme(qEnvironmentVariable("HALO_THEME_DIR"));
+    Theme theme(qEnvironmentVariable("CYMTX_THEME_DIR"));
     Library library;
     Analyzer analyzer;
     Player player(&library, &analyzer);
@@ -147,15 +149,15 @@ int main(int argc, char *argv[]) {
         player.setAudioProblem(QCoreApplication::translate("main", "ffmpeg isn't installed. Install it with: omarchy-pkg-add ffmpeg"));
 
     Spectrum spectrum(&player.engine());
-    qmlRegisterType<HaloView>("Halo", 1, 0, "HaloView");
-    qmlRegisterType<KaleidoPilot>("Halo", 1, 0, "KaleidoPilot");
-    qmlRegisterType<CymaticsPilot>("Halo", 1, 0, "CymaticsPilot");
-    qmlRegisterType<PixelVisual>("Halo", 1, 0, "PixelVisual");
-    qmlRegisterSingletonType(QUrl("qrc:/Style.qml"), "Halo", 1, 0, "Style");
-    qmlRegisterSingletonType(QUrl("qrc:/Secrets.qml"), "Halo", 1, 0, "Secrets");
-    qmlRegisterSingletonType(QUrl("qrc:/PlaylistUi.qml"), "Halo", 1, 0, "PlaylistUi");
-    qmlRegisterUncreatableType<QueueModel>("Halo", 1, 0, "QueueModel", "from player");
-    qmlRegisterUncreatableType<MomentModel>("Halo", 1, 0, "MomentModel", "from player");
+    qmlRegisterType<HaloView>("CymtX", 1, 0, "HaloView");
+    qmlRegisterType<KaleidoPilot>("CymtX", 1, 0, "KaleidoPilot");
+    qmlRegisterType<SandPlate>("CymtX", 1, 0, "SandPlate");
+    qmlRegisterType<PixelVisual>("CymtX", 1, 0, "PixelVisual");
+    qmlRegisterSingletonType(QUrl("qrc:/Style.qml"), "CymtX", 1, 0, "Style");
+    qmlRegisterSingletonType(QUrl("qrc:/Secrets.qml"), "CymtX", 1, 0, "Secrets");
+    qmlRegisterSingletonType(QUrl("qrc:/PlaylistUi.qml"), "CymtX", 1, 0, "PlaylistUi");
+    qmlRegisterUncreatableType<QueueModel>("CymtX", 1, 0, "QueueModel", "from player");
+    qmlRegisterUncreatableType<MomentModel>("CymtX", 1, 0, "MomentModel", "from player");
 
     AlbumModel albums(&library);
     TrackModel tracks(&library);
@@ -174,7 +176,7 @@ int main(int argc, char *argv[]) {
     context->setContextProperty("headphones", &headphones);
     LibraryDoctor doctor(&library);
     context->setContextProperty("doctor", &doctor);
-    qmlRegisterUncreatableType<LyricsService>("Halo", 1, 0, "Lyrics", "from main");
+    qmlRegisterUncreatableType<LyricsService>("CymtX", 1, 0, "Lyrics", "from main");
     context->setContextProperty("spectrumSource", &spectrum);
     context->setContextProperty("albums", &albums);
     context->setContextProperty("tracks", &tracks);
@@ -187,7 +189,7 @@ int main(int argc, char *argv[]) {
     engine.load(QUrl("qrc:/Main.qml"));
     if (engine.rootObjects().isEmpty()) {
         QQmlComponent check(&engine, QUrl("qrc:/Main.qml"));
-        fprintf(stderr, "halo: the interface didn't load:\n%s\n", qPrintable(check.errorString()));
+        fprintf(stderr, "cymtx: the interface didn't load:\n%s\n", qPrintable(check.errorString()));
         return 1;
     }
     engine.rootObjects().first()->installEventFilter(&pointer);
@@ -201,7 +203,7 @@ int main(int argc, char *argv[]) {
             window->requestActivate();
         }
         if (!qEnvironmentVariableIsEmpty("HYPRLAND_INSTANCE_SIGNATURE"))
-            QProcess::startDetached(Safety::systemTool("hyprctl"), {"dispatch", "hl.dsp.focus({ window = \"class:halo\" })"});
+            QProcess::startDetached(Safety::systemTool("hyprctl"), {"dispatch", "hl.dsp.focus({ window = \"class:cymtx\" })"});
     });
 
     QObject::connect(&remote, &Remote::grabRequested, &app, [&](const QString &path) {
@@ -224,7 +226,7 @@ int main(int argc, char *argv[]) {
         if (!allowed.contains(name))
             return;
         if (name == "siege") {
-            if (QObject *secrets = engine.singletonInstance<QObject *>("Halo", "Secrets"))
+            if (QObject *secrets = engine.singletonInstance<QObject *>("CymtX", "Secrets"))
                 secrets->setProperty("siege", value == "true");
             return;
         }

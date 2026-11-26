@@ -50,13 +50,13 @@ QtObject {
     // What the decrypting text cycles through before it settles, the block
     // shades and symbols Omarchy's screensaver effects scramble with.
     readonly property string noise: "█▓▒░#%&@$*+=<>/\\|"
-    // Motion is reducible: Halo's calm setting (C) turns every glitch off.
+    // Motion is reducible: CymtX's calm setting (C) turns every glitch off.
     readonly property bool motion: !player.calm
     // Durations (ms) for every eased change: hovers and presses, things
     // that appear and move, big surfaces arriving. Eased out, so a change
     // starts at once and settles softly.
     // How fine the pixel art is: 2 = twice the cells across (four times the
-    // pixels) of Halo's first visuals. Every visual and the water derive
+    // pixels) of CymtX's first visuals. Every visual and the water derive
     // their cell size from it, so the look scales from a laptop to 4K.
     readonly property real pixelDensity: 2
     readonly property int quick: 140

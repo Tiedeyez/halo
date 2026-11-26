@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // Asks for a name: a new playlist, or a new name for one.
 Popup {

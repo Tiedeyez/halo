@@ -2,9 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
-// The library's sections, search, and what Halo is doing in the background.
+// The library's sections, search, and what CymtX is doing in the background.
 Rectangle {
     id: root
     property int view: 0

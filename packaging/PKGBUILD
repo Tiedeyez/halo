@@ -1,25 +1,30 @@
-# Release package for Halo: builds the tagged release from GitHub, not
+# Release package for CymtX: builds the tagged release from GitHub, not
 # whatever is in a working folder (for that, see bin/install and
 # pkgbuild/PKGBUILD). Install with:  makepkg -si   (in this folder)
 # Maintainer: Tiedeyez <84999823+Tiedeyez@users.noreply.github.com>
-pkgname=halo
+pkgname=cymtx
 pkgver=1.0.3
 pkgrel=1
-pkgdesc='A music player for Omarchy: your library, mixed like a DJ would'
+pkgdesc='Music you can see. A music player for Omarchy: your library, mixed like a DJ would, drawn in sand by its own sound'
 arch=('x86_64' 'aarch64')
-url='https://github.com/Tiedeyez/halo'
+url='https://github.com/Tiedeyez/cymtx'
 license=('MIT' 'CC-BY-SA-4.0')
 depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'taglib' 'ffmpeg')
+# CymtX was called Halo until 1.0.3: it takes that package's place, and
+# keeps a `halo` command for the scripts and bar widgets that still call it.
+provides=('halo')
+conflicts=('halo')
+replaces=('halo')
 makedepends=('git' 'gcc' 'make' 'qt6-shadertools')
 # Pinned to the release tag. After tagging, the tag's commit goes in
 # _commit in a follow-up commit (a commit can't hold its own hash), and
 # prepare() refuses to build if the tag ever points anywhere else.
 _commit='20ac29adfdbcc7b7a5c6337e4a6bdb938f5121ec'
-source=("halo::git+$url.git#tag=v$pkgver")
+source=("cymtx::git+$url.git#tag=v$pkgver")
 sha256sums=('SKIP')
 
 prepare() {
-  cd halo
+  cd cymtx
   if [ -n "$_commit" ] && [ "$(git rev-parse HEAD)" != "$_commit" ]; then
     echo "v$pkgver is not commit $_commit; refusing to build" >&2
     return 1
@@ -27,22 +32,23 @@ prepare() {
 }
 
 build() {
-  cd halo
+  cd cymtx
   ./bin/build
 }
 
 check() {
-  cd halo
+  cd cymtx
   env -u DISPLAY -u WAYLAND_DISPLAY QT_QPA_PLATFORMTHEME=generic ./bin/test
 }
 
 package() {
-  cd halo
-  install -Dm755 build/halo "$pkgdir/usr/bin/halo"
+  cd cymtx
+  install -Dm755 build/cymtx "$pkgdir/usr/bin/cymtx"
+  ln -s cymtx "$pkgdir/usr/bin/halo"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 src/data/HEADPHONES-LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/HEADPHONES-LICENSE.md"
-  install -Dm644 pkgbuild/halo.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/halo.svg"
-  install -Dm644 pkgbuild/halo.desktop "$pkgdir/usr/share/applications/halo.desktop"
+  install -Dm644 pkgbuild/cymtx.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/cymtx.svg"
+  install -Dm644 pkgbuild/cymtx.desktop "$pkgdir/usr/share/applications/cymtx.desktop"
   install -Dm644 DISCLOSURE.md "$pkgdir/usr/share/doc/$pkgname/DISCLOSURE.md"
   install -Dm644 CHANGELOG.md "$pkgdir/usr/share/doc/$pkgname/CHANGELOG.md"
 }

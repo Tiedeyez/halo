@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // What plays, in order. Drag a song to move it; Delete removes the
 // selected song; Ctrl+Z brings back anything removed.

@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // The seconds you pinned with M: a drop, a verse, a song inside a mixtape.
 FocusScope {

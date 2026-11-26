@@ -1,6 +1,6 @@
 #version 440
 
-// The pixel glitch Halo uses for changes: a song, a view, the wordmark.
+// The pixel glitch CymtX uses for changes: a song, a view, the wordmark.
 // At amount 0 the source passes through untouched; towards 1 it breaks into
 // big pixels, slides horizontal slices sideways, splits red from blue and
 // flashes a few slices in the theme's accent, like Omarchy's screensaver

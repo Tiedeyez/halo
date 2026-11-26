@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Window
-import Halo
+import CymtX
 
 // The Bars visual: HaloView's LED bars, finished by shaders/barsfx.frag:
 // coloured up their height, bloomed like lit LEDs, and reflected in a glossy

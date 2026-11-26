@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=CymtX
+GenericName=Music Player
+GenericName[da]=Musikafspiller
+GenericName[es]=Reproductor de música
+Comment=Music you can see: your library, mixed like a DJ would
+Comment[da]=Musik du kan se: dit musikbibliotek, mikset som en DJ ville gøre det
+Comment[es]=Música que puedes ver: tu biblioteca, mezclada como lo haría un DJ
+Exec=cymtx %F
+Icon=cymtx
+Terminal=false
+Categories=AudioVideo;Audio;Player;Music;
+MimeType=audio/mpeg;audio/flac;audio/ogg;audio/opus;audio/mp4;audio/aac;audio/x-wav;audio/x-ms-wma;audio/x-aiff;audio/x-ape;audio/x-wavpack;
+Keywords=music;player;mixtape;playlist;dj;cymatics;visualizer;halo;
+StartupWMClass=cymtx

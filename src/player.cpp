@@ -147,7 +147,7 @@ void MomentModel::reset() {
 Player::Player(Library *library, Analyzer *analyzer, const QString &stateDirectory, QObject *parent)
     : QObject(parent), m_library(library), m_analyzer(analyzer), m_queueModel(this), m_momentModel(this) {
     const QString state = stateDirectory.isEmpty()
-                              ? QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/halo"
+                              ? QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/cymtx"
                               : stateDirectory;
     m_stateFile = state + "/state.json";
 
@@ -381,7 +381,7 @@ void Player::setDrift(bool on) {
         return;
     m_drift = on;
     emit settingsChanged();
-    emit message(on ? tr("Drift on: Halo keeps playing from your library") : tr("Drift off"));
+    emit message(on ? tr("Drift on: CymtX keeps playing from your library") : tr("Drift off"));
     scheduleSave();
 }
 
@@ -1178,7 +1178,7 @@ void Player::startSleep(int minutes) {
     m_engine.setVolume(float(m_volume));
     emit sleepChanged();
     if (minutes > 0)
-        emit message(tr("Halo will fade out and pause in %n minutes", "", minutes));
+        emit message(tr("CymtX will fade out and pause in %n minutes", "", minutes));
 }
 
 void Player::cancelSleep() {
@@ -1257,7 +1257,7 @@ void Player::restore() {
     m_normalize = settings.value("normalize").toBool(true);
     m_calm = settings.value("calm").toBool(false);
     m_onboarded = settings.value("onboarded").toBool(false);
-    m_visualStyle = std::clamp(settings.value("visual").toInt(0), 0, 12);
+    m_visualStyle = std::clamp(settings.value("visual").toInt(12), 0, 12);
     const QJsonObject eq = root.value("eq").toObject();
     m_eqEnabled = eq.value("enabled").toBool(false);
     const QJsonArray gains = eq.value("gains").toArray();

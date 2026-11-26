@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import Halo
+import CymtX
 
 // Time through the track, with the track's moments as ticks and, while a
 // blend is coming, the stretch where the next song fades in.

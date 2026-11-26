@@ -44,7 +44,7 @@ Item {
         "blend": ["M9 6.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11M15 6.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11", true],
         "drift": ["M2 9c2.5-3 4.5-3 7 0s4.5 3 7 0 4.5-3 6-1M2 15c2.5-3 4.5-3 7 0s4.5 3 7 0 4.5-3 6-1", true],
         "lyrics": ["M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z", false],
-        "halo": ["M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7", true]
+        "cymtx": ["M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7", true]
     })
 
     readonly property var entry: paths[name] || paths["song"]

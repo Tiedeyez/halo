@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // Ten bands, a preamp, presets, and the loudness switch.
 Popup {
@@ -132,7 +132,7 @@ Popup {
                 Text {
                     textFormat: Text.PlainText
                     Layout.fillWidth: true
-                    text: qsTr("Brings every song to the same loudness (-14 LUFS), measured by Halo, so a quiet album and a loud mixtape sit together.")
+                    text: qsTr("Brings every song to the same loudness (-14 LUFS), measured by CymtX, so a quiet album and a loud mixtape sit together.")
                     color: Style.faint
                     font.pixelSize: Style.fontSmall
                     wrapMode: Text.Wrap
@@ -160,7 +160,7 @@ Popup {
                     text: headphones.matched
                           ? qsTr("%1, measured by %2. Makes them neutral; the equalizer above is then your taste on top.")
                                 .arg(headphones.model).arg(headphones.source)
-                          : qsTr("Nothing to correct on %1. Halo knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.")
+                          : qsTr("Nothing to correct on %1. CymtX knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.")
                                 .arg(headphones.device.length > 0 ? headphones.device : qsTr("this output")).arg(headphones.known)
                     color: Style.faint
                     font.pixelSize: Style.fontSmall

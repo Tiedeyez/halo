@@ -10,7 +10,7 @@
   "Sort albums": "",
   "Play %1": "",
   "No albums match “%1”.": "",
-  "No music found in %1. Put music there, list more folders in ~/.config/halo/folders, or drop files on this window.": "",
+  "No music found in %1. Put music there, list more folders in ~/.config/cymtx/folders, or drop files on this window.": "",
   "Back to albums (Esc)": "",
   "%n songs": {
     "one": "%n song",
@@ -27,7 +27,7 @@
   "Pre": "",
   "%1 Hz": "",
   "Even loudness": "",
-  "Brings every song to the same loudness (-14 LUFS), measured by Halo, so a quiet album and a loud mixtape sit together.": "",
+  "Brings every song to the same loudness (-14 LUFS), measured by CymtX, so a quiet album and a loud mixtape sit together.": "",
   "Play or pause": "",
   "Next or previous song": "",
   "Back or forward 10 seconds": "",
@@ -50,7 +50,7 @@
   "Show or hide this sheet": "",
   "Quit": "",
   "Shortcuts": "",
-  "Media keys and every MPRIS bar widget control Halo too. From a terminal: halo --help.": "",
+  "Media keys and every MPRIS bar widget control CymtX too. From a terminal: cymtx --help.": "",
   "Songs": "",
   "Most played": "",
   "Counted on this computer when you hear half a song (or four minutes). Nothing leaves it.": "",
@@ -138,7 +138,7 @@
   "ffmpeg isn't installed. Install it with: omarchy-pkg-add ffmpeg": "",
   "Blend on: tracks mix into each other": "",
   "Blend off: gapless playback": "",
-  "Drift on: Halo keeps playing from your library": "",
+  "Drift on: CymtX keeps playing from your library": "",
   "Drift off": "",
   "Can't play %1: %2": "",
   "Added %n songs to the queue": {
@@ -155,12 +155,12 @@
   "No moment after this point": "",
   "No moment before this point": "",
   "That file is no longer there": "",
-  "Halo will fade out and pause in %n minutes": {
-    "one": "Halo will fade out and pause in %n minute",
-    "other": "Halo will fade out and pause in %n minutes"
+  "CymtX will fade out and pause in %n minutes": {
+    "one": "CymtX will fade out and pause in %n minute",
+    "other": "CymtX will fade out and pause in %n minutes"
   },
   "Sleep timer off": "",
-  "ffmpeg isn't installed, so Halo can't decode audio.": "",
+  "ffmpeg isn't installed, so CymtX can't decode audio.": "",
   "ffmpeg couldn't read this file.": "",
   "Flat": "",
   "Bass": "",
@@ -186,7 +186,7 @@
   ", . earlier or later": "",
   ".lrc file": "",
   "Asking lrclib.net, the free lyrics database.": "",
-  "Check the connection. Halo tries again on the next song.": "",
+  "Check the connection. CymtX tries again on the next song.": "",
   "Couldn't reach lrclib.net": "",
   "Instrumental": "",
   "LRCLIB doesn't have this one yet. Freestyles and DJ drops often aren't there. A .lrc file beside the song, named like it, works too.": "",
@@ -200,14 +200,14 @@
   "No words in this one.": "",
   "Play something and its words show here.": "",
   "Searching lyrics": "",
-  "There are no lyrics for this song on this computer. Halo can look them up on lrclib.net, sending the title, artist, album and length of each song you play. Nothing else leaves this computer.": "",
+  "There are no lyrics for this song on this computer. CymtX can look them up on lrclib.net, sending the title, artist, album and length of each song you play. Nothing else leaves this computer.": "",
   "Turn on online lyrics": "",
   "V switches the visual · C calms the motion · L shows the lyrics": "",
   "not timed": "",
   "song tags": "",
   "timed by line": "",
   "timed by word": "",
-  "Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.": "",
+  "CymtX couldn't open its control socket %1 (%2), so `cymtx` commands from a terminal won't reach this window.": "",
   "Looking for lyrics": "",
   "No lyrics on this computer": "",
   "No lyrics": "",
@@ -216,7 +216,7 @@
   "LRCLIB doesn't have this one. A .lrc file beside the song works too.": "",
   "Headphone correction": "",
   "%1, measured by %2. Makes them neutral; the equalizer above is then your taste on top.": "",
-  "Nothing to correct on %1. Halo knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.": "",
+  "Nothing to correct on %1. CymtX knows %2 headphones by name; Bluetooth and USB ones name themselves, ones in a headphone jack can't be told apart.": "",
   "this output": "",
   "Tuned for %1 · E to change": "",
   "Lost & Found": "",
@@ -240,7 +240,7 @@
   "Reading your tags": "",
   "Nothing to fix": "",
   "Every song's tags, in the background.": "",
-  "Every tag Halo can check looks right.": "",
+  "Every tag CymtX can check looks right.": "",
   "Fix all": "",
   "Fix": "",
   "Also at: %1": "",
@@ -267,9 +267,9 @@
     "one": "%n folder",
     "other": "%n folders"
   },
-  "%n file(s) so far. You can start now; albums appear as Halo reads them.": {
-    "one": "%n file so far. You can start now; albums appear as Halo reads them.",
-    "other": "%n files so far. You can start now; albums appear as Halo reads them."
+  "%n file(s) so far. You can start now; albums appear as CymtX reads them.": {
+    "one": "%n file so far. You can start now; albums appear as CymtX reads them.",
+    "other": "%n files so far. You can start now; albums appear as CymtX reads them."
   },
   "Counting the songs in %n folder(s).": {
     "one": "Counting the songs in %n folder.",

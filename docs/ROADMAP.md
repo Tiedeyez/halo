@@ -3,7 +3,7 @@
 Decided 2026-11-17. The bar is "triple A": every claim measured, every
 screen at WCAG 2.2 AAA, nothing personal or borrowed in what ships.
 
-## 1. Audio quality: the best Halo can do
+## 1. Audio quality: the best CymtX can do
 
 Measure first, with test signals and real files, then change.
 

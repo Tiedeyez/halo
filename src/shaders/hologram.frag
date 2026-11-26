@@ -1,6 +1,6 @@
 #version 440
 
-// The Hologram visual: Halo's turntable made of light. Blender drew the deck
+// The Hologram visual: CymtX's turntable made of light. Blender drew the deck
 // as two passes, both white on black (art/turntable/turntable.py --energy):
 // `lines`, every edge the camera sees plus faint hidden ones, and `body`, a
 // fresnel rim where surfaces turn away. Here they are tinted with the theme,

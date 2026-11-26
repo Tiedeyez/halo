@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // Runs one glitch: kick() jumps to full strength and settles back to clean
 // in about a third of a second, re-rolling the torn slices as it goes.

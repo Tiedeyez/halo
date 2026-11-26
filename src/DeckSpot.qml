@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // A small light on a deck visual (the start/stop button, the speed light):
 // placed by image fractions over the visual it sits in, lit by `strength`

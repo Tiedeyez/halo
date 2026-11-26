@@ -42,11 +42,11 @@
 #include "lyrics.h"
 #include "doctor.h"
 #include "headphones.h"
-#include "cymatics.h"
 #include "kaleidopilot.h"
 #include "player.h"
 #include "playlists.h"
 #include "remote.h"
+#include "sandplate.h"
 #include "visualizers.h"
 #include "safety.h"
 #include "ring.h"
@@ -192,7 +192,7 @@ private:
     QHash<QTcpSocket *, QByteArray> buffer;
 };
 
-// A misbehaving listener on Halo's socket, on its own thread so a blocking
+// A misbehaving listener on CymtX's socket, on its own thread so a blocking
 // client in the test thread can talk to it: it reads the request line, then
 // either drips bytes without ever ending the line, or sends far too much.
 struct RogueSocket {
@@ -241,11 +241,11 @@ struct RogueSocket {
     }
 };
 
-class HaloTests : public QObject {
+class CymtXTests : public QObject {
     Q_OBJECT
 
 private slots:
-    // Halo finds Omarchy's language choice where omarchy-language puts it.
+    // CymtX finds Omarchy's language choice where omarchy-language puts it.
     void languageFileFollowsOmarchy() {
         const QByteArray oldOverride = qgetenv("OMARCHY_LANGUAGE_FILE"), oldConfig = qgetenv("XDG_CONFIG_HOME");
         qunsetenv("OMARCHY_LANGUAGE_FILE");
@@ -431,14 +431,14 @@ private slots:
         view.rootContext()->setContextProperty("theme", &themeStub);
         static bool registered = false;
         if (!registered) {
-            qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "Halo", 1, 0, "Style");
-            qmlRegisterType(QUrl::fromLocalFile(QFINDTESTDATA("../src/SmoothWheel.qml")), "Halo", 1, 0, "SmoothWheel");
+            qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "CymtX", 1, 0, "Style");
+            qmlRegisterType(QUrl::fromLocalFile(QFINDTESTDATA("../src/SmoothWheel.qml")), "CymtX", 1, 0, "SmoothWheel");
             registered = true;
         }
         QQmlComponent component(view.engine());
         component.setData(R"(
             import QtQuick
-            import Halo
+            import CymtX
             ListView {
                 id: list
                 width: 300; height: 300
@@ -500,14 +500,14 @@ private slots:
         view.rootContext()->setContextProperty("translator", &translatorStub);
         view.rootContext()->setContextProperty("deckManifest", manifest);
         view.rootContext()->setContextProperty("deckGeometry", energy);
-        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "Halo", 1, 0, "Style");
-        qmlRegisterType(QUrl::fromLocalFile(QFINDTESTDATA("../src/DeckControls.qml")), "Halo", 1, 0, "DeckControls");
+        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "CymtX", 1, 0, "Style");
+        qmlRegisterType(QUrl::fromLocalFile(QFINDTESTDATA("../src/DeckControls.qml")), "CymtX", 1, 0, "DeckControls");
         QQmlComponent component(view.engine());
         // A deck as the visuals are: its manifest, its scale and the arm's
         // geometry (heading() as in TurntableVisual.qml).
         component.setData(R"(
             import QtQuick
-            import Halo
+            import CymtX
             Item {
                 id: deck
                 width: 900; height: 900
@@ -613,14 +613,14 @@ private slots:
         view.rootContext()->setContextProperty("spectrumSource", &spectrumStub);
         view.rootContext()->setContextProperty("translator", &translatorStub);
         view.rootContext()->setContextProperty("lyrics", &lyricsService);
-        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "Halo", 1, 0, "Style");
-        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Secrets.qml")), "Halo", 1, 0, "Secrets");
-        qmlRegisterType(QUrl::fromLocalFile(QFINDTESTDATA("../src/SiegeGame.qml")), "Halo", 1, 0, "SiegeGame");
-        qmlRegisterUncreatableType<LyricsService>("Halo", 1, 0, "Lyrics", "from main");
+        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "CymtX", 1, 0, "Style");
+        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Secrets.qml")), "CymtX", 1, 0, "Secrets");
+        qmlRegisterType(QUrl::fromLocalFile(QFINDTESTDATA("../src/SiegeGame.qml")), "CymtX", 1, 0, "SiegeGame");
+        qmlRegisterUncreatableType<LyricsService>("CymtX", 1, 0, "Lyrics", "from main");
         QQmlComponent component(view.engine());
         component.setData(R"(
             import QtQuick
-            import Halo
+            import CymtX
             Item {
                 width: 640; height: 420
                 property bool spacePlayed: false
@@ -671,105 +671,188 @@ private slots:
 
         // Esc leaves.
         QTest::keyClick(&view, Qt::Key_Escape);
-        QObject *secrets = view.engine()->singletonInstance<QObject *>("Halo", "Secrets");
+        QObject *secrets = view.engine()->singletonInstance<QObject *>("CymtX", "Secrets");
         QVERIFY(secrets);
         QCOMPARE(secrets->property("siege").toBool(), false);
         QVERIFY(secrets->property("best").toInt() >= game->property("score").toInt());
     }
 
-    void cymaticsFiguresRiseInPitch() {
-        using namespace Cymatics;
-        const auto &all = modes();
-        QVERIFY(all.size() >= 40);
-        for (size_t i = 0; i < all.size(); ++i) {
-            // n == m would be a flat plate (or the same wave twice).
-            QVERIFY(all[i].n < all[i].m);
-            QVERIFY(all[i].sign == 1 || all[i].sign == -1);
-            if (i)
-                QVERIFY(all[i].pitch() >= all[i - 1].pitch());
-            // Every figure has sand lines: the plate goes both above and below zero.
-            double lo = 0, hi = 0;
-            for (int y = 0; y <= 20; ++y)
-                for (int x = 0; x <= 20; ++x) {
-                    const double f = height(all[i], x / 20.0, y / 20.0);
-                    QVERIFY(std::fabs(f) <= 2.0 + 1e-9);
-                    lo = std::min(lo, f);
-                    hi = std::max(hi, f);
-                }
-            QVERIFY2(lo < -0.5 && hi > 0.5, qPrintable(QString::number(i)));
+    void plateModesMatchThePublishedTable() {
+        using namespace Plate;
+        // A free circular plate, Poisson's ratio 0.33: eigenvalues squared
+        // from Leissa, Vibration of Plates (NASA SP-160), table 2.5, by
+        // nodal diameters n and nodal circles s.
+        const struct { int n, s; double lambda2; } table[] = {
+            {0, 1, 9.084}, {0, 2, 38.55}, {0, 3, 87.80}, {1, 1, 20.52}, {1, 2, 59.86},
+            {2, 0, 5.253}, {2, 1, 35.25}, {2, 2, 84.38}, {3, 0, 12.23}, {3, 1, 52.91},
+        };
+        for (const auto &row : table) {
+            // n = 0 and 1 have no vibration without a nodal circle, so their
+            // first eigenvalue is s = 1.
+            const int index = row.n < 2 ? row.s - 1 : row.s;
+            const auto roots = eigenvalues(row.n, index + 1);
+            QVERIFY(int(roots.size()) == index + 1);
+            const double lambda2 = roots[size_t(index)] * roots[size_t(index)];
+            QVERIFY2(std::fabs(lambda2 - row.lambda2) / row.lambda2 < 0.005,
+                     qPrintable(QString("n=%1 s=%2: %3 vs %4").arg(row.n).arg(row.s).arg(lambda2).arg(row.lambda2)));
         }
-        // The spectrum's centre of mass: bass low, treble high, silence in the middle.
-        std::vector<float> bands(size_t(Spectrum::Bands), 0.0f);
-        QCOMPARE(Spectrum::centroidOf(bands), 0.5);
-        bands[4] = 1;
-        const double bass = Spectrum::centroidOf(bands);
-        bands[4] = 0;
-        bands[56] = 1;
-        const double treble = Spectrum::centroidOf(bands);
-        QVERIFY(bass < 0.1 && treble > 0.85);
+        // The shapes: largest value 1, a mode with nodal diameters still at
+        // the centre, a ring mode moving there; and the lowest ring mode's
+        // one nodal circle at 0.68 of the radius.
+        const Mode ring = mode(0, 0, eigenvalues(0, 1).front());
+        const Mode petals = mode(6, 0, eigenvalues(6, 1).front());
+        float largest = 0;
+        for (float w : petals.shape)
+            largest = std::max(largest, std::fabs(w));
+        QVERIFY(std::fabs(largest - 1) < 1e-4);
+        QVERIFY(std::fabs(petals.shape.front()) < 1e-6);
+        QVERIFY(std::fabs(ring.shape.front()) > 0.5);
+        double node = -1;
+        for (int i = 1; i < Samples; ++i)
+            if ((ring.shape[size_t(i - 1)] < 0) != (ring.shape[size_t(i)] < 0))
+                node = double(i) / (Samples - 1);
+        QVERIFY2(std::fabs(node - 0.68) < 0.01, qPrintable(QString::number(node)));
     }
 
-    void cymaticsChangeOnTheBeat() {
-        using namespace Cymatics;
-        Pilot pilot;
-        pilot.setBeatsPerChange(4);
-        // 120 BPM at 60 frames a second: a one-frame pulse every 30 frames.
-        const auto play = [&pilot](int frames, double tone, double level = 0.6) {
-            for (int f = 0; f < frames; ++f)
-                pilot.step(1.0 / 60, f % 30 == 0 ? 1.0 : 0.0, level, tone);
+    void sandGathersOnTheNodalLines() {
+        using namespace Plate;
+        Sand sand;
+        sand.setFold(6);
+        sand.setGrains(4000);
+        // One tone, at the pitch of the plate's lowest ring mode: every
+        // other mode stays quiet, and the sand should walk to that mode's
+        // nodal circle at 0.68 of the radius.
+        std::vector<float> bands(size_t(Spectrum::Bands), 0.05f);
+        const double at = std::log(LowestRingHertz / 40.0) / std::log(16000.0 / 40.0) * (Spectrum::Bands - 1);
+        bands[size_t(at)] = bands[size_t(at) + 1] = 1.0f;
+        // How far the grains are from that circle, on average.
+        const auto spread = [&sand] {
+            double sum = 0;
+            for (const Grain &g : sand.grains())
+                sum += std::fabs(std::hypot(g.x, g.y) - 0.68);
+            return sum / double(sand.grains().size());
         };
-        // Three beats in: nothing has changed, the figure holds.
-        const int first = pilot.index();
-        play(89, 0.3);
-        QCOMPARE(pilot.beats(), 3);
-        QCOMPARE(pilot.changes(), 0);
-        QCOMPARE(pilot.index(), first);
-        QVERIFY(!pilot.morphing());
-        // The fourth beat starts a change, to a different figure.
-        play(2, 0.3);
-        QCOMPARE(pilot.beats(), 4);
-        QCOMPARE(pilot.changes(), 1);
-        QVERIFY(pilot.morphing());
-        QVERIFY(pilot.to() != pilot.from());
-        // Half way through, the sand is in the air; then it settles and holds.
-        play(int(Pilot::MorphSeconds * 30), 0.3);
-        QVERIFY2(pilot.agitation() > 0.8, qPrintable(QString::number(pilot.agitation())));
-        play(27 - int(Pilot::MorphSeconds * 30), 0.3);
-        QVERIFY(!pilot.morphing());
-        QCOMPARE(pilot.morph(), 0.0);
-        QVERIFY(pilot.agitation() < 0.05);
-        // A steady tone still changes every four beats, and walks round
-        // several figures instead of flipping between two.
-        int last = pilot.index();
-        QSet<int> shown;
-        for (int bar = 0; bar < 6; ++bar) {
-            play(120, 0.3);
-            QVERIFY(pilot.index() != last);
-            last = pilot.index();
-            shown.insert(last);
+        const double strewn = spread();
+        QVERIFY2(strewn > 0.18, qPrintable(QString::number(strewn)));
+        for (int f = 0; f < 600; ++f)
+            sand.step(1.0 / 60, bands, 0, 0.6);
+        // Gathered on the circle, in a band and not on a hairline: sand
+        // takes up room.
+        const double gathered = spread();
+        QVERIFY2(gathered < 0.07 && gathered > 0.005, qPrintable(QString("%1 -> %2").arg(strewn).arg(gathered)));
+        // Every grain is still on the plate.
+        for (const Grain &g : sand.grains())
+            QVERIFY(std::hypot(g.x, g.y) <= 1.0);
+        // Silence: nothing moves.
+        const auto before = sand.grains();
+        std::vector<float> silence(size_t(Spectrum::Bands), 0.0f);
+        for (int f = 0; f < 60; ++f)
+            sand.step(1.0 / 60, silence, 0, 0);
+        for (size_t i = 0; i < before.size(); ++i)
+            QVERIFY(before[i].x == sand.grains()[i].x && before[i].y == sand.grains()[i].y);
+        // A beat throws the sand: grains that lay still are in the air.
+        const auto airborne = [&sand] {
+            double sum = 0;
+            for (const Grain &g : sand.grains())
+                sum += g.heat;
+            return sum / double(sand.grains().size());
+        };
+        for (int f = 0; f < 240; ++f)
+            sand.step(1.0 / 60, bands, 0, 0.6);
+        const double lying = airborne();
+        for (int f = 0; f < 4; ++f)
+            sand.step(1.0 / 60, bands, 1.0, 0.6);
+        QVERIFY(sand.kick() > 0.3);
+        QVERIFY2(airborne() > lying * 1.5 + 0.05, qPrintable(QString("%1 -> %2").arg(lying).arg(airborne())));
+        // A knock moves the sand under it.
+        const auto resting = sand.grains();
+        sand.tap(0.68, 0, 1);
+        int moved = 0;
+        for (size_t i = 0; i < resting.size(); ++i)
+            moved += resting[i].x != sand.grains()[i].x;
+        QVERIFY(moved > 20);
+    }
+
+    void sandBench() {
+        if (qEnvironmentVariableIsEmpty("CYMTX_BENCH"))
+            QSKIP("set CYMTX_BENCH=1 to time the sand");
+        std::vector<float> bands(size_t(Spectrum::Bands), 0.5f);
+        for (size_t i = 0; i < bands.size(); ++i)
+            bands[i] = 0.4f + 0.5f * float((i * 37) % 11) / 11;
+        Plate::Sand sand;
+        sand.setFold(12);
+        sand.setGrains(9000);
+        QElapsedTimer timer;
+        timer.start();
+        for (int f = 0; f < 200; ++f)
+            sand.step(1.0 / 60, bands, f % 30 == 0, 0.6);
+        qInfo("sand.step: %.2f ms", timer.nsecsElapsed() / 200e6);
+        SandPlate plate;
+        plate.setWidth(632);
+        plate.setHeight(345);
+        plate.setCentre(QPointF(196, 172));
+        plate.setRadius(162);
+        plate.setGrains(9000);
+        plate.setVivid(true);
+        plate.setSong("/m/b.mp3", "B");
+        timer.restart();
+        for (int f = 0; f < 100; ++f)
+            plate.step(1.0 / 60, 0, 0.6);
+        qInfo("plate.step vivid (fold %d): %.2f ms", plate.fold(), timer.nsecsElapsed() / 100e6);
+        plate.setVivid(false);
+        plate.setCentre(QPointF(316, 172));
+        plate.setRadius(374);
+        plate.setGrains(6000);
+        timer.restart();
+        for (int f = 0; f < 100; ++f)
+            plate.step(1.0 / 60, 0, 0.6);
+        qInfo("plate.step background: %.2f ms", timer.nsecsElapsed() / 100e6);
+    }
+
+    void sandPlateDrawsAMandala() {
+        // The fold comes from the song, the same every time, 5 to 12.
+        QCOMPARE(SandPlate::foldFor("/m/a.mp3", "A"), SandPlate::foldFor("/m/a.mp3", "A"));
+        QSet<int> folds;
+        for (int i = 0; i < 200; ++i) {
+            const int fold = SandPlate::foldFor(QString("/m/%1.mp3").arg(i), "Song");
+            QVERIFY(fold >= 5 && fold <= 12);
+            folds.insert(fold);
         }
-        QVERIFY2(shown.size() >= 5, qPrintable(QString::number(shown.size())));
-        QCOMPARE(pilot.changes(), 7);
-        // Brighter music draws a finer figure.
-        const int dark = pilot.to().pitch();
-        play(480, 0.9);
-        QVERIFY2(pilot.to().pitch() > dark, qPrintable(QString("%1 vs %2").arg(pilot.to().pitch()).arg(dark)));
-        // The background's reach keeps it to the broad figures.
-        Pilot calm;
-        calm.setReach(0.42);
-        for (int f = 0; f < 3600; ++f)
-            calm.step(1.0 / 60, f % 30 == 0 ? 1.0 : 0.0, 0.6, 0.2 + 0.7 * ((f / 240) % 2));
-        QVERIFY(calm.changes() > 10);
-        QVERIFY(calm.index() < int(std::lround(double(modes().size()) * 0.42)));
-        // Music with no beat to count still moves on; silence holds.
-        Pilot drone;
-        for (int f = 0; f < 1200; ++f)
-            drone.step(1.0 / 60, 0, 0.5, 0.4);
-        QVERIFY(drone.changes() >= 1);
-        Pilot silent;
-        for (int f = 0; f < 1200; ++f)
-            silent.step(1.0 / 60, 0, 0, 0.5);
-        QCOMPARE(silent.changes(), 0);
+        QVERIFY(folds.size() >= 6);
+        // Drawn with every image of every grain, so the picture mirrors
+        // left to right about the plate's centre.
+        SandPlate plate;
+        plate.setWidth(80);
+        plate.setHeight(80);
+        plate.setCentre(QPointF(40, 40));
+        plate.setRadius(36);
+        plate.setGrains(3000);
+        plate.setVivid(true);
+        plate.setSong("/m/a.mp3", "A");
+        plate.step(1.0 / 60, 0, 0.5);
+        const QImage &f = plate.frame();
+        QCOMPARE(f.size(), QSize(80, 80));
+        int lit = 0, same = 0, sandCells = 0;
+        for (int y = 0; y < 80; ++y)
+            for (int x = 0; x < 40; ++x) {
+                // (x, y) are swapped: the mirror line that every fold has is
+                // the horizontal one through the centre.
+                const bool left = qAlpha(f.pixel(y, x)) == 255, right = qAlpha(f.pixel(y, 79 - x)) == 255;
+                lit += left || right;
+                same += left && right;
+                sandCells += left;
+            }
+        QVERIFY(sandCells > 200);
+        QVERIFY2(same > lit * 0.9, qPrintable(QString("%1 of %2").arg(same).arg(lit)));
+        // Outside the plate nothing is drawn.
+        QCOMPARE(qAlpha(f.pixel(1, 1)), 0);
+        // The background never draws brighter than its ceiling.
+        plate.setVivid(false);
+        plate.setStrength(0.1);
+        plate.step(1.0 / 60, 0, 0.5);
+        for (int y = 0; y < 80; ++y)
+            for (int x = 0; x < 80; ++x)
+                QVERIFY(qAlpha(plate.frame().pixel(x, y)) <= 27);
     }
 
     void kaleidoscopeComesFromTheFile() {
@@ -1284,7 +1367,7 @@ private slots:
         QCOMPARE(t.album, QString());
     }
 
-    // What `halo doctor` and an agent use: the same checks and guarded
+    // What `cymtx doctor` and an agent use: the same checks and guarded
     // writes with no window, sharing one undo log with the window.
     void doctorWorksWithoutAWindow() {
         QTemporaryDir music, state;
@@ -1776,7 +1859,7 @@ private slots:
         writeWav(dir.filePath("keep/song.wav"), second);
         writeWav(dir.filePath("samples/kick.wav"), second);
         writeWav(dir.filePath(".trash/old.wav"), second);
-        QFile marker(dir.filePath("samples/.haloignore"));
+        QFile marker(dir.filePath("samples/.cymtxignore"));
         QVERIFY(marker.open(QIODevice::WriteOnly));
         marker.close();
         const auto tracks = Library::scanFolders({dir.path()}, {});
@@ -1961,12 +2044,12 @@ private slots:
         QCOMPARE(Theme::readAccent(dir.filePath("colors.toml")), QString("#89b4fa"));
     }
 
-    // AAA on every Omarchy theme: each text colour Halo draws, on each
-    // surface it draws it on, reads at 7:1 through Halo's own Theme and
+    // AAA on every Omarchy theme: each text colour CymtX draws, on each
+    // surface it draws it on, reads at 7:1 through CymtX's own Theme and
     // Style, for the themes installed here, the user's own themes, and
     // accents chosen to be awkward (mid greys and pure primaries, where
     // neither black nor white reaches 7:1 on the fill). Set
-    // HALO_CONTRAST_REPORT=1 to print the worst pair per theme.
+    // CYMTX_CONTRAST_REPORT=1 to print the worst pair per theme.
     void everyThemeReadsAt7To1() {
         QTemporaryDir synthetic;
         QStringList dirs;
@@ -1984,7 +2067,7 @@ private slots:
             f.close();
             dirs << dir;
         }
-        // A theme folder with no colors.toml falls back to Halo's yellow.
+        // A theme folder with no colors.toml falls back to CymtX's yellow.
         dirs << synthetic.filePath("no-colours");
         QDir().mkpath(dirs.last());
 
@@ -1996,8 +2079,8 @@ private slots:
             const double x = luminance(a), y = luminance(b);
             return (std::max(x, y) + 0.05) / (std::min(x, y) + 0.05);
         };
-        const bool report = qEnvironmentVariableIntValue("HALO_CONTRAST_REPORT") == 1;
-        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "Halo", 1, 0, "Style");
+        const bool report = qEnvironmentVariableIntValue("CYMTX_CONTRAST_REPORT") == 1;
+        qmlRegisterSingletonType(QUrl::fromLocalFile(QFINDTESTDATA("../src/Style.qml")), "CymtX", 1, 0, "Style");
         QStringList failures;
         for (const QString &dir : std::as_const(dirs)) {
             Theme theme(dir);
@@ -2006,7 +2089,7 @@ private slots:
             QQmlEngine engine;
             engine.rootContext()->setContextProperty("theme", &theme);
             engine.rootContext()->setContextProperty("player", &playerStub);
-            QObject *style = engine.singletonInstance<QObject *>("Halo", "Style");
+            QObject *style = engine.singletonInstance<QObject *>("CymtX", "Style");
             QVERIFY2(style, "Style.qml didn't load");
             auto colour = [&](const char *name) { return style->property(name).value<QColor>(); };
             const QStringList texts{"text", "muted", "faint", "danger", "accentText"};
@@ -2038,14 +2121,14 @@ private slots:
         QVERIFY2(failures.isEmpty(), qPrintable(failures.join("\n")));
     }
 
-    // The first run: Halo finds the desktop's music folder by itself, a
+    // The first run: CymtX finds the desktop's music folder by itself, a
     // folder chosen on the welcome screen is kept (with the ones it found)
     // and scanned, and having seen the welcome is remembered in state.json.
     void firstRunFindsMusicAndRemembersOnboarding() {
         QTemporaryDir home, config, cache, state, chosen;
         // HOME too: without it the fallback finds the real ~/Music.
-        const QByteArray oldMusic = qgetenv("HALO_MUSIC"), oldConfig = qgetenv("XDG_CONFIG_HOME"), oldHome = qgetenv("HOME");
-        qunsetenv("HALO_MUSIC");
+        const QByteArray oldMusic = qgetenv("CYMTX_MUSIC"), oldConfig = qgetenv("XDG_CONFIG_HOME"), oldHome = qgetenv("HOME");
+        qunsetenv("CYMTX_MUSIC");
         qputenv("XDG_CONFIG_HOME", config.path().toUtf8());
         qputenv("HOME", home.path().toUtf8());
         QDir().mkpath(home.filePath("Tunes"));
@@ -2091,7 +2174,7 @@ private slots:
             Player player(&library, &analyzer, state.path());
             QVERIFY(player.onboarded());
         }
-        if (oldMusic.isEmpty()) qunsetenv("HALO_MUSIC"); else qputenv("HALO_MUSIC", oldMusic);
+        if (oldMusic.isEmpty()) qunsetenv("CYMTX_MUSIC"); else qputenv("CYMTX_MUSIC", oldMusic);
         if (oldConfig.isEmpty()) qunsetenv("XDG_CONFIG_HOME"); else qputenv("XDG_CONFIG_HOME", oldConfig);
         qputenv("HOME", oldHome);
     }
@@ -2100,8 +2183,8 @@ private slots:
     // songs it counts in them, and the folders file it writes.
     void setupOffersCountsAndSavesFolders() {
         QTemporaryDir home, config, cache, state, drive;
-        const QByteArray oldMusic = qgetenv("HALO_MUSIC"), oldConfig = qgetenv("XDG_CONFIG_HOME"), oldHome = qgetenv("HOME");
-        qunsetenv("HALO_MUSIC");
+        const QByteArray oldMusic = qgetenv("CYMTX_MUSIC"), oldConfig = qgetenv("XDG_CONFIG_HOME"), oldHome = qgetenv("HOME");
+        qunsetenv("CYMTX_MUSIC");
         qputenv("XDG_CONFIG_HOME", config.path().toUtf8());
         qputenv("HOME", home.path().toUtf8());
         auto touch = [](const QString &path) {
@@ -2169,13 +2252,13 @@ private slots:
         QCOMPARE(library.trackCount(), 2);
         QVERIFY(!library.folderChoices().first().toMap().value("path").toString().isEmpty());
 
-        // HALO_MUSIC decides the folders: nothing can be saved over it.
-        qputenv("HALO_MUSIC", music.toUtf8());
+        // CYMTX_MUSIC decides the folders: nothing can be saved over it.
+        qputenv("CYMTX_MUSIC", music.toUtf8());
         QVERIFY(library.foldersPinned());
         QVERIFY(!library.setFolders({music}));
         QCOMPARE(Library::defaultFolders(), QStringList{music});
 
-        if (oldMusic.isEmpty()) qunsetenv("HALO_MUSIC"); else qputenv("HALO_MUSIC", oldMusic);
+        if (oldMusic.isEmpty()) qunsetenv("CYMTX_MUSIC"); else qputenv("CYMTX_MUSIC", oldMusic);
         if (oldConfig.isEmpty()) qunsetenv("XDG_CONFIG_HOME"); else qputenv("XDG_CONFIG_HOME", oldConfig);
         qputenv("HOME", oldHome);
     }
@@ -2347,7 +2430,7 @@ private slots:
             QVERIFY(lrclib.requests[0].contains("track_name=Hello&"));
             QVERIFY(lrclib.requests[0].contains("duration=121"));
             QVERIFY(lrclib.requests[1].startsWith("/api/search?"));
-            QVERIFY(lrclib.agents.value(0).startsWith("Halo/"));
+            QVERIFY(lrclib.agents.value(0).startsWith("CymtX/"));
         }
         // The next time, the cache answers and LRCLIB isn't asked.
         {
@@ -2420,12 +2503,12 @@ private slots:
 
     void privateFilesAndFoldersOnly() {
         QTemporaryDir root, outside;
-        const QString dir = root.filePath("halo");
+        const QString dir = root.filePath("cymtx");
         QVERIFY(QDir().mkpath(dir + "/covers"));
         chmod(QFile::encodeName(dir).constData(), 0755);
         chmod(QFile::encodeName(dir + "/covers").constData(), 0755);
         const QString state = dir + "/stats.json", cover = dir + "/covers/a.jpg";
-        const QString victim = outside.filePath("not-halos.txt");
+        const QString victim = outside.filePath("not-cymtxs.txt");
         for (const QString &f : {state, cover, victim}) {
             QFile file(f);
             QVERIFY(file.open(QIODevice::WriteOnly));
@@ -2508,12 +2591,12 @@ private slots:
         QCOMPARE(lrclib.requests.size(), 1);   // failed, not retried as a search
     }
 
-    // `halo status` (and the bar widget polling it) gives up on a listener
+    // `cymtx status` (and the bar widget polling it) gives up on a listener
     // that drips a reply forever or sends far more than any real reply.
     void cliReplyIsBoundedInTimeAndSize() {
         QTemporaryDir run;
-        const QByteArray old = qgetenv("HALO_SOCKET");
-        qputenv("HALO_SOCKET", QFile::encodeName(run.filePath("halo.sock")));
+        const QByteArray old = qgetenv("CYMTX_SOCKET");
+        qputenv("CYMTX_SOCKET", QFile::encodeName(run.filePath("cymtx.sock")));
         {
             RogueSocket rogue(Remote::socketName(), RogueSocket::Trickle);
             QElapsedTimer clock;
@@ -2528,15 +2611,15 @@ private slots:
             QVERIFY(!Remote::send({{"cmd", "status"}}, &reply, 10000));
         }
         if (old.isEmpty())
-            qunsetenv("HALO_SOCKET");
+            qunsetenv("CYMTX_SOCKET");
         else
-            qputenv("HALO_SOCKET", old);
+            qputenv("CYMTX_SOCKET", old);
     }
 
     void socketCutsOffOversizeCommands() {
         QTemporaryDir run, music, cache, state;
-        const QByteArray old = qgetenv("HALO_SOCKET");
-        qputenv("HALO_SOCKET", QFile::encodeName(run.filePath("halo.sock")));
+        const QByteArray old = qgetenv("CYMTX_SOCKET");
+        qputenv("CYMTX_SOCKET", QFile::encodeName(run.filePath("cymtx.sock")));
         Library library({music.path()}, cache.path(), state.path());
         Analyzer analyzer(cache.filePath("analysis.json"));
         Player player(&library, &analyzer, state.path());
@@ -2557,9 +2640,9 @@ private slots:
         QTRY_VERIFY(client.canReadLine());
         QVERIFY(QJsonDocument::fromJson(client.readLine()).object().value("ok").toBool());
         if (old.isEmpty())
-            qunsetenv("HALO_SOCKET");
+            qunsetenv("CYMTX_SOCKET");
         else
-            qputenv("HALO_SOCKET", old);
+            qputenv("CYMTX_SOCKET", old);
     }
 
     void ffmpegNeverFetchesFromANetwork() {
@@ -2631,7 +2714,7 @@ private slots:
         const QStringList lines = QString::fromUtf8(f.readAll()).split('\n', Qt::SkipEmptyParts);
         QCOMPARE(lines.value(0), QString("#EXTM3U"));
         QCOMPARE(lines.value(1), QString("#PLAYLIST:Night Drive"));
-        QVERIFY(lines.value(2).startsWith("#HALO:{"));
+        QVERIFY(lines.value(2).startsWith("#CYMTX:{"));
         QCOMPARE(int(lines.filter(QRegularExpression("^#EXTINF:12,")).size()), 3);
         const QStringList entries = lines.filter(QRegularExpression("^[^#]"));
         QCOMPARE(entries, (QStringList{files[2], files[0], files[1]}));
@@ -2720,8 +2803,8 @@ private slots:
     }
 
     // A playlist another player keeps in the shared folder: radio entries
-    // and that player's tags survive everything Halo does to the file.
-    void sharedPlaylistKeepsWhatHaloDoesNotPlay() {
+    // and that player's tags survive everything CymtX does to the file.
+    void sharedPlaylistKeepsWhatCymtXDoesNotPlay() {
         QTemporaryDir music, cache, state, lists;
         Library library({music.path()}, cache.path(), state.path());
         QStringList files;
@@ -2752,15 +2835,15 @@ private slots:
         Playlists playlists(&library, nullptr, lists.path());
         QCOMPARE(playlists.paths("mixed"), (QStringList{files[0], files[1]}));
 
-        // Pin, unpin, describe: one line of Halo's is added, nothing else moves.
+        // Pin, unpin, describe: one line of CymtX's is added, nothing else moves.
         QVERIFY(playlists.setPinned("mixed", true));
-        QVERIFY(read().contains("\n#HALO:{"));
-        QCOMPARE(without(read(), "#HALO:"), original);
+        QVERIFY(read().contains("\n#CYMTX:{"));
+        QCOMPARE(without(read(), "#CYMTX:"), original);
         QVERIFY(playlists.setPinned("mixed", false));
         QVERIFY(playlists.setDescription("mixed", "For the road"));
-        QCOMPARE(without(read(), "#HALO:"), original);
+        QCOMPARE(without(read(), "#CYMTX:"), original);
         QVERIFY(playlists.rename("mixed", "Mixed Up"));
-        QCOMPARE(without(without(read(), "#HALO:"), "#PLAYLIST:"), original);
+        QCOMPARE(without(without(read(), "#CYMTX:"), "#PLAYLIST:"), original);
         QVERIFY(read().contains("#PLAYLIST:Mixed Up\r\n"));
         {
             Playlists again(&library, nullptr, lists.path());
@@ -2807,16 +2890,16 @@ private slots:
         p.name = "New Name";
         p.created = 5;
         p.pinned = true;
-        const QByteArray halo = "#HALO:{\"created\":5,\"pinned\":true}";
+        const QByteArray cymtx = "#CYMTX:{\"created\":5,\"pinned\":true}";
         // No header at all, no final newline, not UTF-8.
-        QCOMPARE(Playlists::patchHeader("caf\xE9.mp3\nhttp://x/y", p, false), halo + "\ncaf\xE9.mp3\nhttp://x/y");
-        QCOMPARE(Playlists::patchHeader("", p, true), QByteArray("#PLAYLIST:New Name\n") + halo + "\n");
+        QCOMPARE(Playlists::patchHeader("caf\xE9.mp3\nhttp://x/y", p, false), cymtx + "\ncaf\xE9.mp3\nhttp://x/y");
+        QCOMPARE(Playlists::patchHeader("", p, true), QByteArray("#PLAYLIST:New Name\n") + cymtx + "\n");
         // A BOM and CRLF stay; existing lines are replaced where they are.
-        QCOMPARE(Playlists::patchHeader("\xEF\xBB\xBF#EXTM3U\r\n#PLAYLIST:Old\r\n#HALO:{}\r\na.mp3\r\n", p, true),
-                 QByteArray("\xEF\xBB\xBF#EXTM3U\r\n#PLAYLIST:New Name\r\n") + halo + "\r\na.mp3\r\n");
+        QCOMPARE(Playlists::patchHeader("\xEF\xBB\xBF#EXTM3U\r\n#PLAYLIST:Old\r\n#CYMTX:{}\r\na.mp3\r\n", p, true),
+                 QByteArray("\xEF\xBB\xBF#EXTM3U\r\n#PLAYLIST:New Name\r\n") + cymtx + "\r\na.mp3\r\n");
         QCOMPARE(Playlists::patchHeader("#EXTM3U\r\n#PLAYLIST:Old\r\na.mp3\r\n", p, false),
-                 QByteArray("#EXTM3U\r\n#PLAYLIST:Old\r\n") + halo + "\r\na.mp3\r\n");
-        // More entries than Halo lists stay in the file through a rewrite.
+                 QByteArray("#EXTM3U\r\n#PLAYLIST:Old\r\n") + cymtx + "\r\na.mp3\r\n");
+        // More entries than CymtX lists stay in the file through a rewrite.
         QByteArray many = "#EXTM3U\n";
         for (int i = 0; i < Playlists::MaxEntries + 5; ++i)
             many += "/m/" + QByteArray::number(i) + ".mp3\n";
@@ -2834,7 +2917,7 @@ private slots:
         QStringList files;
         for (const QString &name : src.entryList({"*.qml"}, QDir::Files))
             files << src.filePath(name);
-        files << QFINDTESTDATA("../plugin/HaloWidget.qml");
+        files << QFINDTESTDATA("../plugin/CymtXWidget.qml");
         QVERIFY(files.size() > 40);
         const QRegularExpression opens("^\\s*(?:[A-Za-z_][\\w.]*:\\s*)?(?:Text|Label|TextEdit|TextArea) \\{");
         int checked = 0;
@@ -2968,10 +3051,10 @@ private slots:
                 change(p);
             return Playlists::m3u8(p, nullptr);
         };
-        auto body = [](const QString &text) { // without the name and Halo's line
+        auto body = [](const QString &text) { // without the name and CymtX's line
             QStringList out;
             for (const QString &line : text.split('\n', Qt::SkipEmptyParts))
-                if (!line.startsWith("#PLAYLIST:") && !line.startsWith("#HALO:"))
+                if (!line.startsWith("#PLAYLIST:") && !line.startsWith("#CYMTX:"))
                     out << line;
             return out;
         };
@@ -2979,7 +3062,7 @@ private slots:
         // The header keeps its attributes and stays first.
         const QByteArray tv = "#EXTM3U url-tvg=\"x\"\n#EXTINF:-1,r\nhttp://s\n";
         QCOMPARE(body(again(tv)), (L{"#EXTM3U url-tvg=\"x\"", "#EXTINF:-1,r", "http://s"}));
-        QVERIFY(Playlists::patchHeader(tv, Playlist(), false).startsWith("#EXTM3U url-tvg=\"x\"\n#HALO:"));
+        QVERIFY(Playlists::patchHeader(tv, Playlist(), false).startsWith("#EXTM3U url-tvg=\"x\"\n#CYMTX:"));
         // Tags above the first song that are about the file stay at the top
         // when that song goes or moves; a tag about the song goes with it.
         const QByteArray tagged = "#EXTM3U\n#EXTENC:UTF-8\n#EXTGRP:Rock\n# mine\n#EXTVLCOPT:x\n/a\n/b\nhttp://s\n";
@@ -3147,7 +3230,7 @@ private slots:
         const QString smart = playlists.createSmart("Heavy rotation", {{"rules", QVariantList{QVariantMap{
                                                                            {"field", "plays"}, {"op", "greater"}, {"value", "3"}}}}});
         QCOMPARE(smart, QString("heavy-rotation"));
-        QVERIFY(QFileInfo::exists(lists.filePath("heavy-rotation.halo-smart")));
+        QVERIFY(QFileInfo::exists(lists.filePath("heavy-rotation.cymtx-smart")));
         QCOMPARE(playlists.add(smart, {"/x.mp3"}), 0); // smart playlists fill themselves
         QVERIFY(!playlists.setSpec("road-trip", {}));
         QVERIFY(playlists.setSpec(smart, {{"matchAll", false}, {"rules", QVariantList{}}}));
@@ -3280,5 +3363,5 @@ private slots:
 
 };
 
-QTEST_MAIN(HaloTests)
-#include "halo_tests.moc"
+QTEST_MAIN(CymtXTests)
+#include "cymtx_tests.moc"

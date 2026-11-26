@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // Every album as a cover. Arrow keys move, Enter opens, Space still plays.
 FocusScope {
@@ -137,7 +137,7 @@ FocusScope {
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
                             anchors.margins: 10
-                            name: "halo"
+                            name: "cymtx"
                             color: Style.accent
                             width: 26
                             height: 26
@@ -177,9 +177,9 @@ FocusScope {
                 busy: library.scanning
                 headline: library.scanning ? qsTr("Reading your music")
                         : albums.query.length ? qsTr("No matches") : qsTr("No music yet")
-                body: library.scanning ? qsTr("%n files so far. Albums appear when Halo has read them all.", "", library.scanned)
+                body: library.scanning ? qsTr("%n files so far. Albums appear when CymtX has read them all.", "", library.scanned)
                     : albums.query.length ? qsTr("No albums match “%1”. Try fewer or shorter words.").arg(albums.query)
-                    : qsTr("Halo looked in %1 and found no songs. Choose the folder your music is in, or drop songs on this window.")
+                    : qsTr("CymtX looked in %1 and found no songs. Choose the folder your music is in, or drop songs on this window.")
                           .arg(library.folders.join(", "))
                 action: !library.scanning && !albums.query.length ? qsTr("Choose your music folder") : ""
                 onActed: root.chooseFolder()

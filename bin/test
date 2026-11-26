@@ -5,6 +5,6 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 mkdir -p "$ROOT/build/tests"
 cd "$ROOT/build/tests"
 
-qmake6 "$ROOT/tests/halo_tests.pro"
+qmake6 "$ROOT/tests/cymtx_tests.pro"
 make -j"$(nproc)"
-QT_QPA_PLATFORM=offscreen ./halo_tests
+QT_QPA_PLATFORM=offscreen ./cymtx_tests

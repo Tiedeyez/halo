@@ -1,23 +1,24 @@
 import QtQuick
-import Halo
+import CymtX
 
-// "HALO" in square pixels with a drop shadow, after the pixel OMARCHY
+// "CYMTX" in square pixels with a drop shadow, after the pixel OMARCHY
 // wordmark on Omarchy's wallpaper and the shaded block letters of its
 // screensaver. The pixels pour in when the window opens, and every so often
 // a few rows tear sideways for a moment. Calm keeps it still.
 Item {
     id: root
-    property string word: "HALO"
+    property string word: "CYMTX"
     property int cell: 4
     property color color: Style.accent
     property color shadow: Qt.darker(Style.accent, 3.2)
 
     // 5x7 letters, one string per row.
     readonly property var font: ({
-        "H": ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
-        "A": ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
-        "L": ["10000", "10000", "10000", "10000", "10000", "10000", "11111"],
-        "O": ["01110", "10001", "10001", "10001", "10001", "10001", "01110"]
+        "C": ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
+        "Y": ["10001", "10001", "01010", "00100", "00100", "00100", "00100"],
+        "M": ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
+        "T": ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
+        "X": ["10001", "10001", "01010", "00100", "01010", "10001", "10001"]
     })
     readonly property var pixels: {
         const out = []

@@ -9,7 +9,7 @@
 #include <cmath>
 #include <vector>
 
-// What Halo knows about a track after listening to it once.
+// What CymtX knows about a track after listening to it once.
 struct TrackAnalysis {
     double bpm = 0;          // 0 when no steady beat was found
     double loudness = -14;   // integrated loudness, LUFS (BS.1770 by ffmpeg's ebur128)

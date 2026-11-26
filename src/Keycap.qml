@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // A keyboard key, for showing which key does what.
 Rectangle {

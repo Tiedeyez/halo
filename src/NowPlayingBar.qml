@@ -2,9 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
-// The transport along the bottom: what plays (with a small halo round the
+// The transport along the bottom: what plays (with a small cymtx round the
 // cover), the controls, time, and the Blend/Drift/EQ/sleep switches.
 Rectangle {
     id: root
@@ -47,7 +47,7 @@ Rectangle {
                     visible: !player.hasTrack
                     color: Style.raised
                     border.color: Style.line
-                    Glyph { anchors.centerIn: parent; name: "halo"; color: Style.faint; width: 26; height: 26 }
+                    Glyph { anchors.centerIn: parent; name: "cymtx"; color: Style.faint; width: 26; height: 26 }
                 }
                 CoverArt {
                     glitchOnChange: true

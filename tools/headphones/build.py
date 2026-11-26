@@ -7,7 +7,7 @@ under CC BY-SA 4.0; see src/data/HEADPHONES-LICENSE.md.
 
 Keeps one parametric correction per product: the most trusted measurement
 (oratory1990, then crinacle, Rtings, Innerfidelity, then any), and only
-corrections Halo's engine can run (peaks and shelves, at most 16 bands).
+corrections CymtX's engine can run (peaks and shelves, at most 16 bands).
 
 usage: python3 -I tools/headphones/build.py database_v1.jsonl src/data/headphones.json"""
 import json, sys

@@ -46,7 +46,7 @@ QString PixelVisual::modeName(int mode) {
     case Waterfall: return tr("Waterfall");
     case Warp: return tr("Warp");
     case Aurora: return tr("Aurora");
-    case Ring: return tr("Halo");
+    case Ring: return tr("Ring");
     default: return {};
     }
 }
@@ -557,7 +557,7 @@ void PixelVisual::drawAurora(const In &in) {
         }
 }
 
-// ---- Halo: the ring of rays around the cover, one cell per pixel. A cell
+// ---- Ring: the ring of rays around the cover, one cell per pixel. A cell
 // lights when its band reaches out that far; rays are mirrored left and
 // right with the lows at the top, so the ring reads as one shape. A soft
 // glow in the accent swells with the music, and on a hard beat a few rows

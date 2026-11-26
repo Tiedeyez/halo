@@ -1,8 +1,8 @@
 #!/bin/sh
 # Runs the bar widget for real in a private, offscreen Quickshell instance:
-# Omarchy's own qs.Commons and qs.Ui, a stand-in bar and a stub `halo`, so
-# nothing touches your bar, your shell.json or a running Halo. With --real it
-# also reads the installed /usr/bin/halo once with `status --json` (read-only).
+# Omarchy's own qs.Commons and qs.Ui, a stand-in bar and a stub `cymtx`, so
+# nothing touches your bar, your shell.json or a running CymtX. With --real it
+# also reads the installed /usr/bin/cymtx once with `status --json` (read-only).
 #
 # --grab saves the bar as out.png and the player as out-player.png.
 #
@@ -41,12 +41,12 @@ ln -s "$SHELL_DIR/services" "$work/services"
 cp -R "$ROOT/plugin" "$work/plugin"
 cp "$ROOT/tests/plugin/harness.qml" "$work/shell.qml"
 
-# A picture to stand in for the cover Halo caches.
+# A picture to stand in for the cover CymtX caches.
 cp "$ROOT/docs/turntable.png" "$work/cover.png"
 
-cat > "$work/halo" <<'STUB'
+cat > "$work/cymtx" <<'STUB'
 #!/bin/sh
-# Stand-in for /usr/bin/halo. Logs its arguments; answers by the mode file,
+# Stand-in for /usr/bin/cymtx. Logs its arguments; answers by the mode file,
 # and remembers the few settings the widget changes.
 d="$(dirname "$0")"
 printf '%s\n' "$*" >> "$d/calls"
@@ -62,7 +62,7 @@ case "$1" in
 esac
 case "$mode" in
   offline)
-    echo '{"ok":false,"error":"Halo isn'"'"'t running. Start it with `halo open`."}'
+    echo '{"ok":false,"error":"CymtX isn'"'"'t running. Start it with `cymtx open`."}'
     exit 1 ;;
   playing|paused)
     if [ "$1" = visual ]; then echo '{"ok":true,"visual":"bars"}'; exit 0; fi
@@ -85,10 +85,10 @@ case "$mode" in
     echo '{"ok":true,"status":{"playing":false,"path":""}}' ;;
 esac
 STUB
-chmod 700 "$work/halo"
+chmod 700 "$work/cymtx"
 
 env -u WAYLAND_DISPLAY -u DISPLAY QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic \
-  HALO_WIDGET_TEST_DIR="$work" HALO_WIDGET_TEST_REAL="$REAL" \
+  CYMTX_WIDGET_TEST_DIR="$work" CYMTX_WIDGET_TEST_REAL="$REAL" \
   qs -p "$work" > "$work/log" 2>&1 &
 pid=$!
 

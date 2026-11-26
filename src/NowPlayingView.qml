@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // Full-bleed song visual behind the song and lyrics. The layout follows the
 // window: a wide window puts the song on the left and the lyrics on the right;
@@ -132,14 +132,14 @@ Rectangle {
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
-        // Cymatics: a square plate of sand, the music's pitch drawing its
-        // figure, centred on the song like the round visuals.
+        // Cymatics: a round plate of sand shaken by the song into a mandala,
+        // centred on the song like the other round visuals.
         Cymatics {
             anchors.fill: parent
             vivid: true
             origin: Qt.point(focusPoint.x, focusPoint.y)
-            plate: Math.min(stage.focusH * 0.9, stage.focusW * 0.94)
-            cell: Math.max(3, Math.round(plate / (150 * Style.pixelDensity)))
+            plate: Math.min(stage.focusH * 0.94, stage.focusW * 0.98)
+            cell: Math.max(3, Math.round(plate / (160 * Style.pixelDensity)))
             opacity: player.visualStyle === 12 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
@@ -259,7 +259,7 @@ Rectangle {
         }
     }
 
-    // Title (decrypting), its credits, artist and album, what Halo heard.
+    // Title (decrypting), its credits, artist and album, what CymtX heard.
     component Header: ColumnLayout {
         property int titleSize: Style.fontHero + 6
         property bool chips: true
@@ -306,7 +306,7 @@ Rectangle {
             font.pixelSize: Style.fontBody
             elide: Text.ElideRight
         }
-        // What Halo heard in the song.
+        // What CymtX heard in the song.
         Flow {
             Layout.fillWidth: true
             Layout.topMargin: 8
@@ -415,7 +415,7 @@ Rectangle {
             text: lyrics.status === Lyrics.Searching ? qsTr("Asking lrclib.net. The words appear here when they arrive.")
                 : lyrics.status === Lyrics.Offline ? qsTr("Looking them up sends the title, artist, album and length to lrclib.net.")
                 : lyrics.status === Lyrics.NotFound ? qsTr("LRCLIB doesn't have this one. A .lrc file beside the song works too.")
-                : lyrics.status === Lyrics.Failed ? qsTr("Check the connection. Halo tries again on the next song.")
+                : lyrics.status === Lyrics.Failed ? qsTr("Check the connection. CymtX tries again on the next song.")
                 : lyrics.kind === Lyrics.KindInstrumental ? qsTr("No words in this one.") : ""
             visible: text.length > 0
             color: Style.muted

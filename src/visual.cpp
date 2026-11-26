@@ -16,7 +16,7 @@ constexpr double SampleRate = 48000;
 
 Spectrum::Spectrum(Engine *engine, QObject *parent)
     : QObject(parent), m_engine(engine), m_history(Window, 0.0f), m_read(8192),
-      m_bands(Bands, 0.0f), m_peaks(Bands, 0.0f), m_peakVelocity(Bands, 0.0f) {
+      m_bands(Bands, 0.0f), m_peaks(Bands, 0.0f), m_peakVelocity(Bands, 0.0f), m_fresh(Bands, 0.0f) {
     m_timer.setInterval(16);
     m_timer.setTimerType(Qt::PreciseTimer);
     connect(&m_timer, &QTimer::timeout, this, &Spectrum::tick);
@@ -71,6 +71,7 @@ void Spectrum::tick() {
     for (size_t i = 0; i < Window; ++i)
         m_wave[i] = m_history[(m_historyPos + i) % Window];
     const auto fresh = analyse(m_wave);
+    m_fresh = fresh;
 
     double freshBass = 0;
     for (int b = 0; b < 8; ++b)

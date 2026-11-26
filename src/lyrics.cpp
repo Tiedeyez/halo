@@ -401,7 +401,7 @@ int pickSearchResult(const QList<QJsonObject> &results, const LyricsQuery &query
 
 namespace {
 
-const char *UserAgent = "Halo/1.0.3 (Omarchy music player)";
+const char *UserAgent = "CymtX/1.0.3 (Omarchy music player)";
 constexpr qint64 MissRecheckSeconds = 7 * 24 * 3600;
 
 QString kindName(int kind) {
@@ -445,14 +445,14 @@ QString readText(const QString &path) {
 namespace {
 // Every LRCLIB request: redirects only within the same site, and a reply
 // larger than any lyrics could be is cut off, so a bad or hijacked server
-// can't make Halo hold an unbounded download.
+// can't make CymtX hold an unbounded download.
 QNetworkReply *boundedGet(QNetworkAccessManager *network, QNetworkRequest request) {
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
     request.setMaximumRedirectsAllowed(3);
     QNetworkReply *reply = network->get(request);
     QObject::connect(reply, &QNetworkReply::downloadProgress, reply, [reply](qint64 received, qint64 total) {
         if (received > Safety::MaxLyricsReply || total > Safety::MaxLyricsReply) {
-            reply->setProperty("haloOversize", true);
+            reply->setProperty("cymtxOversize", true);
             reply->abort();
         }
     });
@@ -463,12 +463,12 @@ QNetworkReply *boundedGet(QNetworkAccessManager *network, QNetworkRequest reques
 LyricsService::LyricsService(const QString &cacheDirectory, const QString &stateDirectory, QObject *parent)
     : QObject(parent),
       m_cacheDirectory(cacheDirectory.isEmpty()
-                           ? QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/halo/lyrics"
+                           ? QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/cymtx/lyrics"
                            : cacheDirectory),
       m_stateFile((stateDirectory.isEmpty()
-                       ? QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/halo"
+                       ? QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/cymtx"
                        : stateDirectory) + "/lyrics.json"),
-      m_endpoint(qEnvironmentVariable("HALO_LRCLIB_URL", "https://lrclib.net")) {
+      m_endpoint(qEnvironmentVariable("CYMTX_LRCLIB_URL", "https://lrclib.net")) {
     m_retryTimer.setSingleShot(true);
     connect(&m_retryTimer, &QTimer::timeout, this, [this] {
         if (m_status == Searching)
@@ -692,7 +692,7 @@ void LyricsService::fetch() {
         reply->deleteLater();
         if (generation != m_generation)
             return;
-        if (reply->property("haloOversize").toBool())
+        if (reply->property("cymtxOversize").toBool())
             return setStatus(Failed);
         if (reply->error() == QNetworkReply::OperationCanceledError)
             return;
@@ -747,7 +747,7 @@ void LyricsService::fetchSearch() {
         reply->deleteLater();
         if (generation != m_generation)
             return;
-        if (reply->property("haloOversize").toBool())
+        if (reply->property("cymtxOversize").toBool())
             return setStatus(Failed);
         if (reply->error() == QNetworkReply::OperationCanceledError)
             return;

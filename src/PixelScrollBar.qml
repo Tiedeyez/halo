@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import Halo
+import CymtX
 
 // A square scrollbar handle, brighter when held.
 ScrollBar {

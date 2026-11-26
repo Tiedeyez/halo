@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // One line of lyrics. The line being sung fills word by word in the accent,
 // with a block cursor at the edge like a terminal's; it decrypts into place

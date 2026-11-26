@@ -1,12 +1,12 @@
 import QtQuick
 import QtQuick.Window
-import Halo
+import CymtX
 import "qrc:/turntable/manifest.js" as Layers
 import "qrc:/hologram/manifest.js" as Energy
 
 // The Turntable visual: a deck rendered in Blender (art/turntable), seen
 // from straight above, composed live from layers (src/turntable, packed by
-// tools/turntable-layers). The album cover (or Halo's tile for it) turns on
+// tools/turntable-layers). The album cover (or CymtX's tile for it) turns on
 // the label at 33 1/3 while music plays and stops where it is when paused or
 // calm (C), with specks of dust riding the vinyl through the light; the
 // ring and lamps take the theme's accent and lift with the beat, the stage
@@ -122,7 +122,7 @@ Item {
         asynchronous: true
         visible: false
     }
-    // The label: the album's cover, or Halo's own tile for it (its colour
+    // The label: the album's cover, or CymtX's own tile for it (its colour
     // and initials) when it has none, so the record is always seen turning.
     CoverArt {
         id: labelArt
@@ -173,7 +173,7 @@ Item {
         fragmentShader: "qrc:/shaders/turntable.frag.qsb"
     }
 
-    // ---- the controls follow Halo's own ----
+    // ---- the controls follow CymtX's own ----
     // Start/stop lights while playing, and the 33 speed light beside it.
     DeckSpot {
         host: root

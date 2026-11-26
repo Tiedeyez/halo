@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // The rules of a smart playlist: songs from your library that match all
 // (or any) of them, sorted and optionally limited. A live count shows what

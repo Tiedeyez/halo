@@ -3,14 +3,14 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
-// Setting Halo up, in three short steps: which folders the music is in
-// (each with a count of the songs Halo finds there), how it should play, and
+// Setting CymtX up, in three short steps: which folders the music is in
+// (each with a count of the songs CymtX finds there), how it should play, and
 // the library being read. Shown on the first run (player.onboarded), and
 // again whenever it is asked for (Ctrl+,). Nothing changes until a step is
 // left with Next: the folders are saved then, and the switches on the second
-// step are the same ones the rest of Halo uses.
+// step are the same ones the rest of CymtX uses.
 Rectangle {
     id: root
 
@@ -31,7 +31,7 @@ Rectangle {
     // Solid: nothing of the window behind shows through or takes a click.
     color: Style.window
     Accessible.role: Accessible.Dialog
-    Accessible.name: qsTr("Set up Halo")
+    Accessible.name: qsTr("Set up CymtX")
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }
 
     function shortPath(path) {
@@ -111,11 +111,11 @@ Rectangle {
         { key: "blend", glyph: "blend", title: qsTr("Blend"),
           body: qsTr("Songs mix into each other on the beat, like a DJ set. Off, they play one after another with no gap.") },
         { key: "drift", glyph: "drift", title: qsTr("Drift"),
-          body: qsTr("When the queue runs out, Halo keeps going with songs from your library that sound close to the last one.") },
+          body: qsTr("When the queue runs out, CymtX keeps going with songs from your library that sound close to the last one.") },
         { key: "normalize", glyph: "volume", title: qsTr("Even loudness"),
           body: qsTr("Quiet and loud songs are brought to the same level, so you don't reach for the volume.") },
         { key: "lyrics", glyph: "lyrics", title: qsTr("Online lyrics"),
-          body: qsTr("Halo asks lrclib.net for the words of the song playing, sending its title, artist, album and length. Nothing else goes online, and there is no account.") }
+          body: qsTr("CymtX asks lrclib.net for the words of the song playing, sending its title, artist, album and length. Nothing else goes online, and there is no account.") }
     ]
     function optionOn(key) {
         return key === "blend" ? player.blend : key === "drift" ? player.drift
@@ -138,7 +138,7 @@ Rectangle {
                     return
                 }
                 if (!library.setFolders(chosenPaths)) {
-                    note = qsTr("Halo couldn't save those folders. Check that they are still there.")
+                    note = qsTr("CymtX couldn't save those folders. Check that they are still there.")
                     return
                 }
             }
@@ -291,13 +291,13 @@ Rectangle {
                 lineHeight: 1.15
                 text: root.step === 0
                         ? (library.foldersPinned
-                            ? qsTr("These folders are set by the HALO_MUSIC variable Halo was started with, so they can't be changed here.")
-                            : qsTr("Halo plays the songs in the folders you tick, and in every folder inside them. It only reads them: nothing is moved, copied or sent anywhere."))
-                    : root.step === 1 ? qsTr("Four things Halo does that you might not expect. Each has a key to change it later.")
-                    : library.scanning ? qsTr("%n file(s) so far. You can start now; albums appear as Halo reads them.", "", library.scanned)
+                            ? qsTr("These folders are set by the CYMTX_MUSIC variable CymtX was started with, so they can't be changed here.")
+                            : qsTr("CymtX plays the songs in the folders you tick, and in every folder inside them. It only reads them: nothing is moved, copied or sent anywhere."))
+                    : root.step === 1 ? qsTr("Four things CymtX does that you might not expect. Each has a key to change it later.")
+                    : library.scanning ? qsTr("%n file(s) so far. You can start now; albums appear as CymtX reads them.", "", library.scanned)
                     : library.trackCount > 0
                         ? qsTr("%1 in %2.").arg(qsTr("%n song(s)", "", library.trackCount)).arg(qsTr("%n album(s)", "", library.albumCount))
-                        : qsTr("Halo found no songs in the folders you chose. It plays MP3, FLAC, Ogg, Opus, M4A, WAV and most other music files. Go back and choose another folder, or drop songs on the window.")
+                        : qsTr("CymtX found no songs in the folders you chose. It plays MP3, FLAC, Ogg, Opus, M4A, WAV and most other music files. Go back and choose another folder, or drop songs on the window.")
             }
 
             // ---- step 1: folders ----

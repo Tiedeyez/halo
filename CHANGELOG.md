@@ -5,15 +5,29 @@ notes on its GitHub release page as well.
 
 ## Unreleased
 
-Cymatics, and a pass over the visuals.
+Halo is now CymtX: the same player, named for cymatics, the shapes sound
+makes, and built round them.
 
-- **Cymatics, a thirteenth visual** (`halo visual cymatics`). Sand on a
-  plate that the music shakes into Chladni's figures: the music's pitch
-  picks the figure, it changes every two beats, the sand is thrown up and
-  settles on the new lines, and the plate glows under it with the bass.
-- **The window's background is cymatics too**, in place of the water: the
-  same figures, dim and in the accent, changing every eight beats. A click
-  throws the sand round the pointer. Text over it still reads at 7:1.
+- **A new name.** The app, its command, its package and its files are
+  `cymtx`. The first start takes a copy of everything Halo kept (settings
+  and queue, playlists, music folders, the analysis and cover caches), so
+  nothing is set up or analysed again; Halo's own folders are left as they
+  were. The package takes Halo's place and keeps a `halo` command for
+  scripts and bar widgets that still call it. Playlists and `.haloignore`
+  files from Halo still work. `HALO_*` environment variables are now
+  `CYMTX_*`.
+- **Cymatics, a thirteenth visual and the one CymtX opens with**
+  (`cymtx visual cymatics`): sand on a round plate shaken by the song,
+  worked out from the plate's physics. The plate's modes (the free-edge
+  solutions of the plate equation, tested against Leissa's table) ring to
+  the spectrum, each in its own time; thousands of grains walk to where the
+  plate is still, take up room, and are thrown by every beat; and the
+  whole is mirrored into a mandala whose fold comes from the song.
+- **The window's background is the same plate**, in place of the water:
+  sand only, dim and in the accent. A click knocks the plate. Text over it
+  still reads at 7:1.
+- **A new icon and wordmark**: a Chladni figure in square pixels, and CYMTX
+  in the pixel letters.
 - **Loud masters no longer fill the pixel visuals solid.** Ring, Skyline,
   Pulsar, Waterfall and Aurora now measure each band against the music's
   own average, so a compressed master shows its peaks instead of one block.

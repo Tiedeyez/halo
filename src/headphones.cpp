@@ -115,7 +115,7 @@ std::vector<Dsp::Coefficients> design(const Profile &profile, double rate) {
 Headphones::Headphones(Engine *engine, const QString &stateFile, QObject *parent)
     : QObject(parent), m_engine(engine),
       m_stateFile(stateFile.isEmpty()
-                      ? QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/halo/headphones.json"
+                      ? QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/cymtx/headphones.json"
                       : stateFile) {
     QFile data(":/data/headphones.json");
     if (data.open(QIODevice::ReadOnly))

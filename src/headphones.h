@@ -76,7 +76,7 @@ class Headphones : public QObject {
 
 public:
     // stateFile: where turned-off devices are remembered (empty: the default
-    // under ~/.local/state/halo).
+    // under ~/.local/state/cymtx).
     explicit Headphones(Engine *engine, const QString &stateFile = {}, QObject *parent = nullptr);
 
     QString device() const { return m_device; }

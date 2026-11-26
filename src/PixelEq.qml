@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // A tiny meter for the song playing: lows, mids and highs as three columns
 // of square pixels. Still (and low) while paused or calm.

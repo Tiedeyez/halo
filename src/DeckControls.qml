@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import Halo
+import CymtX
 
 // The record player's controls, working: laid over a deck visual
 // (Turntable or Hologram), in the places its manifest gives.

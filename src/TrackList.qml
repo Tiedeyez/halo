@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // A list of songs. Enter plays from the selected song on, A adds it to the
 // queue, Shift+Enter plays it next; right-click for the same. In a playlist

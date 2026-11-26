@@ -62,7 +62,7 @@ void Theme::refreshRounding() {
 }
 
 namespace {
-// colors.toml comes from the theme, not from Halo: read at most 64 KiB of
+// colors.toml comes from the theme, not from CymtX: read at most 64 KiB of
 // it, and only ever take #rrggbb values out of it.
 QString readTheme(const QString &path) {
     QFile file(path);
@@ -121,7 +121,7 @@ void Theme::reload() {
             m_watcher.addPath(path);
 
     // Omarchy's current-theme folder keeps colors.toml in theme/; a theme's
-    // own folder (HALO_THEME_DIR, for checking a theme without switching
+    // own folder (CYMTX_THEME_DIR, for checking a theme without switching
     // to it) keeps it at the top.
     const QString colours = QFileInfo::exists(m_directory + "/theme/colors.toml") || !QFileInfo::exists(m_directory + "/colors.toml")
                                 ? m_directory + "/theme/colors.toml" : m_directory + "/colors.toml";

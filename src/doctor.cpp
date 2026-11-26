@@ -870,7 +870,7 @@ using namespace Doctor;
 LibraryDoctor::LibraryDoctor(Library *library, const QString &logFile, QObject *parent)
     : QObject(parent), m_library(library),
       m_logFile(logFile.isEmpty()
-                    ? QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/halo/doctor.json"
+                    ? QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + "/cymtx/doctor.json"
                     : logFile) {
     loadLog();
 }
@@ -1002,7 +1002,7 @@ bool LibraryDoctor::apply(const Finding &f) {
     // was given, so a field with several can't be changed safely there.
     const QString suffix = QFileInfo(f.path).suffix().toLower();
     if (distinct(all).size() > 1 && (suffix == "wma" || suffix == "asf")) {
-        emit message(tr("%1 has several values in that field, which Halo can't change safely in this format.")
+        emit message(tr("%1 has several values in that field, which CymtX can't change safely in this format.")
                          .arg(QFileInfo(f.path).fileName()));
         return false;
     }
@@ -1115,7 +1115,7 @@ bool LibraryDoctor::undoLast() {
         const Entry e = m_log.back();
         m_log.pop_back();
         // The file must still hold what the fix left. An entry from before
-        // Halo logged whole lists is checked, and put back, by its first value.
+        // CymtX logged whole lists is checked, and put back, by its first value.
         Tags now;
         QStringList all;
         // (Copies of a value don't count: writing another field can add one.)
@@ -1194,7 +1194,7 @@ int LibraryDoctor::applyAnswers(const QList<Answer> &answers) {
         const QString value = cleanAnswer(a.value);
         static const QRegularExpression number("^[1-9][0-9]{0,2}$");
         if (!fields.contains(a.field)) {
-            emit message(tr("%1: Halo doesn't write a field called %2.").arg(name, a.field));
+            emit message(tr("%1: CymtX doesn't write a field called %2.").arg(name, a.field));
             continue;
         }
         if (a.field == "tracknumber" ? !number.match(value).hasMatch() : (value.isEmpty() && !clearable.contains(a.field))) {
@@ -1223,7 +1223,7 @@ void LibraryDoctor::loadLog() {
     QFile f(m_logFile);
     if (!f.open(QIODevice::ReadOnly))
         return;
-    // A log Halo can't read (far too large, or not what it wrote) is set
+    // A log CymtX can't read (far too large, or not what it wrote) is set
     // aside under another name, never cut short and written over: it is the
     // only record of what the tags said before.
     const QByteArray bytes = f.read(MaxLogBytes + 1);

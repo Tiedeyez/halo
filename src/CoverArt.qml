@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // An album cover, or when there is none, a tile in a colour of its own
 // with the album's initials, so a library of untagged mixtapes still has

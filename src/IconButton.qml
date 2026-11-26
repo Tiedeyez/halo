@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
-import Halo
+import CymtX
 
 // A 44 px target with one glyph, a tooltip that names it, and an accessible
 // name for screen readers.

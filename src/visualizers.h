@@ -12,7 +12,7 @@ class Spectrum;
 
 // The pixel visualisers (V cycles through them). Each is drawn on the CPU into
 // a small image, one pixel per screen cell, and enlarged by the same pixel
-// grid as the kaleidoscope, so every one shares Halo's square-pixel look and
+// grid as the kaleidoscope, so every one shares CymtX's square-pixel look and
 // costs next to nothing on integrated graphics (a 90 x 90 grid is 8,100
 // pixels a frame).
 //

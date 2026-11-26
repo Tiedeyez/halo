@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // Steps a visual once per screen refresh (not on a timer, which drifts
 // against the display and stutters), and eases the music's beat, loudness,

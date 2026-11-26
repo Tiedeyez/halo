@@ -49,7 +49,7 @@ constexpr double MinimumFlux = 0.04;
 
 // ITU-R BS.1770 loudness: K-weighting (a high shelf, then a high-pass), mean
 // square over 400 ms blocks every 100 ms, an absolute gate at -70 LUFS and a
-// relative gate 10 LU under the mean. Halo analyses ffmpeg's mono downmix,
+// relative gate 10 LU under the mean. CymtX analyses ffmpeg's mono downmix,
 // which keeps the power of a centred mix (it sums at -3 dB per channel), and
 // at 22 kHz it misses the top octave; checked against ffmpeg's ebur128 meter
 // on real tracks, that leaves it about 0.5 LU low, which is added back.
@@ -208,7 +208,7 @@ double estimateBpm(const float *mono, size_t count, int rate) {
     for (float e : envelope)
         flux += e;
     flux /= double(envelope.size()) * (Frame / 2);
-    if (qEnvironmentVariableIsSet("HALO_DEBUG_TEMPO"))
+    if (qEnvironmentVariableIsSet("CYMTX_DEBUG_TEMPO"))
         qInfo("tempo: flux %.5f, zero-lag %.3f, peak/mean %.3f", flux, best >= 0 ? ac[size_t(best)] / ac[0] : 0.0,
               best >= 0 && mean > 0 ? ac[size_t(best)] / mean : 0.0);
     if (best < 0 || flux < MinimumFlux || ac[size_t(best)] / ac[0] < 0.08 || mean <= 0 ||
@@ -314,7 +314,7 @@ TrackAnalysis analyzeFile(const QString &path, QString *error) {
 Analyzer::Analyzer(const QString &cacheFile, QObject *parent)
     : QObject(parent),
       m_cacheFile(cacheFile.isEmpty()
-                      ? QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/halo/analysis.json"
+                      ? QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/cymtx/analysis.json"
                       : cacheFile) {
     m_save.setSingleShot(true);
     m_save.setInterval(3000);

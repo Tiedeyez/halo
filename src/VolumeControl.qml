@@ -2,11 +2,11 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
-// Halo's volume: a mute button and the volume as a row of pixel bars
+// CymtX's volume: a mute button and the volume as a row of pixel bars
 // rising to the right, like a signal meter (drag or click across it, or
-// scroll over it). This is Halo's own volume, not the system's; used in the
+// scroll over it). This is CymtX's own volume, not the system's; used in the
 // bottom bar and on Now Playing (where the bar is hidden).
 RowLayout {
     spacing: 4

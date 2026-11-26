@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // The lyrics of the song playing. Timed lyrics scroll on their own, the
 // line being sung held a third of the way down; scroll or flick to read
@@ -209,9 +209,9 @@ Item {
                 if (!player.hasTrack) return qsTr("Play something and its words show here.")
                 switch (lyrics.status) {
                 case Lyrics.Searching: return qsTr("Asking lrclib.net, the free lyrics database.")
-                case Lyrics.Offline: return qsTr("There are no lyrics for this song on this computer. Halo can look them up on lrclib.net, sending the title, artist, album and length of each song you play. Nothing else leaves this computer.")
+                case Lyrics.Offline: return qsTr("There are no lyrics for this song on this computer. CymtX can look them up on lrclib.net, sending the title, artist, album and length of each song you play. Nothing else leaves this computer.")
                 case Lyrics.NotFound: return qsTr("LRCLIB doesn't have this one yet. Freestyles and DJ drops often aren't there. A .lrc file beside the song, named like it, works too.")
-                case Lyrics.Failed: return qsTr("Check the connection. Halo tries again on the next song.")
+                case Lyrics.Failed: return qsTr("Check the connection. CymtX tries again on the next song.")
                 }
                 return lyrics.kind === Lyrics.KindInstrumental ? qsTr("No words in this one.") : ""
             }

@@ -1,16 +1,16 @@
 .pragma library
 
-// Turns what `/usr/bin/halo <command> --json` printed into the small, bounded
+// Turns what `/usr/bin/cymtx <command> --json` printed into the small, bounded
 // state the bar widget shows, and builds the few command lines the widget may
 // run. Pure functions, no I/O, so they can be tested outside the shell
 // (tests/plugin/status-test.mjs).
 
-// The most of one reply the widget will read. A `halo status --json` line is
+// The most of one reply the widget will read. A `cymtx status --json` line is
 // about 1 KiB and a song's lyrics a few KiB; anything far bigger is neither.
 var MaxReplyBytes = 64 * 1024
 // The longest title, artist, album or lyric line the widget keeps.
 var MaxField = 300
-// The longest file path the widget keeps (the cover Halo cached).
+// The longest file path the widget keeps (the cover CymtX cached).
 var MaxPath = 1024
 
 function clip(value) {
@@ -31,7 +31,7 @@ function within(value, low, high, fallback) {
   return Math.max(low, Math.min(high, value))
 }
 
-// The cover Halo cut and cached for the album: an absolute path to a JPEG or
+// The cover CymtX cut and cached for the album: an absolute path to a JPEG or
 // PNG, or nothing. Anything else (a URL, a relative path, another kind of
 // file) is dropped, so the widget only ever opens a local picture.
 function coverPath(value) {
@@ -42,9 +42,9 @@ function coverPath(value) {
   return value
 }
 
-// "missing"  - /usr/bin/halo isn't installed
-// "offline"  - Halo is installed but no window is running (or it didn't answer)
-// "idle"     - Halo is running with nothing loaded
+// "missing"  - /usr/bin/cymtx isn't installed
+// "offline"  - CymtX is installed but no window is running (or it didn't answer)
+// "idle"     - CymtX is running with nothing loaded
 // "paused" / "playing"
 function emptyState(kind, message) {
   return {
@@ -54,7 +54,7 @@ function emptyState(kind, message) {
     key: "",
     title: "", artist: "", album: "",
     position: 0, duration: 0,
-    // -1 when Halo didn't say.
+    // -1 when CymtX didn't say.
     volume: -1,
     shuffle: false, repeat: "off", blend: false, drift: false,
     // Seconds until the sleep timer pauses; 0 when it is off.
@@ -62,7 +62,7 @@ function emptyState(kind, message) {
     // 0 when the song hasn't been analysed.
     bpm: 0,
     hasLoudness: false, lufs: 0,
-    // Place in the queue, from 1; 0 when Halo didn't say.
+    // Place in the queue, from 1; 0 when CymtX didn't say.
     queueIndex: 0, queueSize: 0,
     cover: "",
     problem: "",
@@ -74,14 +74,14 @@ function emptyState(kind, message) {
 function parse(text, exitCode) {
   var raw = typeof text === "string" ? text : ""
   if (raw.length > MaxReplyBytes)
-    return emptyState("offline", "Halo's reply was too large to read")
+    return emptyState("offline", "CymtX's reply was too large to read")
   var line = raw.trim()
   var reply = null
   if (line.length > 0) {
     try { reply = JSON.parse(line) } catch (e) { reply = null }
   }
   if (!reply || typeof reply !== "object" || Array.isArray(reply))
-    return emptyState("offline", exitCode === 0 ? "Halo's reply wasn't readable" : "")
+    return emptyState("offline", exitCode === 0 ? "CymtX's reply wasn't readable" : "")
   if (reply.ok !== true)
     return emptyState("offline", typeof reply.error === "string" ? reply.error : "")
   var s = reply.status
@@ -89,7 +89,7 @@ function parse(text, exitCode) {
     return emptyState("idle", "")
   var path = typeof s.path === "string" ? s.path : ""
   var state = emptyState(path === "" ? "idle" : s.playing === true ? "playing" : "paused", "")
-  // What Halo is set to holds whether or not a song is loaded.
+  // What CymtX is set to holds whether or not a song is loaded.
   state.volume = Math.round(within(s.volume, 0, 100, -1))
   state.shuffle = s.shuffle === true
   state.repeat = s.repeat === "all" || s.repeat === "one" ? s.repeat : "off"
@@ -131,7 +131,7 @@ function parse(text, exitCode) {
 }
 
 // The state with a few fields replaced: what the widget shows between asking
-// Halo for a change and Halo's reply.
+// CymtX for a change and CymtX's reply.
 function withChange(state, changes) {
   var copy = {}
   var k
@@ -140,7 +140,7 @@ function withChange(state, changes) {
   return copy
 }
 
-// What `halo lyrics --json` printed, cut down to the line being sung and the
+// What `cymtx lyrics --json` printed, cut down to the line being sung and the
 // one after it. `timed` is false for plain words with no times (and for no
 // lyrics at all): there is no "line being sung" then, and the widget shows
 // nothing and stops asking until the song changes.
@@ -218,8 +218,8 @@ var onOff = oneOf(["on", "off"])
 // The commands the widget may run, and nothing else. Each maps to a fixed
 // argv: no shell. A command that takes a value has a check that turns the
 // value into one of a few words or a whole number in a range; anything else
-// is refused, so no text from a song, a setting or a reply reaches Halo.
-//   reply: "status" - Halo answers with its status
+// is refused, so no text from a song, a setting or a reply reaches CymtX.
+//   reply: "status" - CymtX answers with its status
 //          "lyrics" - with the lyrics
 //          "other"  - with something the widget doesn't read
 var Commands = {

@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // Every shortcut on one sheet, opened and closed with "?".
 Rectangle {
@@ -107,7 +107,7 @@ Rectangle {
                     textFormat: Text.PlainText
                     Layout.topMargin: 12
                     Layout.fillWidth: true
-                    text: qsTr("Media keys and every MPRIS bar widget control Halo too. From a terminal: halo --help.")
+                    text: qsTr("Media keys and every MPRIS bar widget control CymtX too. From a terminal: cymtx --help.")
                     color: Style.muted
                     font.pixelSize: Style.fontSmall + 1
                     wrapMode: Text.Wrap

@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Window
-import Halo
+import CymtX
 import "qrc:/hologram/manifest.js" as Layers
 
 // The Hologram visual: the Turntable's deck made of light and energy. The
@@ -88,7 +88,7 @@ Item {
         }
     }
 
-    // The label: the album's cover, or Halo's own tile for it (its colour
+    // The label: the album's cover, or CymtX's own tile for it (its colour
     // and initials) when it has none, so the record is always seen turning.
     CoverArt {
         id: labelArt
@@ -181,7 +181,7 @@ Item {
         Light { host: root; anchors.fill: parent; name: root.armName(armBox.upper); gain: armBox.upper === armBox.lower ? 0 : armBox.t }
     }
 
-    // ---- the controls follow Halo's own, as light ----
+    // ---- the controls follow CymtX's own, as light ----
     // The fader is the volume; the dial's index the EQ's gain (-12..+12 dB
     // over its ticks, at rest while the EQ is off). Both ease into place.
     Light {

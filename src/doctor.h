@@ -100,7 +100,7 @@ class LibraryDoctor : public QObject {
 
 public:
     // logFile: where fixes are recorded for undo (empty: the default under
-    // ~/.local/state/halo).
+    // ~/.local/state/cymtx).
     explicit LibraryDoctor(class Library *library, const QString &logFile = {}, QObject *parent = nullptr);
 
     QVariantList findings() const;
@@ -163,7 +163,7 @@ private:
         QStringList beforeAll, afterAll;
         qint64 batch = 0;   // fixes written by one press share a number; 0: on its own
     };
-    // The log as it is on disk now: another Halo (the window, or a
+    // The log as it is on disk now: another CymtX (the window, or a
     // command) may have written fixes since this one last looked.
     void refreshLog();
     mutable QString m_logStamp;

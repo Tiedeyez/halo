@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Window
-import Halo
+import CymtX
 
 // One of the pixel visualisers (Skyline, Phosphor, Pulsar, Waterfall, Warp,
 // Aurora, and the Ring): PixelVisual (C++) draws it one pixel per cell, and

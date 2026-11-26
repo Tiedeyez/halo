@@ -2,15 +2,15 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Loads the real bar widget (plugin/HaloWidget.qml) with Omarchy's own
-// qs.Commons and qs.Ui, a stand-in bar, and a stub `halo`, then walks it
+// Loads the real bar widget (plugin/CymtXWidget.qml) with Omarchy's own
+// qs.Commons and qs.Ui, a stand-in bar, and a stub `cymtx`, then walks it
 // through every state. run-widget-test.sh builds the folder this runs from.
 // Each check prints "CHECK PASS|FAIL <name>"; the last line is "DONE <n> <failures>".
 ShellRoot {
   id: shell
 
-  property string dir: Quickshell.env("HALO_WIDGET_TEST_DIR")
-  property string realHalo: Quickshell.env("HALO_WIDGET_TEST_REAL") === "1" ? "/usr/bin/halo" : ""
+  property string dir: Quickshell.env("CYMTX_WIDGET_TEST_DIR")
+  property string realCymtX: Quickshell.env("CYMTX_WIDGET_TEST_REAL") === "1" ? "/usr/bin/cymtx" : ""
   property int failures: 0
   property int checks: 0
 
@@ -60,11 +60,11 @@ ShellRoot {
       id: loader
       anchors.verticalCenter: parent.verticalCenter
       x: 8
-      source: Qt.resolvedUrl("plugin/HaloWidget.qml")
+      source: Qt.resolvedUrl("plugin/CymtXWidget.qml")
       onLoaded: {
         item.bar = fakeBar
         item.settings = ({})
-        item.haloBinary = shell.dir + "/no-such-halo"
+        item.cymtxBinary = shell.dir + "/no-such-cymtx"
         steps.start()
       }
       onStatusChanged: if (status === Loader.Error) console.log("CHECK FAIL load  (" + sourceComponent + ")")
@@ -79,7 +79,7 @@ ShellRoot {
     [1500, function() {}, function() {
       check("missing binary shows 'missing'", w.kind === "missing" && w.checked, w.kind)
       check("missing: label is empty", w.barLabel === "", w.barLabel)
-      w.haloBinary = shell.dir + "/halo"
+      w.cymtxBinary = shell.dir + "/cymtx"
       writeMode("offline")
     }],
     [300, function() { w.request("status") }, null],
@@ -101,32 +101,32 @@ ShellRoot {
       w.setVolume(70)
     }],
     [1500, function() {}, function() {
-      check("volume ran `halo volume 70 --json`", lastCall.indexOf("volume 70 --json") >= 0, lastCall)
+      check("volume ran `cymtx volume 70 --json`", lastCall.indexOf("volume 70 --json") >= 0, lastCall)
       check("the reply holds the new volume", w.state.volume === 70, w.state.volume)
       check("the clock runs between replies", w.shownPosition > w.state.position, w.shownPosition + " vs " + w.state.position)
       w.seekTo(100.4)
     }],
     [1500, function() {}, function() {
-      check("seek ran `halo seek 100 --json`", lastCall.indexOf("seek 100 --json") >= 0, lastCall)
+      check("seek ran `cymtx seek 100 --json`", lastCall.indexOf("seek 100 --json") >= 0, lastCall)
       check("the song is where it was sent", w.state.position === 100, w.state.position)
       w.setMode("shuffle", true)
     }],
     [1500, function() {}, function() {
-      check("shuffle ran `halo shuffle on --json`", lastCall.indexOf("shuffle on --json") >= 0, lastCall)
+      check("shuffle ran `cymtx shuffle on --json`", lastCall.indexOf("shuffle on --json") >= 0, lastCall)
       check("shuffle is on", w.state.shuffle === true, String(w.state.shuffle))
       w.cycleRepeat()
     }],
     [1500, function() {}, function() {
-      check("repeat ran `halo repeat all --json`", lastCall.indexOf("repeat all --json") >= 0 && w.state.repeat === "all", lastCall)
+      check("repeat ran `cymtx repeat all --json`", lastCall.indexOf("repeat all --json") >= 0 && w.state.repeat === "all", lastCall)
       w.cycleSleep()
     }],
     [1500, function() {}, function() {
-      check("sleep ran `halo sleep 15 --json`", lastCall.indexOf("sleep 15 --json") >= 0, lastCall)
+      check("sleep ran `cymtx sleep 15 --json`", lastCall.indexOf("sleep 15 --json") >= 0, lastCall)
       check("the sleep timer counts down", w.sleepLeft > 800 && w.sleepLeft <= 900, w.sleepLeft)
       w.request("visual", "next")
     }],
     [1500, function() {}, function() {
-      check("visual ran `halo visual next --json`", lastCall.indexOf("visual next --json") >= 0, lastCall)
+      check("visual ran `cymtx visual next --json`", lastCall.indexOf("visual next --json") >= 0, lastCall)
       check("a reply without a status leaves the song showing", w.kind === "playing" && w.state.title === "Night Drive", w.kind)
       w.request("lyrics")
     }],
@@ -142,7 +142,7 @@ ShellRoot {
       w.request("toggle")
     }],
     [1500, function() {}, function() {
-      check("toggle ran `halo toggle --json`", lastCall.indexOf("toggle --json") >= 0, lastCall)
+      check("toggle ran `cymtx toggle --json`", lastCall.indexOf("toggle --json") >= 0, lastCall)
       check("toggle's own reply updates the state (paused)", w.kind === "paused", w.kind)
       check("paused: the bar icon is the still note", w.dancing === false, String(w.dancing))
       w.settings = ({ artwork: false })
@@ -151,7 +151,7 @@ ShellRoot {
       w.request("next")
     }],
     [1500, function() {}, function() {
-      check("next ran `halo next --json`", lastCall.indexOf("next --json") >= 0, lastCall)
+      check("next ran `cymtx next --json`", lastCall.indexOf("next --json") >= 0, lastCall)
       writeMode("markup")
     }],
     [300, function() { w.request("status") }, null],
@@ -175,16 +175,16 @@ ShellRoot {
     }],
     [2500, function() {}, function() {
       check("an action during a poll is queued and runs after it", lastCall.indexOf("toggle --json") >= 0, lastCall)
-      if (shell.realHalo !== "") {
-        w.haloBinary = shell.realHalo
+      if (shell.realCymtX !== "") {
+        w.cymtxBinary = shell.realCymtX
         w.request("status")
       }
     }],
     [2500, function() {}, function() {
-      if (shell.realHalo !== "")
-        check("the real /usr/bin/halo status --json reads (kind " + w.kind + ")",
+      if (shell.realCymtX !== "")
+        check("the real /usr/bin/cymtx status --json reads (kind " + w.kind + ")",
               ["idle", "paused", "playing", "offline"].indexOf(w.kind) >= 0, w.kind)
-      w.haloBinary = shell.dir + "/halo"
+      w.cymtxBinary = shell.dir + "/cymtx"
       writeMode("playing")
       w.request("status")
     }],
@@ -211,7 +211,7 @@ ShellRoot {
     }]
   ]
 
-  // The last few `halo` calls, newest last. Not only the very last one: the
+  // The last few `cymtx` calls, newest last. Not only the very last one: the
   // widget's own status poll can land just after an action.
   property string lastCall: ""
   property var recent: []

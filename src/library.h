@@ -85,16 +85,16 @@ public:
 
     Q_INVOKABLE void rescan();
     // Adds a music folder (a path or a file:// URL from the folder dialog)
-    // to ~/.config/halo/folders and scans it. False if it isn't a folder.
+    // to ~/.config/cymtx/folders and scans it. False if it isn't a folder.
     Q_INVOKABLE bool addFolder(const QString &folder);
-    // The setup screen. folderChoices: the folders Halo reads now, then the
+    // The setup screen. folderChoices: the folders CymtX reads now, then the
     // usual places it could (the desktop's music folder, ~/Music,
     // ~/Downloads, a Music folder on a plugged-in drive), each as
     // {path, chosen, kind}; kind is "music", "downloads", "drive" or "yours".
     Q_INVOKABLE QVariantList folderChoices() const;
-    // Makes these the music folders: writes ~/.config/halo/folders with
+    // Makes these the music folders: writes ~/.config/cymtx/folders with
     // exactly them and scans. False (and nothing written) when none of them
-    // is a folder, or when HALO_MUSIC decides the folders (foldersPinned).
+    // is a folder, or when CYMTX_MUSIC decides the folders (foldersPinned).
     Q_INVOKABLE bool setFolders(const QStringList &folders);
     bool foldersPinned() const;
     // How many songs a folder holds, counted off the GUI thread by the

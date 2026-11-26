@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
-import Halo
+import CymtX
 
 // A circle drawn as pixel art: its edge steps in whole pixels of `pixel`
 // size, like a sprite, instead of curving smoothly.

@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // Four corner brackets drawn in pixels, a terminal's selection marks. They
 // snap in from just outside the item when shown.

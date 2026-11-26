@@ -4,7 +4,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Dialogs
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 ApplicationWindow {
     id: win
@@ -13,7 +13,7 @@ ApplicationWindow {
     minimumWidth: 960
     minimumHeight: 640
     visible: true
-    title: player.hasTrack ? player.title + " · Halo" : "Halo"
+    title: player.hasTrack ? player.title + " · CymtX" : "CymtX"
     color: Style.window
 
     Material.theme: Material.Dark
@@ -66,7 +66,7 @@ ApplicationWindow {
     property bool helpVisible: false
 
     // ---- first run ----
-    // The setup (Welcome.qml) opens the first time Halo runs, and again on
+    // The setup (Welcome.qml) opens the first time CymtX runs, and again on
     // Ctrl+, or from an empty library's button. Finishing or skipping it
     // counts as onboarded, so it never opens by itself again.
     property bool setupOpen: false
@@ -208,14 +208,11 @@ ApplicationWindow {
         layer.effect: GlitchEffect { amount: bootGlitch.amount; seed: bootGlitch.seed }
         Timer { interval: 60; running: true; onTriggered: bootGlitch.kick(1) }
 
-        // Behind the library: sand on a plate, shaken into figures by the
-        // music (cymatics), dim enough to read over.
+        // Behind the library: one plate of sand larger than the window,
+        // shaken by the music (cymatics), dim enough to read over.
         Cymatics {
             anchors.fill: parent
             cell: Math.max(3, Math.round(6 / Style.pixelDensity))
-            // One plate is three quarters of the window's short side, so a
-            // few figures tile across a wide window.
-            plate: Math.min(width, height) * 0.75
             visible: nowPlayingView.opacity < 1
         }
 
@@ -503,7 +500,7 @@ ApplicationWindow {
                                 Layout.bottomMargin: 12
                                 Layout.fillWidth: true
                                 wrapMode: Text.Wrap
-                                text: qsTr("Checks your songs' tags on this computer and proposes fixes from the tags, file names and folders. Fix all writes only the fixes that are certain; the rest are for you to check, one song or one folder at a time, or to answer yourself. Nothing is written until you say so, and U undoes the last thing you did. Duplicates are only pointed out. A coding agent can answer what is left: run halo skill install once, then ask it to fix your music library.")
+                                text: qsTr("Checks your songs' tags on this computer and proposes fixes from the tags, file names and folders. Fix all writes only the fixes that are certain; the rest are for you to check, one song or one folder at a time, or to answer yourself. Nothing is written until you say so, and U undoes the last thing you did. Duplicates are only pointed out. A coding agent can answer what is left: run cymtx skill install once, then ask it to fix your music library.")
                                 color: Style.faint
                                 font.pixelSize: Style.fontSmall
                             }
@@ -513,7 +510,7 @@ ApplicationWindow {
                                 visible: doctor.scanning || doctor.findings.length === 0
                                 busy: doctor.scanning
                                 headline: doctor.scanning ? qsTr("Reading your tags") : qsTr("Nothing to fix")
-                                body: doctor.scanning ? qsTr("Every song's tags, in the background.") : qsTr("Every tag Halo can check looks right.")
+                                body: doctor.scanning ? qsTr("Every song's tags, in the background.") : qsTr("Every tag CymtX can check looks right.")
                             }
                             ListView {
                                 id: findingsList
@@ -822,7 +819,7 @@ ApplicationWindow {
         }
     }
     // A deleted playlist can come back for a few seconds (and later with
-    // `halo playlist restore`): its file waits in the folder's .trash.
+    // `cymtx playlist restore`): its file waits in the folder's .trash.
     Rectangle {
         id: undoDelete
         property string name

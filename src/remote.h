@@ -10,7 +10,7 @@
 
 class Player;
 
-// org.mpris.MediaPlayer2: who Halo is, for media keys, the Omarchy bar and
+// org.mpris.MediaPlayer2: who CymtX is, for media keys, the Omarchy bar and
 // every now-playing widget.
 class MprisRoot : public QDBusAbstractAdaptor {
     Q_OBJECT
@@ -28,8 +28,8 @@ public:
     bool canQuit() const { return true; }
     bool canRaise() const { return true; }
     bool hasTrackList() const { return false; }
-    QString identity() const { return QStringLiteral("Halo"); }
-    QString desktopEntry() const { return QStringLiteral("halo"); }
+    QString identity() const { return QStringLiteral("CymtX"); }
+    QString desktopEntry() const { return QStringLiteral("cymtx"); }
     QStringList uriSchemes() const { return {"file"}; }
     QStringList mimeTypes() const;
 
@@ -106,7 +106,7 @@ private:
     QString m_artFor;
 };
 
-// The MPRIS service and the local socket the `halo` command talks to.
+// The MPRIS service and the local socket the `cymtx` command talks to.
 class LyricsService;
 class Playlists;
 
@@ -119,18 +119,18 @@ public:
 
     // Socket name in $XDG_RUNTIME_DIR.
     static QString socketName();
-    // Sends one request to a running Halo. Returns false if none answers.
+    // Sends one request to a running CymtX. Returns false if none answers.
     static bool send(const QJsonObject &request, QJsonObject *reply, int timeoutMs = 2000);
-    // Whether another Halo is listening, even if it is too busy to answer yet.
+    // Whether another CymtX is listening, even if it is too busy to answer yet.
     static bool running(int timeoutMs = 1000);
 
-    // Starts listening; false (and nothing changed) if another Halo already
+    // Starts listening; false (and nothing changed) if another CymtX already
     // owns the socket.
     bool listen();
     QJsonObject handle(const QJsonObject &request);
     // Why the control socket couldn't be opened, if it couldn't.
     QString error() const { return m_error; }
-    // Lets `halo lyrics` read and steer the lyrics; optional.
+    // Lets `cymtx lyrics` read and steer the lyrics; optional.
     void setLyrics(LyricsService *lyrics) { m_lyrics = lyrics; }
     void setPlaylists(Playlists *playlists) { m_playlists = playlists; }
 

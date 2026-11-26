@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
-import Halo
+import CymtX
 
 // "Add to playlist": a new playlist, then every playlist you can add to
 // (smart ones fill themselves). Works as a submenu or on its own.

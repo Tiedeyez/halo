@@ -21,7 +21,7 @@
 
 namespace {
 
-const QString SmartSuffix = ".halo-smart";
+const QString SmartSuffix = ".cymtx-smart";
 constexpr int TrashKeep = 50;
 
 qint64 nowSeconds() { return QDateTime::currentSecsSinceEpoch(); }
@@ -295,14 +295,14 @@ std::vector<int> Playlists::evaluate(const Playlist &p, const std::vector<Track>
 }
 
 namespace {
-QString haloLine(const Playlist &p) {
-    QJsonObject halo{{"created", p.created}, {"pinned", p.pinned}};
+QString cymtxLine(const Playlist &p) {
+    QJsonObject cymtx{{"created", p.created}, {"pinned", p.pinned}};
     if (!p.description.isEmpty())
-        halo.insert("description", p.description);
+        cymtx.insert("description", p.description);
     // Plain ASCII (other characters as \u escapes), so the line is the same
     // bytes whatever encoding the rest of the file is in.
-    const QString json = QString::fromUtf8(QJsonDocument(halo).toJson(QJsonDocument::Compact));
-    QString out = "#HALO:";
+    const QString json = QString::fromUtf8(QJsonDocument(cymtx).toJson(QJsonDocument::Compact));
+    QString out = "#CYMTX:";
     for (const QChar c : json)
         out += c.unicode() < 0x80 ? QString(c) : QString("\\u%1").arg(uint(c.unicode()), 4, 16, QChar('0'));
     return out;
@@ -327,7 +327,7 @@ static bool perEntryTag(const QString &line) {
 
 QString Playlists::m3u8(const Playlist &p, const std::function<const Track *(const QString &)> &track) {
     QString out = (p.header.isEmpty() ? QStringLiteral("#EXTM3U") : p.header) + "\n#PLAYLIST:" + cleanName(p.name) + "\n" +
-                  haloLine(p) + "\n";
+                  cymtxLine(p) + "\n";
     // Kept lines go back where they were: above their song, or after the
     // song they followed. Each is written once.
     QHash<QString, QList<int>> above, below;
@@ -356,7 +356,7 @@ QString Playlists::m3u8(const Playlist &p, const std::function<const Track *(con
         } else if (p.extinf.contains(key)) {
             out += p.extinf.value(key) + "\n";
         }
-        // A song Halo added a second time is spelt like its first.
+        // A song CymtX added a second time is spelt like its first.
         out += p.written.value(key, p.written.value(path, path)) + "\n";
         put(below.value(key));
     }
@@ -398,8 +398,9 @@ Playlist Playlists::parseM3u(const QByteArray &data, const QString &baseDir) {
         if (line.startsWith('#')) {
             if (line.startsWith("#PLAYLIST:"))
                 p.name = cleanName(line.mid(10));
-            else if (line.startsWith("#HALO:")) {
-                const QJsonObject o = QJsonDocument::fromJson(line.mid(6).toUtf8()).object();
+            else if (line.startsWith("#CYMTX:") || line.startsWith("#HALO:")) {
+                // "#HALO:" is the same line from before the app was renamed.
+                const QJsonObject o = QJsonDocument::fromJson(line.mid(line.indexOf(':') + 1).toUtf8()).object();
                 p.created = qint64(o.value("created").toDouble());
                 p.pinned = o.value("pinned").toBool();
                 p.description = o.value("description").toString().left(2000);
@@ -430,7 +431,7 @@ Playlist Playlists::parseM3u(const QByteArray &data, const QString &baseDir) {
                 path = QDir(baseDir).absoluteFilePath(path);
             }
         }
-        // A stream (Halo plays files), or more songs than Halo lists: not
+        // A stream (CymtX plays files), or more songs than CymtX lists: not
         // shown, and kept in the file as it is.
         if (path.isEmpty() || p.paths.size() >= MaxEntries) {
             pending << raw;
@@ -440,7 +441,7 @@ Playlist Playlists::parseM3u(const QByteArray &data, const QString &baseDir) {
         }
         path = QDir::cleanPath(path);
         const QString key = occurrence(path, count[path]++);
-        // Halo writes #EXTINF for songs in the library; other tags stay.
+        // CymtX writes #EXTINF for songs in the library; other tags stay.
         QString extinf;
         for (int i = int(pending.size()) - 1; i >= 0; --i)
             if (pending[i].trimmed().startsWith("#EXTINF")) {
@@ -473,15 +474,15 @@ QByteArray Playlists::patchHeader(const QByteArray &data, const Playlist &p, boo
     QStringDecoder utf8(QStringDecoder::Utf8);
     (void)QString(utf8(data));
     const QString name_ = cleanName(p.name);
-    const QByteArray halo = haloLine(p).toLatin1(),
+    const QByteArray cymtx = cymtxLine(p).toLatin1(),
                      title = "#PLAYLIST:" + (utf8.hasError() ? name_.toLatin1() : name_.toUtf8());
-    int head = -1, titleAt = -1, haloAt = -1;
+    int head = -1, titleAt = -1, cymtxAt = -1;
     for (int i = 0; i < int(lines.size()); ++i) {
         const QByteArray t = lines[i].trimmed();
         const QByteArray end = lines[i].endsWith('\r') ? "\r" : "";
-        if (t.startsWith("#HALO:")) {
-            lines[i] = halo + end;
-            haloAt = i;
+        if (t.startsWith("#CYMTX:") || t.startsWith("#HALO:")) {
+            lines[i] = cymtx + end;
+            cymtxAt = i;
         } else if (t.startsWith("#PLAYLIST:")) {
             if (name)
                 lines[i] = title + end;
@@ -493,15 +494,15 @@ QByteArray Playlists::patchHeader(const QByteArray &data, const Playlist &p, boo
     int at = titleAt >= 0 ? titleAt + 1 : head >= 0 ? head + 1 : 0;
     if (name && titleAt < 0)
         lines.insert(at++, title + eol);
-    if (haloAt < 0)
-        lines.insert(at, halo + eol);
+    if (cymtxAt < 0)
+        lines.insert(at, cymtx + eol);
     return (hasBom ? bom : QByteArray()) + lines.join('\n');
 }
 
 // ---- Playlists ----
 
 QString Playlists::defaultFolder() {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/halo/playlists";
+    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/cymtx/playlists";
 }
 
 Playlists::Playlists(Library *library, Analyzer *analyzer, const QString &folder, QObject *parent)
@@ -644,7 +645,7 @@ bool Playlists::save(Playlist &p) {
 
 bool Playlists::saveHeader(Playlist &p, bool name) {
     // The file as it is now on disk, with those lines changed: a playlist in
-    // this folder can be another player's too, and may hold things Halo
+    // this folder can be another player's too, and may hold things CymtX
     // doesn't list.
     const QString file = m_files.value(p.id);
     QByteArray data;
@@ -1096,7 +1097,7 @@ QString Playlists::importFile(const QString &file) {
     QByteArray data;
     const QFileInfo info(file);
     if (!info.isFile() || info.size() > MaxFileBytes) {
-        emit message(tr("“%1” isn't a playlist file Halo can read.").arg(info.fileName()));
+        emit message(tr("“%1” isn't a playlist file CymtX can read.").arg(info.fileName()));
         return {};
     }
     QFile f(file);

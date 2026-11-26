@@ -1,26 +1,66 @@
-# Halo
+# CymtX
 
-![Halo playing a song, the Halo visual filling the window: a ring of light with beams above and below](docs/screenshot.png)
+![CymtX playing a song: a mandala of pixel sand on a round plate](docs/screenshot.png)
 
-A music player for Omarchy. Halo plays the music on your disk, analyses
-every song once for its tempo and loudness, and uses that to play your
-library the way a DJ would: songs blend into each other on the phrase, the
-queue never has to run out, and a loud mixtape sits next to a quiet album
-at the same level. Nothing leaves your computer. The window follows your
-Omarchy theme and language.
+Music you can see. CymtX (say "cymatics") is a music player for Omarchy
+built round one idea: sound has a shape. Scatter sand on a metal plate, play
+a note into it, and the sand walks into a figure; change the note and it
+walks into another. CymtX does that to every song, for real: it works out
+how a round plate rings to the music it is playing and where thousands of
+grains of sand would go, and draws the result in square pixels, mirrored
+into a mandala that is never the same twice.
 
-What [DISCLOSURE.md](DISCLOSURE.md) says Halo reads, writes and runs is
+Under the picture it is a full player. It plays the music on your disk,
+analyses every song once for its tempo and loudness, and uses that to play
+your library the way a DJ would: songs blend into each other on the phrase,
+the queue never has to run out, and a loud mixtape sits next to a quiet
+album at the same level. Nothing leaves your computer. The window follows
+your Omarchy theme and language.
+
+CymtX was called Halo until version 1.0.3. It is the same player: the first
+time it starts it takes a copy of Halo's settings, queue, playlists and
+analysis, and a `halo` command still works.
+
+What [DISCLOSURE.md](DISCLOSURE.md) says CymtX reads, writes and runs is
 checked against the source.
 
 ## What it does
 
-- **Blend.** Instead of a fixed crossfade, Halo mixes for eight beats at the
+- **Cymatics.** The picture is worked out, not drawn. Four things happen
+  sixty times a second:
+  - *The plate.* A thin round plate, free at its edge, can only ring in
+    certain shapes, each with its own pitch: rings, spokes, and lattices of
+    both (the solutions of the Kirchhoff-Love plate equation, built from
+    Bessel functions; CymtX solves the free-edge condition for them, and
+    its numbers are tested against the published table in Leissa's
+    *Vibration of Plates*). CymtX's plate has its lowest ring at 55 Hz and
+    its finest lattice near the top of hearing.
+  - *The music.* Each shape is a resonator that answers the part of the
+    spectrum at its own pitch, a treble shape in a few milliseconds, a bass
+    one in a few hundredths of a second, and each is measured against what
+    it usually hears, so a kick drum, a hi-hat and a voice each get the
+    plate for their moment. Nothing is smoothed first: the plate hears the
+    spectrum as it was measured this frame.
+  - *The sand.* Thousands of grains are thrown about where the plate moves
+    and lie where it is still, so they walk downhill to the quiet places.
+    Sand takes up room, so it fills those places like water fills a basin
+    instead of standing on one point. Below the loudness that would lift a
+    grain off the plate nothing moves; a beat is a blow that throws all of
+    it into the air for a moment.
+  - *The mandala.* The shapes used share their spokes, so the plate's
+    motion repeats round the centre and mirrors across each spoke, and the
+    sand's with it. How many times it repeats (5 to 12) comes from the
+    song, the same every time you play it.
+  Under the sand the bare plate glows where it is moving. In a wide window
+  the plate sits on the song's side, clear of the text.
+
+- **Blend.** Instead of a fixed crossfade, CymtX mixes for eight beats at the
   outgoing song's tempo, starting where its music really ends rather than at
   its last second, and skipping the next song's silent lead-in. Halfway
   through, the bass swaps: the outgoing song's lows are filtered away as the
   incoming song's arrive, so two kick drums never pile up. Turn Blend off
   (B) for exact gapless playback, sample for sample.
-- **Drift.** When the queue runs out, Halo keeps going from your library,
+- **Drift.** When the queue runs out, CymtX keeps going from your library,
   picking songs close in tempo (half and double time count) and loudness,
   not played recently, and preferably from another album. Songs Drift adds
   are marked with a wave in the queue.
@@ -28,7 +68,7 @@ checked against the source.
   the start of a song inside an hour-long mixtape. Moments are ticks on the
   seek bar, `[` and `]` jump between them, and the Moments view replays any of
   them.
-- **The visuals.** Every visual is drawn from the song itself (Halo's own FFT
+- **The visuals.** Every visual is drawn from the song itself (CymtX's own FFT
   of what it plays, not every sound on the machine). The first, **Ring**, is a
   ring of square pixels around the cover in your theme's accent, torn sideways
   for a frame on hard beats. V cycles to LED bars, then to the kaleidoscope: a mirrored fractal
@@ -47,7 +87,7 @@ checked against the source.
   ridge lines of the spectrum), **Waterfall** (a scrolling spectrogram),
   **Warp** (flying through stars, faster as the music gets louder),
   **Aurora** (curtains of light with rays). Then three drawn at the screen's
-  full resolution: **Halo** (a ring of light in 3D, seen through a camera
+  full resolution: **CymtX** (a ring of light in 3D, seen through a camera
   and moved by physics: each kick strikes it, so it swells, bounces back and
   rocks on its tilt; plasma flows round it, its brightness round the ring
   follows the spectrum, and every beat sends out radiation, a wavefront
@@ -58,23 +98,15 @@ checked against the source.
   deck made of light and energy: every edge a line of light with faint
   x-ray lines of the parts behind, the grooves carrying the spectrum, a
   shockwave on each beat, the album cover turning on the label as light,
-  and the tonearm following the song). And **Cymatics**: sand on a square
-  plate that the music shakes, as in Chladni's experiment. A plate ringing
-  at one pitch stands still along certain lines and the sand collects on
-  them, so every pitch draws its own figure: a bass line a few broad
-  curves, cymbals and voices a fine lattice. Halo picks the figure from how
-  bright the music sounds, measured against the range the song itself
-  covers, and changes it every two beats, never to one it has just shown.
-  A change throws the sand into the air and it settles on the new lines;
-  loud music packs it tight; under it the plate's two halves glow in turn
-  with the bass.
+  and the tonearm following the song). And **Cymatics**, the one CymtX is named for and
+  the one it opens with.
   In Now Playing, the active visual fills the window behind the song and
   lyrics; a soft window-colour scrim keeps the text at WCAG AAA contrast.
   Ring, Bars, Kaleidoscope, Turntable and Hologram grow beyond the window
-  edges, while Halo and the six square-pixel visuals fill the whole window.
+  edges, while CymtX and the six square-pixel visuals fill the whole window.
   In a wide window the visuals with a middle (Skyline's bass, Pulsar's
-  peak, Warp's vanishing point, the Cymatics plate) put it on the song's
-  side, clear of the text.
+  peak, Warp's vanishing point) put it on the song's side, clear of the
+  text.
   Cover art stays in the centre of Ring and Kaleidoscope, stands on top of
   the Bars, and turns on the label of Turntable and Hologram.
   The spectrum is measured in decibels, so a loud, compressed master holds
@@ -90,14 +122,14 @@ checked against the source.
   press start/stop to play and pause, and take the tonearm's headshell and
   drop the needle anywhere on the record to move through the song.
   Visuals crossfade as V switches them, and the name shows for a moment.
-  C keeps any of them still. `halo visual <name>` switches from a terminal.
-- **The library is a plate of sand.** Behind the library views the same
-  cymatics run dim, in your accent: the figure repeats across the window,
-  keeps to the broad shapes, and changes every eight beats, the plate
-  swelling faintly with the bass. A click anywhere throws the sand round
-  the pointer. It is kept dim enough that the faintest text over it still
-  reads at 7:1, it rests when nothing is playing or settling, and C stills
-  it. Now Playing gives that background to the active music visual instead.
+  C keeps any of them still. `cymtx visual <name>` switches from a terminal.
+- **The library is the same plate.** Behind the library views one plate
+  larger than the window lies under everything: the same sand, in your
+  accent, dim enough that the faintest text over it still reads at 7:1,
+  lifting for the moment of a beat. A click anywhere knocks the plate
+  there and the sand jumps. It rests when nothing is playing or settling,
+  and C stills it. Now Playing gives that background to the active visual
+  instead.
 - **Smooth motion.** Everything moves on the display's own frame clock with
   eased curves: pages surface with a fade and a lift, Now Playing and the
   shortcut sheet rise and settle, covers fade up as they load and crossfade
@@ -110,9 +142,9 @@ checked against the source.
   from a `.lrc` file beside the song, its tags, or (only if you turn it on)
   [LRCLIB](https://lrclib.net), the free lyrics database, which has word
   timing for many songs. If the timing is off, `,` and `.` shift it for that
-  song, and Halo remembers. See [DISCLOSURE.md](DISCLOSURE.md) for exactly
+  song, and CymtX remembers. See [DISCLOSURE.md](DISCLOSURE.md) for exactly
   what a lookup sends.
-- **Pixel glitch, Omarchy style.** Halo borrows the screensaver's look: a
+- **Pixel glitch, Omarchy style.** CymtX borrows the screensaver's look: a
   pixel wordmark, titles that decrypt into place through block shades, and a
   pixel-and-slice glitch as the window opens. C (calm) turns the motion off.
 - **DJ tapes read right.** When a tape tags the host as every track's artist
@@ -140,7 +172,7 @@ checked against the source.
   never taken for an album. Every write is logged and U undoes the last
   thing you did, whole; a file that changed since the check is never
   overwritten. Duplicates are only pointed out, never deleted.
-- **Headphone correction, by itself.** When the output changes, Halo looks
+- **Headphone correction, by itself.** When the output changes, CymtX looks
   its name up among 6,229 headphones measured by oratory1990, crinacle,
   Rtings and others (OPRA's dataset, which includes AutoEQ's) and, on an
   exact match, makes them neutral before your EQ. Bluetooth and USB
@@ -157,12 +189,12 @@ checked against the source.
 - **Playlists.** Make one from the sidebar's +, from any song's or album's
   menu, or from the queue (Save as playlist). Reorder with Alt+Up/Down,
   pin favourites to the top, and undo a delete. They are plain `.m3u8` files
-  in `~/.local/share/halo/playlists`, so other players read them too, and
-  `.m3u` files dropped in that folder show up in Halo. Songs that have moved
+  in `~/.local/share/cymtx/playlists`, so other players read them too, and
+  `.m3u` files dropped in that folder show up in CymtX. Songs that have moved
   are kept and greyed out, not dropped.
 - **Smart playlists.** Rules over title, artist, album, genre, folder, year,
   length, plays, when a song was added or last played, and the tempo and
-  loudness Halo measured: "faster than 118 BPM and played in the last 90
+  loudness CymtX measured: "faster than 118 BPM and played in the last 90
   days". They keep up with the library, show a live count while you edit,
   and start from templates (Heavy rotation, Recently added, Never played,
   Up-tempo, Slow and quiet).
@@ -170,17 +202,17 @@ checked against the source.
   library that would fit: close in tempo and loudness to songs already in it,
   or by the same artists and genres. Worked out on this computer; nothing is
   added until you say so.
-- **Every bar widget is a remote.** Halo speaks MPRIS, so media keys, the
+- **Every bar widget is a remote.** CymtX speaks MPRIS, so media keys, the
   Omarchy bar, and the now-playing widgets on the plugin marketplace control
   it.
 - **See-through like your terminals.** Omarchy makes terminals slightly
-  transparent with a window rule. Halo never changes your Hyprland settings,
+  transparent with a window rule. CymtX never changes your Hyprland settings,
   so to give it the same look, add this line to
   `~/.config/hypr/looknfeel.lua`:
-  `o.transparent_window("^halo$")` (or `o.transparent_window("^halo$", "0.94 0.9")`
+  `o.transparent_window("^cymtx$")` (or `o.transparent_window("^cymtx$", "0.94 0.9")`
   for a little more)
-- **Agents can drive it.** `halo status --json`, `halo add <folder>`,
-  `halo analyze <file> --json` and more; `halo skill install` teaches coding
+- **Agents can drive it.** `cymtx status --json`, `cymtx add <folder>`,
+  `cymtx analyze <file> --json` and more; `cymtx skill install` teaches coding
   agents how.
 
 ![The album grid, with a song playing](docs/albums.png)
@@ -189,7 +221,7 @@ checked against the source.
 
 ## Your music
 
-The first time Halo opens, a short setup asks three things. **Where your
+The first time CymtX opens, a short setup asks three things. **Where your
 music is:** it lists your music folder (`XDG_MUSIC_DIR`, usually `~/Music`),
 `~/Downloads` and a `Music` folder on any drive that is plugged in, each
 with a count of the songs in it, and you tick the ones to play or add your
@@ -197,14 +229,14 @@ own. **How it should play:** Blend, Drift, even loudness and online lyrics,
 each on or off. Then it reads the library and shows the few keys worth
 knowing. Enter moves on, Esc skips it, and Ctrl+, brings it back whenever
 you want to change folders. Your choice is saved one per line in
-`~/.config/halo/folders`, which you can also edit by hand. A folder is an album, which is how mixtapes, rips
+`~/.config/cymtx/folders`, which you can also edit by hand. A folder is an album, which is how mixtapes, rips
 and downloads are laid out; a `CD1` or `Disc 2` folder joins its parent.
 Covers come from an image in the folder or from the files' tags. Files
 shorter than ten seconds (drum one-shots, sample packs) stay out of the
-library, and a folder holding a `.haloignore` or `.nomedia` file is skipped.
+library, and a folder holding a `.cymtxignore` or `.nomedia` file is skipped.
 Drop files or folders on the window to play them.
 
-Halo never changes, moves or deletes a music file.
+CymtX never changes, moves or deletes a music file.
 
 ## Keys
 
@@ -242,34 +274,34 @@ Halo never changes, moves or deletes a music file.
 ## From a terminal
 
 ```sh
-halo open ~/Music/SomeAlbum     # play a folder (or files)
-halo status                     # what is playing and the library scan; --json for scripts
-halo add song.flac ; halo playnext ~/Music/Other
-halo next ; halo pause ; halo seek +30 ; halo volume 60
-halo blend on ; halo drift off ; halo repeat all ; halo sleep 30
-halo visual hologram            # switch the visual (next, previous, or one of the thirteen by name)
-halo lyrics                     # the words of the song playing, the sung line marked
-halo lyrics online on           # look lyrics up on lrclib.net (off by default)
-halo lyrics offset +0.3         # this song's lyrics 0.3 s earlier
-halo analyze track.mp3 --json   # tempo, loudness, where the music starts and stops
-halo scan                       # what is in your music folders, no window needed
-halo doctor                     # what is wrong with your tags, by kind
-halo doctor fix                 # write the fixes that are certain
-halo doctor list noartist       # what is left, with each file's tags
-halo doctor set song.mp3 artist "Drake"
-halo doctor apply answers.json  # many tags at once, undone together
-halo doctor undo                # take back the last fix, set or apply
-halo skill install              # a skill for coding agents
+cymtx open ~/Music/SomeAlbum     # play a folder (or files)
+cymtx status                     # what is playing and the library scan; --json for scripts
+cymtx add song.flac ; cymtx playnext ~/Music/Other
+cymtx next ; cymtx pause ; cymtx seek +30 ; cymtx volume 60
+cymtx blend on ; cymtx drift off ; cymtx repeat all ; cymtx sleep 30
+cymtx visual hologram            # switch the visual (next, previous, or one of the thirteen by name)
+cymtx lyrics                     # the words of the song playing, the sung line marked
+cymtx lyrics online on           # look lyrics up on lrclib.net (off by default)
+cymtx lyrics offset +0.3         # this song's lyrics 0.3 s earlier
+cymtx analyze track.mp3 --json   # tempo, loudness, where the music starts and stops
+cymtx scan                       # what is in your music folders, no window needed
+cymtx doctor                     # what is wrong with your tags, by kind
+cymtx doctor fix                 # write the fixes that are certain
+cymtx doctor list noartist       # what is left, with each file's tags
+cymtx doctor set song.mp3 artist "Drake"
+cymtx doctor apply answers.json  # many tags at once, undone together
+cymtx doctor undo                # take back the last fix, set or apply
+cymtx skill install              # a skill for coding agents
 ```
 
 **Let your agent finish the job.** Omarchy is agent-first, and so is the
-Library Doctor. Halo fixes what it can work out from the tags, file names
+Library Doctor. CymtX fixes what it can work out from the tags, file names
 and folders, with no network. What is left usually needs someone who knows
-the music, and a coding agent does: after `halo skill install`, ask yours
-to "fix my music library". It reads `halo doctor list --json`, answers what
-it recognises through `halo doctor apply`, and leaves the rest. Every tag
+the music, and a coding agent does: after `cymtx skill install`, ask yours
+to "fix my music library". It reads `cymtx doctor list --json`, answers what
+it recognises through `cymtx doctor apply`, and leaves the rest. Every tag
 it writes goes through the same checks and the same undo log as the
-window, so `halo doctor undo` (or U in the Doctor) takes it back.
+window, so `cymtx doctor undo` (or U in the Doctor) takes it back.
 
 Every command takes `--json` and exits 0 on success or 1 with the error on
 stderr.
@@ -279,33 +311,33 @@ stderr.
 From the release, which builds the tagged source and runs the tests first:
 
 ```sh
-git clone https://github.com/Tiedeyez/halo && cd halo/packaging
+git clone https://github.com/Tiedeyez/cymtx && cd cymtx/packaging
 makepkg -si
 ```
 
-Halo is then in the app launcher (Super+Space).
+CymtX is then in the app launcher (Super+Space).
 
-### Halo in the bar
+### CymtX in the bar
 
-The repository is also an Omarchy plugin, **Halo Player** (`tiedeyez.halo`):
+The repository is also an Omarchy plugin, **CymtX Player** (`tiedeyez.halo`):
 the song playing in your bar, with a small player behind it. Install it
-from the Omarchy Marketplace, then add the Halo widget to the bar. It needs
-the Halo app above.
+from the Omarchy Marketplace, then add the CymtX widget to the bar. It needs
+the CymtX app above.
 
 In the bar: the album cover when the song has one, the song and artist, a
 thin line showing how far the song is,
 and an icon of three small bars that dance while it plays (paused, it is
-the note again). Click for the player, right click to bring the Halo window
+the note again). Click for the player, right click to bring the CymtX window
 up, middle click to play or pause, and turn the wheel to skip.
 
 The player has the cover, title, artist and album, the song's tempo and
 loudness and its place in the queue; a seek bar you can drag, click or
 scroll; shuffle, previous, play/pause, next and repeat; Blend, Drift, the
 sleep timer (15, 30, 60, 90 minutes, then off) and a button that saves a
-moment; Halo's own volume; the line being sung and the one coming, when the
+moment; CymtX's own volume; the line being sung and the one coming, when the
 song has lyrics with times; what plays next; and a button that switches the
-visual in the Halo window. The cover, in the bar and in the player, needs
-Halo newer than 1.0.3; with an older Halo the bar has none and the player
+visual in the CymtX window. The cover, in the bar and in the player, needs
+CymtX newer than 1.0.3; with an older CymtX the bar has none and the player
 shows the note in its place.
 
 Settings, all optional, in the widget's entry in `~/.config/omarchy/shell.json`:
@@ -318,53 +350,53 @@ Settings, all optional, in the widget's entry in `~/.config/omarchy/shell.json`:
 | `artwork` | `false` hides the album cover in the bar | `true` |
 | `progress` | `false` hides the line under the label | `true` |
 | `lyrics` | `false` hides the line being sung | `true` |
-| `click` | `"open"`: click opens Halo, right click the player | `"player"` |
-| `scroll` | `"volume"`: the wheel changes Halo's volume | `"track"` |
+| `click` | `"open"`: click opens CymtX, right click the player | `"player"` |
+| `scroll` | `"volume"`: the wheel changes CymtX's volume | `"track"` |
 
-The widget only runs `/usr/bin/halo`, with one of a fixed list of commands
+The widget only runs `/usr/bin/cymtx`, with one of a fixed list of commands
 (`status`, `toggle`, `next`, `previous`, `seek`, `volume`, `shuffle`,
 `repeat`, `blend`, `drift`, `sleep`, `moment`, `visual`, `lyrics`, `open`).
 The only values it passes are whole numbers in a range and a few fixed
-words, never text from a song or a setting. It shows the cover Halo already
+words, never text from a song or a setting. It shows the cover CymtX already
 cached (a local picture), writes no files, changes no settings and opens no
 network connection.
 
 ## Build
 
-Halo is C++ and Qt Quick, built with qmake into one binary. It needs Qt 6
+CymtX is C++ and Qt Quick, built with qmake into one binary. It needs Qt 6
 (base, declarative, multimedia, wayland), TagLib and ffmpeg, all in Arch's
 repositories and all but TagLib already part of Omarchy. Building also needs
 `qt6-shadertools` for `qsb`, which compiles the glitch shader into the binary.
 
 ```sh
-bin/build      # build/halo
+bin/build      # build/cymtx
 bin/test       # the Qt Test suite, offscreen
-bin/install    # makepkg -fsi: installs halo, its icon and launcher entry
+bin/install    # makepkg -fsi: installs cymtx, its icon and launcher entry
 ```
 
-After `bin/install`, Halo is in the app launcher (Super+Space).
+After `bin/install`, CymtX is in the app launcher (Super+Space).
 `bin/install` builds the package from this folder, then `makepkg -i` asks
 for your password once so pacman can install it.
 
 ## Remove
 
 ```sh
-sudo pacman -Rns halo                        # the app, its icon and launcher entry
-rm -rf ~/.local/state/halo ~/.cache/halo     # your queue, play history, lyrics and caches
-rm -rf ~/.config/halo                        # your music folders list
-rm -rf ~/.agents/skills/halo ~/.claude/skills/halo   # only if you ran `halo skill install`
+sudo pacman -Rns cymtx                        # the app, its icon and launcher entry
+rm -rf ~/.local/state/cymtx ~/.cache/cymtx     # your queue, play history, lyrics and caches
+rm -rf ~/.config/cymtx                        # your music folders list
+rm -rf ~/.agents/skills/cymtx ~/.claude/skills/cymtx   # only if you ran `cymtx skill install`
 ```
 
-For the bar widget, remove the Halo widget from the bar, then uninstall
-Halo Player in the Omarchy Marketplace (or delete
+For the bar widget, remove the CymtX widget from the bar, then uninstall
+CymtX Player in the Omarchy Marketplace (or delete
 `~/.config/omarchy/plugins/tiedeyez.halo`). It keeps no files of its own.
 
-Halo never edits your music files except through Library Doctor fixes you
-press or `halo doctor` commands you or your agent run (each one undoable
-while Halo is installed), and never changes Omarchy
-or Hyprland settings, so nothing else needs undoing. If you made Halo your
+CymtX never edits your music files except through Library Doctor fixes you
+press or `cymtx doctor` commands you or your agent run (each one undoable
+while CymtX is installed), and never changes Omarchy
+or Hyprland settings, so nothing else needs undoing. If you made CymtX your
 default player for audio files, pick another in your file manager or remove
-the `halo.desktop` lines from `~/.config/mimeapps.list`.
+the `cymtx.desktop` lines from `~/.config/mimeapps.list`.
 
 ## How it works
 

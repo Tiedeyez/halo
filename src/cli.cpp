@@ -20,13 +20,13 @@
 
 namespace {
 
-const char *Usage = R"(Usage: halo [open] [file or folder ...]
+const char *Usage = R"(Usage: cymtx [open] [file or folder ...]
 A music player for Omarchy: your library, mixed like a DJ would.
 
 Window:
-  open [paths]                 Open Halo, playing the files or folders given
+  open [paths]                 Open CymtX, playing the files or folders given
 
-Control a running Halo:
+Control a running CymtX:
   status [--json]              What is playing
   play | pause | toggle        Start, pause, or flip between them
   next | previous              Skip forward or back
@@ -50,7 +50,7 @@ Control a running Halo:
   lyrics offset <+N|-N|reset>  Show this song's lyrics N seconds earlier or later
   rescan                       Look for new music
 
-Playlists (files in ~/.local/share/halo/playlists, readable by any player):
+Playlists (files in ~/.local/share/cymtx/playlists, readable by any player):
   playlist [list]              List playlists
   playlist show <name>         The songs in a playlist
   playlist new <name> [paths]  Make a playlist, with songs from files or folders
@@ -68,7 +68,7 @@ Playlists (files in ~/.local/share/halo/playlists, readable by any player):
   playlist rename <name> <new> | delete <name> | restore
   playlist import <file.m3u8> | export <name> <file.m3u8>
 
-Library Doctor (needs no running Halo; every write is logged and can be undone):
+Library Doctor (needs no running CymtX; every write is logged and can be undone):
   doctor [--json]              What is wrong with the library's tags, by kind
   doctor list [kind] [--folder <dir>] [--limit N] [--json]
                                The findings, each with the file's tags, the
@@ -81,7 +81,7 @@ Library Doctor (needs no running Halo; every write is logged and can be undone):
                                undone together
   doctor undo                  Take back the last fix, set or apply, whole
 
-Commands that need no running Halo:
+Commands that need no running CymtX:
   scan [--json]                Scan the music folders and report what's there
   analyze <file> [--json]      Tempo, loudness and silent edges of a track
   skill [install]              Print the skill for coding agents, or install it
@@ -92,9 +92,9 @@ Options:
 )";
 
 const char *Skill = R"(---
-name: halo
+name: cymtx
 description: |
-  Control Halo, the Omarchy music player, from the command line: what is
+  Control CymtX, the Omarchy music player, from the command line: what is
   playing, play/pause/skip, queue songs or folders, playlists (make, add to,
   smart rules, suggestions), set volume, Blend
   (beat-aware crossfades), Drift (keeps playing similar music from the
@@ -105,53 +105,53 @@ description: |
   tag, organise or fix a music library.
 ---
 
-# Halo
+# CymtX
 
-Halo must be running for control commands (`halo open` starts it). Every
+CymtX must be running for control commands (`cymtx open` starts it). Every
 command takes `--json`; it exits 0 on success and 1 with the error on stderr.
 
 ```sh
-halo status --json              # {"playing":true,"title":..,"artist":..,"position":..}
-halo add ~/Music/SomeAlbum      # folders are added in file-name order
-halo playnext song.flac
-halo open ~/Music/Album         # replace the queue and play
-halo next ; halo pause ; halo seek +30 ; halo volume 60
-halo queue --json
-halo blend on ; halo drift on ; halo repeat all ; halo sleep 30
-halo analyze track.mp3 --json   # {"bpm":..,"lufs":..,"start":..,"end":..}
-halo scan --json                # library size, no window needed
-halo lyrics --json              # {"lyrics":{"status":"found","kind":"words","current":12,"lines":[..]}}
-halo lyrics offset +0.3         # this song's lyrics 0.3 s earlier (saved per song)
-halo playlist --json            # {"playlists":[{"id":..,"name":..,"count":..,"smart":..}]}
-halo playlist new "Road Trip" ~/Music/Album   # make one (folders become their songs)
-halo playlist addcurrent "Road Trip"          # add the song playing
-halo playlist smart "Fast" "bpm greater 118" "played inLast 90"
-halo playlist play "Road Trip" ; halo playlist suggest "Road Trip" 10
+cymtx status --json              # {"playing":true,"title":..,"artist":..,"position":..}
+cymtx add ~/Music/SomeAlbum      # folders are added in file-name order
+cymtx playnext song.flac
+cymtx open ~/Music/Album         # replace the queue and play
+cymtx next ; cymtx pause ; cymtx seek +30 ; cymtx volume 60
+cymtx queue --json
+cymtx blend on ; cymtx drift on ; cymtx repeat all ; cymtx sleep 30
+cymtx analyze track.mp3 --json   # {"bpm":..,"lufs":..,"start":..,"end":..}
+cymtx scan --json                # library size, no window needed
+cymtx lyrics --json              # {"lyrics":{"status":"found","kind":"words","current":12,"lines":[..]}}
+cymtx lyrics offset +0.3         # this song's lyrics 0.3 s earlier (saved per song)
+cymtx playlist --json            # {"playlists":[{"id":..,"name":..,"count":..,"smart":..}]}
+cymtx playlist new "Road Trip" ~/Music/Album   # make one (folders become their songs)
+cymtx playlist addcurrent "Road Trip"          # add the song playing
+cymtx playlist smart "Fast" "bpm greater 118" "played inLast 90"
+cymtx playlist play "Road Trip" ; cymtx playlist suggest "Road Trip" 10
 ```
 
-Playlists are .m3u8 files (smart ones .halo-smart JSON) in
-~/.local/share/halo/playlists. Deleting moves the file to .trash there
-(`halo playlist restore` brings the last one back).
+Playlists are .m3u8 files (smart ones .cymtx-smart JSON) in
+~/.local/share/cymtx/playlists. Deleting moves the file to .trash there
+(`cymtx playlist restore` brings the last one back).
 
 Online lyrics (lrclib.net) is off unless the user turned it on; it sends the
 title, artist, album and length of each song played. Don't switch it on
-(`halo lyrics online on`) without the user asking.
+(`cymtx lyrics online on`) without the user asking.
 
 ## Fixing a library's tags
 
 The Library Doctor finds wrong and missing tags and fixes what it can work
 out from the tags, file names and folders. What it can't work out is left
 for the person, or for you: you often know whose song a title is. It needs
-no running Halo, and never touches the network.
+no running CymtX, and never touches the network.
 
 ```sh
-halo doctor --json                       # {"kinds":{"noartist":{"count":127,"certain":0},..}}
-halo doctor fix                          # write every certain fix (safe to run first)
-halo doctor list noartist --json         # what is left, with each file's tags
-halo doctor list --folder ~/Music/Tape --json
-halo doctor set song.mp3 artist "Drake"  # one tag
-halo doctor apply answers.json           # many, undone together
-halo doctor undo                         # take back the last fix, set or apply
+cymtx doctor --json                       # {"kinds":{"noartist":{"count":127,"certain":0},..}}
+cymtx doctor fix                          # write every certain fix (safe to run first)
+cymtx doctor list noartist --json         # what is left, with each file's tags
+cymtx doctor list --folder ~/Music/Tape --json
+cymtx doctor set song.mp3 artist "Drake"  # one tag
+cymtx doctor apply answers.json           # many, undone together
+cymtx doctor undo                         # take back the last fix, set or apply
 ```
 
 Kinds: watermark labels numbered notitle noartist noalbum nonumber spelling
@@ -163,7 +163,7 @@ fields are title, artist, album, albumartist, comment, tracknumber. An empty
 value clears album, albumartist or comment.
 
 How to work:
-- Run `halo doctor fix` first, then read what is left a kind or a folder at
+- Run `cymtx doctor fix` first, then read what is left a kind or a folder at
   a time. Proposals that aren't certain say why; check them against the
   file's name, its folder and its neighbours before accepting them.
 - Answer only what you know: a song you recognise, a tape whose track list
@@ -171,15 +171,15 @@ How to work:
   wrong tag is worse than a missing one.
 - Before writing more than a handful of tags, tell the person what you are
   about to change and where. Afterwards say how many tags you wrote and that
-  `halo doctor undo` (or U in Halo's Library Doctor) takes them back.
-- Only files in Halo's music folders can be written. Halo never deletes,
+  `cymtx doctor undo` (or U in CymtX's Library Doctor) takes them back.
+- Only files in CymtX's music folders can be written. CymtX never deletes,
   moves or renames a music file; duplicates are only pointed out.
 
-Music lives in ~/Music (more folders, one per line, in ~/.config/halo/folders).
-Halo changes a music file only through the Library Doctor: a fix someone
-pressed in the window, or a `halo doctor` command. It never moves or deletes
-one. State is in ~/.local/state/halo (the Doctor's undo log is doctor.json
-there) and caches (covers, analysis, library index) in ~/.cache/halo.
+Music lives in ~/Music (more folders, one per line, in ~/.config/cymtx/folders).
+CymtX changes a music file only through the Library Doctor: a fix someone
+pressed in the window, or a `cymtx doctor` command. It never moves or deletes
+one. State is in ~/.local/state/cymtx (the Doctor's undo log is doctor.json
+there) and caches (covers, analysis, library index) in ~/.cache/cymtx.
 )";
 
 QTextStream &out() {
@@ -195,7 +195,7 @@ QTextStream &err() {
 int fail(const QString &message, bool json) {
     if (json)
         out() << QJsonDocument(QJsonObject{{"ok", false}, {"error", message}}).toJson(QJsonDocument::Compact) << "\n";
-    err() << "halo: " << message << "\n";
+    err() << "cymtx: " << message << "\n";
     out().flush();
     err().flush();
     return 1;
@@ -229,9 +229,9 @@ void printStatus(const QJsonObject &s) {
 
 int remote(const QString &command, const QStringList &args, bool json) {
     QJsonArray list;
-    // Paths go over as absolute paths, since Halo has its own cwd. Only for
-    // the commands that take files: `halo visual halo` run from a folder that
-    // holds something named "halo" must still mean the visual.
+    // Paths go over as absolute paths, since CymtX has its own cwd. Only for
+    // the commands that take files: `cymtx visual cymtx` run from a folder that
+    // holds something named "cymtx" must still mean the visual.
     static const QStringList takesFiles{"add", "open", "playnext", "grab"};
     for (const QString &a : args) {
         const QFileInfo info(a);
@@ -252,7 +252,7 @@ int remote(const QString &command, const QStringList &args, bool json) {
     }
     QJsonObject reply;
     if (!Remote::send({{"cmd", command}, {"args", list}}, &reply, 3000))
-        return fail("Halo isn't running. Start it with `halo open`.", json);
+        return fail("CymtX isn't running. Start it with `cymtx open`.", json);
     if (!reply.value("ok").toBool())
         return fail(reply.value("error").toString("the command failed"), json);
     if (json) {
@@ -286,11 +286,11 @@ int remote(const QString &command, const QStringList &args, bool json) {
         if (reply.contains("playlists")) {
             const QJsonArray all = reply.value("playlists").toArray();
             if (all.isEmpty())
-                out() << "No playlists yet. Make one with: halo playlist new <name>\n";
+                out() << "No playlists yet. Make one with: cymtx playlist new <name>\n";
             for (const auto &v : all)
                 out() << (v.toObject().value("pinned").toBool() ? "* " : "  ") << line(v.toObject()) << "\n";
         } else if (reply.contains("deleted")) {
-            out() << "Deleted. Bring it back with: halo playlist restore\n";
+            out() << "Deleted. Bring it back with: cymtx playlist restore\n";
         } else if (reply.contains("file")) {
             out() << "Wrote " << reply.value("file").toString() << "\n";
         } else if (reply.contains("added")) {
@@ -317,7 +317,7 @@ int remote(const QString &command, const QStringList &args, bool json) {
         const QString status = l.value("status").toString();
         const QString kind = l.value("kind").toString();
         if (status == "offline") {
-            out() << "No lyrics on this computer for this song. Turn on lookups with: halo lyrics online on\n";
+            out() << "No lyrics on this computer for this song. Turn on lookups with: cymtx lyrics online on\n";
             return 0;
         }
         if (status != "found") {
@@ -376,7 +376,7 @@ int scan(bool json) {
 
 int analyze(const QStringList &args, bool json) {
     if (args.size() != 1)
-        return fail("usage: halo analyze <file> [--json]", json);
+        return fail("usage: cymtx analyze <file> [--json]", json);
     if (!QFileInfo(args.first()).isFile())
         return fail(QString("%1: no such file").arg(args.first()), json);
     QString error;
@@ -395,7 +395,7 @@ int analyze(const QStringList &args, bool json) {
     return 0;
 }
 
-// `halo doctor ...`: the Library Doctor without a window, for the terminal
+// `cymtx doctor ...`: the Library Doctor without a window, for the terminal
 // and for agents. The same checks, the same guarded writes and the same
 // undo log as the Doctor page.
 int doctor(QStringList args, bool json) {
@@ -416,7 +416,7 @@ int doctor(QStringList args, bool json) {
     static const QStringList kinds{"watermark", "labels", "numbered", "notitle", "noartist", "noalbum", "nonumber",
                                    "spelling", "album", "albumartist", "case", "duplicate"};
     static const QStringList subs{"summary", "list", "fix", "set", "apply", "undo"};
-    const char *usage = "usage: halo doctor [list [kind] [--folder <dir>] [--limit N] | fix [kind] | "
+    const char *usage = "usage: cymtx doctor [list [kind] [--folder <dir>] [--limit N] | fix [kind] | "
                         "set <file> <field> <value> | apply <answers.json> | undo] [--json]";
     if (!subs.contains(sub) || (sub == "set" && args.size() != 3) || (sub == "apply" && args.size() != 1)
         || ((sub == "list" || sub == "fix") && args.size() > 1) || ((sub == "summary" || sub == "undo") && !args.isEmpty()))
@@ -428,7 +428,7 @@ int doctor(QStringList args, bool json) {
     QStringList said;
     QObject::connect(&doctor, &LibraryDoctor::message, [&said](const QString &text) { said << text; });
     auto done = [&](int count, const QString &verb) {
-        // A running Halo shows the new tags once it looks again.
+        // A running CymtX shows the new tags once it looks again.
         if (count > 0 && Remote::running(300))
             Remote::send({{"cmd", "rescan"}, {"args", QJsonArray()}}, nullptr, 1000);
         if (json)
@@ -494,7 +494,7 @@ int doctor(QStringList args, bool json) {
             if (inLibrary.contains(a.path))
                 inside.append(a);
             else
-                said << QString("%1 isn't a song in Halo's music folders; left alone.").arg(a.path);
+                said << QString("%1 isn't a song in CymtX's music folders; left alone.").arg(a.path);
         }
         const int count = doctor.applyAnswers(inside);
         done(count, "written");
@@ -533,7 +533,7 @@ int doctor(QStringList args, bool json) {
                   << "\n";
         else
             out() << total << " findings in " << paths.size() << " songs; " << certain
-                  << " certain (halo doctor fix writes those), " << open << " with no proposal.\n";
+                  << " certain (cymtx doctor fix writes those), " << open << " with no proposal.\n";
         return 0;
     }
 
@@ -578,7 +578,7 @@ int doctor(QStringList args, bool json) {
     return 0;
 }
 
-// Installs like Hype: the skill lives in ~/.agents/skills/halo and is linked
+// Installs like Hype: the skill lives in ~/.agents/skills/cymtx and is linked
 // into ~/.claude/skills so every agent on the machine finds it.
 int skill(const QStringList &args) {
     if (args.isEmpty()) {
@@ -587,17 +587,17 @@ int skill(const QStringList &args) {
     }
     const bool force = args == QStringList{"install", "--force"};
     if (args != QStringList{"install"} && !force)
-        return fail("usage: halo skill [install [--force]]", false);
+        return fail("usage: cymtx skill [install [--force]]", false);
     const QString home = QDir::homePath();
-    const QString directory = home + "/.agents/skills/halo";
-    // Only replace a SKILL.md this command wrote (it starts with "name: halo");
+    const QString directory = home + "/.agents/skills/cymtx";
+    // Only replace a SKILL.md this command wrote (it starts with "name: cymtx");
     // anything else there is someone else's, so it's left alone without --force.
     {
         QFile existing(directory + "/SKILL.md");
         if (!force && existing.open(QIODevice::ReadOnly)) {
             const QByteArray head = existing.read(256);
-            if (!head.startsWith("---\nname: halo\n"))
-                return fail(QString("%1 isn't Halo's; left it alone (halo skill install --force replaces it)")
+            if (!head.startsWith("---\nname: cymtx\n"))
+                return fail(QString("%1 isn't CymtX's; left it alone (cymtx skill install --force replaces it)")
                                 .arg(existing.fileName()), false);
         }
     }
@@ -608,14 +608,14 @@ int skill(const QStringList &args) {
     const QByteArray bytes(Skill);
     if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit())
         return fail(QString("%1: %2").arg(file.fileName(), file.errorString()), false);
-    const QString link = home + "/.claude/skills/halo";
+    const QString link = home + "/.claude/skills/cymtx";
     QDir().mkpath(home + "/.claude/skills");
     const QFileInfo existing(link);
     if (!existing.exists() && !existing.isSymLink())
-        QFile::link("../../.agents/skills/halo", link);
+        QFile::link("../../.agents/skills/cymtx", link);
     else if (!existing.isSymLink())
-        err() << "halo: left " << link << " alone; it isn't a link this command made\n";
-    out() << "Installed the Halo skill in " << directory << "\n";
+        err() << "cymtx: left " << link << " alone; it isn't a link this command made\n";
+    out() << "Installed the CymtX skill in " << directory << "\n";
     return 0;
 }
 
@@ -641,7 +641,7 @@ int run(const QStringList &arguments) {
         return 0;
     }
     if (command == "-v" || command == "--version") {
-        out() << "halo " << QCoreApplication::applicationVersion() << "\n";
+        out() << "cymtx " << QCoreApplication::applicationVersion() << "\n";
         return 0;
     }
     if (command == "scan")
@@ -657,7 +657,7 @@ int run(const QStringList &arguments) {
     static const QStringList needArgument{"seek", "volume", "add", "playnext", "blend", "drift", "shuffle",
                                           "normalize", "repeat", "sleep"};
     if (needArgument.contains(command) && args.isEmpty())
-        return fail(QString("%1 needs a value; see halo --help").arg(command), json);
+        return fail(QString("%1 needs a value; see cymtx --help").arg(command), json);
     return remote(command, args, json);
 }
 

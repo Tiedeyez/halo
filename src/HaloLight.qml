@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Window
-import Halo
+import CymtX
 
 // The Halo visual: a ring of light in 3D, seen through a camera, driven by
 // the music through a little physics (shaders/halolight.frag draws it).

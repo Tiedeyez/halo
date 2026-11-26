@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // A dotted rule of square pixels, for the edges between panels.
 Item {

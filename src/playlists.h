@@ -29,7 +29,7 @@ struct Playlist {
     bool pinned = false;
     qint64 created = 0, modified = 0;
     QStringList paths; // a manual playlist's songs, in order
-    // What else the file holds, so that saving never loses it: lines Halo
+    // What else the file holds, so that saving never loses it: lines CymtX
     // doesn't play (a radio stream, with the tags above it) or doesn't know
     // (another player's tags). `anchor` is the song they sit after, or, with
     // `before`, the song they belong to; empty is the top of the file.
@@ -61,12 +61,12 @@ struct TrackFacts {
     double loudness = 0;   // LUFS, 0 = unknown
 };
 
-// Playlists live as files in ~/.local/share/halo/playlists, so any player
-// can read them and they survive Halo: a manual playlist is an .m3u8
-// (absolute paths, #EXTINF lines, Halo's own details on a #HALO: line that
-// other players skip), a smart playlist a small .halo-smart JSON file.
-// Files dropped into the folder, or written by `halo playlist`, show up
-// in a running Halo by themselves.
+// Playlists live as files in ~/.local/share/cymtx/playlists, so any player
+// can read them and they survive CymtX: a manual playlist is an .m3u8
+// (absolute paths, #EXTINF lines, CymtX's own details on a #CYMTX: line that
+// other players skip), a smart playlist a small .cymtx-smart JSON file.
+// Files dropped into the folder, or written by `cymtx playlist`, show up
+// in a running CymtX by themselves.
 class Playlists : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList all READ all NOTIFY changed)
@@ -135,7 +135,7 @@ public:
     // Parses an .m3u/.m3u8: relative entries resolve against `baseDir`,
     // file:// URLs are decoded, anything else (streams) is skipped.
     static Playlist parseM3u(const QByteArray &data, const QString &baseDir);
-    // The file's bytes with only Halo's own line (and, with `name`, the
+    // The file's bytes with only CymtX's own line (and, with `name`, the
     // #PLAYLIST line) changed or added; every other byte stays, whatever
     // wrote it.
     static QByteArray patchHeader(const QByteArray &data, const Playlist &p, bool name);

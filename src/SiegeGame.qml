@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // Siege: the lyrics as a fixed shooter. Every line still to be sung comes
 // down as a row of letters, timed so it reaches the dashed line the moment
@@ -610,7 +610,7 @@ Item {
         onReleased: game.fireHeld = false
     }
 
-    // Keys the game uses go to it, not to Halo's shortcuts.
+    // Keys the game uses go to it, not to CymtX's shortcuts.
     function ours(key) {
         return key === Qt.Key_Left || key === Qt.Key_Right || key === Qt.Key_A || key === Qt.Key_D
             || key === Qt.Key_Space || key === Qt.Key_Up || key === Qt.Key_W

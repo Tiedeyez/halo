@@ -1,10 +1,15 @@
-pkgname=halo
+pkgname=cymtx
 pkgver=1.0.3
 pkgrel=1
-pkgdesc='A music player for Omarchy: your library, mixed like a DJ would'
+pkgdesc='Music you can see. A music player for Omarchy: your library, mixed like a DJ would, drawn in sand by its own sound'
 arch=('x86_64' 'aarch64')
 license=('MIT' 'CC-BY-SA-4.0')
 depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'taglib' 'ffmpeg')
+# CymtX was called Halo until 1.0.3: it takes that package's place, and
+# keeps a `halo` command for the scripts and bar widgets that still call it.
+provides=('halo')
+conflicts=('halo')
+replaces=('halo')
 makedepends=('gcc' 'make' 'qt6-shadertools')
 source=()
 sha256sums=()
@@ -16,9 +21,10 @@ build() {
 
 package() {
   cd "$startdir/.."
-  install -Dm755 build/halo "$pkgdir/usr/bin/halo"
+  install -Dm755 build/cymtx "$pkgdir/usr/bin/cymtx"
+  ln -s cymtx "$pkgdir/usr/bin/halo"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 src/data/HEADPHONES-LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/HEADPHONES-LICENSE.md"
-  install -Dm644 "$startdir/halo.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/halo.svg"
-  install -Dm644 "$startdir/halo.desktop" "$pkgdir/usr/share/applications/halo.desktop"
+  install -Dm644 "$startdir/cymtx.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/cymtx.svg"
+  install -Dm644 "$startdir/cymtx.desktop" "$pkgdir/usr/share/applications/cymtx.desktop"
 }

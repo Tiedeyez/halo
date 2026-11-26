@@ -1,9 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
-import Halo
+import CymtX
 
 // What a page shows when it has nothing to list: a row of pixels (sweeping
-// while Halo is busy), a headline that decrypts in, and a line on what to do.
+// while CymtX is busy), a headline that decrypts in, and a line on what to do.
 ColumnLayout {
     id: root
     property string headline

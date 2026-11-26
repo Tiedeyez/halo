@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
   "id": "tiedeyez.halo",
-  "name": "Halo Player",
+  "name": "CymtX Player",
   "version": "1.0.3",
   "author": "Tiedeyez",
   "license": "MIT",
-  "description": "Halo in your bar: the song playing in the native Halo music player, with a small player behind it: cover, seek bar, play/pause, next and previous, shuffle and repeat, Blend, Drift, the sleep timer, moments, Halo's volume and the line being sung. The widget only runs the installed /usr/bin/halo command with a fixed list of commands (status, toggle, next, previous, seek, volume, shuffle, repeat, blend, drift, sleep, moment, visual, lyrics, open); it writes no files, edits no configuration and opens no network connection. Needs the Halo app, installed from this repository.",
+  "description": "CymtX in your bar: the song playing in the native CymtX music player, with a small player behind it: cover, seek bar, play/pause, next and previous, shuffle and repeat, Blend, Drift, the sleep timer, moments, CymtX's volume and the line being sung. The widget only runs the installed /usr/bin/cymtx command with a fixed list of commands (status, toggle, next, previous, seek, volume, shuffle, repeat, blend, drift, sleep, moment, visual, lyrics, open); it writes no files, edits no configuration and opens no network connection. Needs the CymtX app, installed from this repository.",
   "kinds": [
     "bar-widget"
   ],
   "entryPoints": {
-    "barWidget": "plugin/HaloWidget.qml"
+    "barWidget": "plugin/CymtXWidget.qml"
   },
   "barWidget": {
-    "displayName": "Halo",
-    "description": "Now playing in Halo, with a player: cover, seek, volume, shuffle, repeat, Blend, Drift, sleep timer and lyrics",
+    "displayName": "CymtX",
+    "description": "Now playing in CymtX, with a player: cover, seek, volume, shuffle, repeat, Blend, Drift, sleep timer and lyrics",
     "category": "Media",
     "allowMultiple": false,
     "defaultSection": "center"

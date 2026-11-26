@@ -25,12 +25,12 @@
 
 namespace {
 const char *Path = "/org/mpris/MediaPlayer2";
-const char *Service = "org.mpris.MediaPlayer2.halo";
+const char *Service = "org.mpris.MediaPlayer2.cymtx";
 
 QDBusObjectPath trackId(const QString &path) {
     // An MPRIS track id is a D-Bus object path, so it can only carry
     // [A-Za-z0-9_]; a hash of the file path is unique enough.
-    return QDBusObjectPath(QStringLiteral("/org/halo/track/t") +
+    return QDBusObjectPath(QStringLiteral("/org/cymtx/track/t") +
                            QString::number(qHash(path), 16));
 }
 }
@@ -207,13 +207,13 @@ Remote::~Remote() {
 }
 
 QString Remote::socketName() {
-    if (!qEnvironmentVariableIsEmpty("HALO_SOCKET"))
-        return qEnvironmentVariable("HALO_SOCKET");
+    if (!qEnvironmentVariableIsEmpty("CYMTX_SOCKET"))
+        return qEnvironmentVariable("CYMTX_SOCKET");
     // Qt hands back a private (0700, yours) runtime folder or nothing. With
     // nothing there is no socket: a fixed name in the shared /tmp could be
     // taken by another account first.
     const QString runtime = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
-    return runtime.isEmpty() ? QString() : runtime + "/halo.sock";
+    return runtime.isEmpty() ? QString() : runtime + "/cymtx.sock";
 }
 
 bool Remote::send(const QJsonObject &request, QJsonObject *reply, int timeoutMs) {
@@ -227,7 +227,7 @@ bool Remote::send(const QJsonObject &request, QJsonObject *reply, int timeoutMs)
     socket.flush();
     // The whole reply has one deadline and a size cap, so whatever listens on
     // the socket can't keep a terminal command (or a bar widget polling
-    // `halo status`) waiting forever by trickling bytes, or fill its memory.
+    // `cymtx status`) waiting forever by trickling bytes, or fill its memory.
     const QDeadlineTimer deadline(timeoutMs);
     while (!socket.canReadLine()) {
         if (socket.bytesAvailable() > Safety::MaxSocketReply || deadline.hasExpired())
@@ -244,9 +244,9 @@ bool Remote::send(const QJsonObject &request, QJsonObject *reply, int timeoutMs)
 }
 
 bool Remote::running(int timeoutMs) {
-    // A connection is accepted by the kernel even while that Halo's main
+    // A connection is accepted by the kernel even while that CymtX's main
     // thread is busy (starting a song, merging a scan), so this doesn't
-    // mistake a slow Halo for none. Waiting for a reply to a ping did, and
+    // mistake a slow CymtX for none. Waiting for a reply to a ping did, and
     // the second launch then took the socket and played over the first.
     if (socketName().isEmpty())
         return false;
@@ -256,7 +256,7 @@ bool Remote::running(int timeoutMs) {
 }
 
 bool Remote::listen() {
-    // Another Halo listening means this one should hand over and exit.
+    // Another CymtX listening means this one should hand over and exit.
     if (running())
         return false;
     // Nobody listening: a socket file left behind by a crash is stale.
@@ -264,15 +264,15 @@ bool Remote::listen() {
         QLocalServer::removeServer(socketName());
     m_server.setSocketOptions(QLocalServer::UserAccessOption);
     if (socketName().isEmpty()) {
-        m_error = tr("Halo has no private runtime folder (XDG_RUNTIME_DIR), so `halo` commands from a terminal won't reach this window.");
+        m_error = tr("CymtX has no private runtime folder (XDG_RUNTIME_DIR), so `cymtx` commands from a terminal won't reach this window.");
     } else if (!m_server.listen(socketName())) {
-        // Another Halo that started at the same moment won the socket.
+        // Another CymtX that started at the same moment won the socket.
         if (running(500))
             return false;
-        // No other Halo: the socket itself can't be made (a path over the
+        // No other CymtX: the socket itself can't be made (a path over the
         // 108-byte limit, a folder that isn't writable). Keep running and
-        // say so; quitting silently looked like Halo never opened.
-        m_error = tr("Halo couldn't open its control socket %1 (%2), so `halo` commands from a terminal won't reach this window.")
+        // say so; quitting silently looked like CymtX never opened.
+        m_error = tr("CymtX couldn't open its control socket %1 (%2), so `cymtx` commands from a terminal won't reach this window.")
                       .arg(socketName(), m_server.errorString());
     }
 
@@ -469,7 +469,7 @@ QJsonObject Remote::handle(const QJsonObject &request) {
     return {{"ok", false}, {"error", QString("unknown command %1").arg(cmd)}};
 }
 
-// `halo playlist ...`: the same playlists the window shows, by name or id.
+// `cymtx playlist ...`: the same playlists the window shows, by name or id.
 QJsonObject Remote::playlistCommand(const QStringList &args) {
     if (!m_playlists)
         return {{"ok", false}, {"error", "playlists aren't available"}};
@@ -508,7 +508,7 @@ QJsonObject Remote::playlistCommand(const QStringList &args) {
         return {{"ok", true}, {"playlist", summary(id)}};
     }
     if (sub == "smart") {
-        // halo playlist smart NAME [any] "plays greater 3" "added inLast 30" ...
+        // cymtx playlist smart NAME [any] "plays greater 3" "added inLast 30" ...
         const QString name = args.value(1);
         if (Playlists::cleanName(name).isEmpty())
             return fail("give the playlist a name");

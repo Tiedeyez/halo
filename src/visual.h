@@ -52,6 +52,9 @@ public:
 
     const std::vector<float> &bands() const { return m_bands; }
     const std::vector<float> &peaks() const { return m_peaks; }
+    // The bands as just measured, before the meter's easing: for what must
+    // answer the music at once (the sand).
+    const std::vector<float> &fresh() const { return m_fresh; }
     // The last 2048 samples the engine played, oldest first (for scopes).
     const std::vector<float> &wave() const { return m_wave; }
     double pulse() const { return m_pulse; }
@@ -96,7 +99,7 @@ private:
     bool m_active = false;
     std::vector<float> m_history, m_read, m_wave;
     size_t m_historyPos = 0;
-    std::vector<float> m_bands, m_peaks, m_peakVelocity;
+    std::vector<float> m_bands, m_peaks, m_peakVelocity, m_fresh;
     double m_pulse = 0, m_level = 0;
     BeatDetector m_beats;
     int m_idleFrames = 0;

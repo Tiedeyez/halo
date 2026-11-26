@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import Halo
+import CymtX
 
 // The main action on a page, filled with the accent. Its words are black or
 // white, whichever reads at 7:1 on the fill (Style.accentInk), and the fill

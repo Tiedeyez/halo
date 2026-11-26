@@ -94,7 +94,7 @@ public:
                      KindWords = Lyrics::Words, KindInstrumental = Lyrics::Instrumental };
     Q_ENUM(KindValue)
 
-    // Directories are for tests; empty means Halo's cache and state folders.
+    // Directories are for tests; empty means CymtX's cache and state folders.
     explicit LyricsService(const QString &cacheDirectory = {}, const QString &stateDirectory = {},
                            QObject *parent = nullptr);
     ~LyricsService() override;

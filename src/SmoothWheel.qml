@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // Mouse-wheel scrolling that glides instead of jumping a notch at a time.
 // Put one inside a ListView, GridView or Flickable: its handler sits on the

@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // Text that decrypts into place, left to right, through block shades and
 // symbols, the way Omarchy's screensaver reveals its logo. Screen readers get

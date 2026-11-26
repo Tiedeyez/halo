@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Window
-import Halo
+import CymtX
 
 // The Kaleidoscope visual (V cycles to it): a mirrored fractal of the song's
 // own, in square pixels and the Omarchy theme's colours. KaleidoPilot works

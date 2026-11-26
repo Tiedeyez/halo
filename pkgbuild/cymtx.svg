@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- CymtX: sand on a ringing plate (the Chladni figure n=2, m=4), in square pixels. -->
+  <rect width="64" height="64" rx="14" fill="#0e0e10"/>
+  <g fill="#FFD60A">
+    <rect x="13.21" y="6.12" width="2.12" height="2.12"/>
+    <rect x="27.39" y="6.12" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="29.76" y="6.12" width="2.12" height="2.12"/>
+    <rect x="32.12" y="6.12" width="2.12" height="2.12"/>
+    <rect x="34.48" y="6.12" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="48.67" y="6.12" width="2.12" height="2.12"/>
+    <rect x="13.21" y="8.48" width="2.12" height="2.12"/>
+    <rect x="27.39" y="8.48" width="2.12" height="2.12"/>
+    <rect x="29.76" y="8.48" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="32.12" y="8.48" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="34.48" y="8.48" width="2.12" height="2.12"/>
+    <rect x="48.67" y="8.48" width="2.12" height="2.12"/>
+    <rect x="10.85" y="10.85" width="2.12" height="2.12"/>
+    <rect x="13.21" y="10.85" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="25.03" y="10.85" width="2.12" height="2.12"/>
+    <rect x="36.85" y="10.85" width="2.12" height="2.12"/>
+    <rect x="48.67" y="10.85" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="51.03" y="10.85" width="2.12" height="2.12"/>
+    <rect x="6.12" y="13.21" width="2.12" height="2.12"/>
+    <rect x="8.48" y="13.21" width="2.12" height="2.12"/>
+    <rect x="10.85" y="13.21" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="22.67" y="13.21" width="2.12" height="2.12"/>
+    <rect x="39.21" y="13.21" width="2.12" height="2.12"/>
+    <rect x="51.03" y="13.21" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="53.39" y="13.21" width="2.12" height="2.12"/>
+    <rect x="55.76" y="13.21" width="2.12" height="2.12"/>
+    <rect x="20.30" y="15.57" width="2.12" height="2.12"/>
+    <rect x="41.57" y="15.57" width="2.12" height="2.12"/>
+    <rect x="17.94" y="17.94" width="2.12" height="2.12"/>
+    <rect x="43.94" y="17.94" width="2.12" height="2.12"/>
+    <rect x="15.57" y="20.30" width="2.12" height="2.12"/>
+    <rect x="46.30" y="20.30" width="2.12" height="2.12"/>
+    <rect x="13.21" y="22.67" width="2.12" height="2.12"/>
+    <rect x="25.03" y="22.67" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="27.39" y="22.67" width="2.12" height="2.12"/>
+    <rect x="29.76" y="22.67" width="2.12" height="2.12"/>
+    <rect x="32.12" y="22.67" width="2.12" height="2.12"/>
+    <rect x="34.48" y="22.67" width="2.12" height="2.12"/>
+    <rect x="36.85" y="22.67" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="48.67" y="22.67" width="2.12" height="2.12"/>
+    <rect x="10.85" y="25.03" width="2.12" height="2.12"/>
+    <rect x="22.67" y="25.03" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="25.03" y="25.03" width="2.12" height="2.12"/>
+    <rect x="36.85" y="25.03" width="2.12" height="2.12"/>
+    <rect x="39.21" y="25.03" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="51.03" y="25.03" width="2.12" height="2.12"/>
+    <rect x="6.12" y="27.39" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="8.48" y="27.39" width="2.12" height="2.12"/>
+    <rect x="22.67" y="27.39" width="2.12" height="2.12"/>
+    <rect x="39.21" y="27.39" width="2.12" height="2.12"/>
+    <rect x="53.39" y="27.39" width="2.12" height="2.12"/>
+    <rect x="55.76" y="27.39" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="6.12" y="29.76" width="2.12" height="2.12"/>
+    <rect x="8.48" y="29.76" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="22.67" y="29.76" width="2.12" height="2.12"/>
+    <rect x="39.21" y="29.76" width="2.12" height="2.12"/>
+    <rect x="53.39" y="29.76" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="55.76" y="29.76" width="2.12" height="2.12"/>
+    <rect x="6.12" y="32.12" width="2.12" height="2.12"/>
+    <rect x="8.48" y="32.12" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="22.67" y="32.12" width="2.12" height="2.12"/>
+    <rect x="39.21" y="32.12" width="2.12" height="2.12"/>
+    <rect x="53.39" y="32.12" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="55.76" y="32.12" width="2.12" height="2.12"/>
+    <rect x="6.12" y="34.48" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="8.48" y="34.48" width="2.12" height="2.12"/>
+    <rect x="22.67" y="34.48" width="2.12" height="2.12"/>
+    <rect x="39.21" y="34.48" width="2.12" height="2.12"/>
+    <rect x="53.39" y="34.48" width="2.12" height="2.12"/>
+    <rect x="55.76" y="34.48" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="10.85" y="36.85" width="2.12" height="2.12"/>
+    <rect x="22.67" y="36.85" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="25.03" y="36.85" width="2.12" height="2.12"/>
+    <rect x="36.85" y="36.85" width="2.12" height="2.12"/>
+    <rect x="39.21" y="36.85" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="51.03" y="36.85" width="2.12" height="2.12"/>
+    <rect x="13.21" y="39.21" width="2.12" height="2.12"/>
+    <rect x="25.03" y="39.21" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="27.39" y="39.21" width="2.12" height="2.12"/>
+    <rect x="29.76" y="39.21" width="2.12" height="2.12"/>
+    <rect x="32.12" y="39.21" width="2.12" height="2.12"/>
+    <rect x="34.48" y="39.21" width="2.12" height="2.12"/>
+    <rect x="36.85" y="39.21" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="48.67" y="39.21" width="2.12" height="2.12"/>
+    <rect x="15.57" y="41.57" width="2.12" height="2.12"/>
+    <rect x="46.30" y="41.57" width="2.12" height="2.12"/>
+    <rect x="17.94" y="43.94" width="2.12" height="2.12"/>
+    <rect x="43.94" y="43.94" width="2.12" height="2.12"/>
+    <rect x="20.30" y="46.30" width="2.12" height="2.12"/>
+    <rect x="41.57" y="46.30" width="2.12" height="2.12"/>
+    <rect x="6.12" y="48.67" width="2.12" height="2.12"/>
+    <rect x="8.48" y="48.67" width="2.12" height="2.12"/>
+    <rect x="10.85" y="48.67" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="22.67" y="48.67" width="2.12" height="2.12"/>
+    <rect x="39.21" y="48.67" width="2.12" height="2.12"/>
+    <rect x="51.03" y="48.67" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="53.39" y="48.67" width="2.12" height="2.12"/>
+    <rect x="55.76" y="48.67" width="2.12" height="2.12"/>
+    <rect x="10.85" y="51.03" width="2.12" height="2.12"/>
+    <rect x="13.21" y="51.03" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="25.03" y="51.03" width="2.12" height="2.12"/>
+    <rect x="36.85" y="51.03" width="2.12" height="2.12"/>
+    <rect x="48.67" y="51.03" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="51.03" y="51.03" width="2.12" height="2.12"/>
+    <rect x="13.21" y="53.39" width="2.12" height="2.12"/>
+    <rect x="27.39" y="53.39" width="2.12" height="2.12"/>
+    <rect x="29.76" y="53.39" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="32.12" y="53.39" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="34.48" y="53.39" width="2.12" height="2.12"/>
+    <rect x="48.67" y="53.39" width="2.12" height="2.12"/>
+    <rect x="13.21" y="55.76" width="2.12" height="2.12"/>
+    <rect x="27.39" y="55.76" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="29.76" y="55.76" width="2.12" height="2.12"/>
+    <rect x="32.12" y="55.76" width="2.12" height="2.12"/>
+    <rect x="34.48" y="55.76" width="2.12" height="2.12" opacity="0.55"/>
+    <rect x="48.67" y="55.76" width="2.12" height="2.12"/>
+  </g>
+</svg>

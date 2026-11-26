@@ -4,16 +4,16 @@ import Quickshell.Io
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
-import "HaloStatus.js" as HaloStatus
+import "CymtXStatus.js" as CymtXStatus
 
-// Halo in the bar: what is playing, and a small player in a popup: the
+// CymtX in the bar: what is playing, and a small player in a popup: the
 // cover, a seek bar, play/pause, next and previous, shuffle and repeat,
-// Blend and Drift, the sleep timer, a moment, Halo's volume and the line
-// being sung. It talks to Halo only by running the `halo` command with one
-// of the fixed argument lists in HaloStatus.js, never through a shell, and
+// Blend and Drift, the sleep timer, a moment, CymtX's volume and the line
+// being sung. It talks to CymtX only by running the `cymtx` command with one
+// of the fixed argument lists in CymtXStatus.js, never through a shell, and
 // the only values it passes are whole numbers in a range and a few fixed
 // words. It reads at most 64 KiB of each reply, gives a command five
-// seconds, shows the cover Halo already cached (a local picture), and
+// seconds, shows the cover CymtX already cached (a local picture), and
 // writes no files, edits no configuration and opens no network connection.
 BarWidget {
   id: root
@@ -21,18 +21,18 @@ BarWidget {
 
   // The installed program. Absolute, so nothing earlier on PATH can stand in
   // for it. Not read from settings; the plugin's own test points it at a stub.
-  property string haloBinary: "/usr/bin/halo"
+  property string cymtxBinary: "/usr/bin/cymtx"
 
-  // What Halo last said, already bounded by HaloStatus.parse().
-  property var state: HaloStatus.emptyState("offline", "")
+  // What CymtX last said, already bounded by CymtXStatus.parse().
+  property var state: CymtXStatus.emptyState("offline", "")
   // When it said it (ms), so the clock can run between replies.
   property real stamp: 0
   property real now: 0
-  // The line being sung, bounded by HaloStatus.parseLyrics().
-  property var lyrics: HaloStatus.emptyLyrics()
+  // The line being sung, bounded by CymtXStatus.parseLyrics().
+  property var lyrics: CymtXStatus.emptyLyrics()
   // Whether asking for this song's lyrics again can show anything new.
   property bool lyricsWanted: true
-  // Until the first reply the widget doesn't claim Halo is missing or off.
+  // Until the first reply the widget doesn't claim CymtX is missing or off.
   property bool checked: false
   property bool popupOpen: false
 
@@ -49,16 +49,16 @@ BarWidget {
   //   artwork         false hides the album cover in the bar     (true)
   //   progress        false hides the line under the bar label   (true)
   //   lyrics          false hides the line being sung            (true)
-  //   click           "open" makes a click open Halo and a right
+  //   click           "open" makes a click open CymtX and a right
   //                   click the player; "player" the reverse     ("player")
-  //   scroll          "volume" makes the wheel change Halo's
+  //   scroll          "volume" makes the wheel change CymtX's
   //                   volume; "track" skips songs                ("track")
   readonly property bool showTitle: setting("showTitle", true) !== false
   readonly property int maxLabelChars: Math.max(8, Math.min(80, Number(setting("maxTitleLength", 32)) || 32))
   readonly property bool showArtwork: setting("artwork", true) !== false
   readonly property bool showProgress: setting("progress", true) !== false
   readonly property bool showLyrics: setting("lyrics", true) !== false
-  readonly property bool clickOpensHalo: setting("click", "player") === "open"
+  readonly property bool clickOpensCymtX: setting("click", "player") === "open"
   readonly property bool scrollVolume: setting("scroll", "track") === "volume"
 
   readonly property color fg: root.bar ? root.bar.foreground : Commons.Color.foreground
@@ -85,7 +85,7 @@ BarWidget {
     onTriggered: root.eqStep = (root.eqStep + 1) % 16
   }
 
-  // The clock between replies: Halo said where the song was at `stamp`, and
+  // The clock between replies: CymtX said where the song was at `stamp`, and
   // a playing song has moved on since. Only runs while something shows it.
   readonly property real elapsed: Math.max(0, now - stamp) / 1000
   readonly property real shownPosition: {
@@ -107,8 +107,8 @@ BarWidget {
     var text = songLine
     return text.length > maxLabelChars ? text.slice(0, maxLabelChars - 1) + "…" : text
   }
-  // The cover Halo cached for the album, as a link to the local file; empty
-  // when there is none (or Halo is too old to name it).
+  // The cover CymtX cached for the album, as a link to the local file; empty
+  // when there is none (or CymtX is too old to name it).
   readonly property string coverUrl: hasSong && state.cover !== ""
     ? "file://" + state.cover.split("/").map(encodeURIComponent).join("/") : ""
   // The cover sits before the label in a horizontal bar, once it has loaded.
@@ -117,23 +117,23 @@ BarWidget {
   readonly property int artRoom: artShown ? artSide + Style.spacing.md : 0
   readonly property bool progressShown: showProgress && hasSong && state.duration > 0 && !vertical
 
-  // Tempo and loudness, when Halo has analysed the song; then the place in
+  // Tempo and loudness, when CymtX has analysed the song; then the place in
   // the queue.
   readonly property string factsLine: {
     var parts = []
-    if (state.bpm > 0) parts.push(strings.t("halo.bpm", "%1 BPM").arg(state.bpm))
-    if (state.hasLoudness) parts.push(strings.t("halo.lufs", "%1 LUFS").arg(state.lufs.toFixed(1)))
-    if (state.queueSize > 0) parts.push(strings.t("halo.place", "%1 of %2").arg(state.queueIndex).arg(state.queueSize))
+    if (state.bpm > 0) parts.push(strings.t("cymtx.bpm", "%1 BPM").arg(state.bpm))
+    if (state.hasLoudness) parts.push(strings.t("cymtx.lufs", "%1 LUFS").arg(state.lufs.toFixed(1)))
+    if (state.queueSize > 0) parts.push(strings.t("cymtx.place", "%1 of %2").arg(state.queueIndex).arg(state.queueSize))
     return parts.join("  ·  ")
   }
 
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
 
   readonly property string stateLine: {
-    if (!checked) return strings.t("halo.checking", "Looking for Halo")
-    if (kind === "missing") return strings.t("halo.missing", "Halo isn't installed")
-    if (kind === "offline") return strings.t("halo.offline", "Halo isn't running")
-    if (kind === "idle") return strings.t("halo.idle", "Nothing is playing")
+    if (!checked) return strings.t("cymtx.checking", "Looking for CymtX")
+    if (kind === "missing") return strings.t("cymtx.missing", "CymtX isn't installed")
+    if (kind === "offline") return strings.t("cymtx.offline", "CymtX isn't running")
+    if (kind === "idle") return strings.t("cymtx.idle", "Nothing is playing")
     return ""
   }
 
@@ -141,7 +141,7 @@ BarWidget {
   // What the player holds, for the plugin's own test.
   readonly property alias playerContent: column
 
-  // ---- talking to Halo ----------------------------------------------------
+  // ---- talking to CymtX ----------------------------------------------------
 
   // One command at a time. Something the user asked for during another
   // command runs as soon as that one ends (the latest wins, so dragging the
@@ -153,7 +153,7 @@ BarWidget {
   function request(name, value) {
     var isPoll = name === "status" || name === "lyrics"
     if (!installed && checked && name !== "status") return
-    var argv = HaloStatus.argv(root.haloBinary, name, value)
+    var argv = CymtXStatus.argv(root.cymtxBinary, name, value)
     if (!argv) return
     if (proc.running) {
       if (!isPoll) queued = { name: name, value: value }
@@ -170,7 +170,7 @@ BarWidget {
 
   function adopt(next) {
     if (next.key !== root.state.key) {
-      root.lyrics = HaloStatus.emptyLyrics()
+      root.lyrics = CymtXStatus.emptyLyrics()
       root.lyricsWanted = true
     }
     root.state = next
@@ -179,9 +179,9 @@ BarWidget {
     root.checked = true
   }
 
-  // Shows a change at once; Halo's reply, a moment later, is what stays.
+  // Shows a change at once; CymtX's reply, a moment later, is what stays.
   function expect(changes) {
-    var next = HaloStatus.withChange(root.state, changes)
+    var next = CymtXStatus.withChange(root.state, changes)
     if (changes.position === undefined) next.position = root.shownPosition
     root.state = next
     root.stamp = Date.now()
@@ -190,15 +190,15 @@ BarWidget {
 
   function finish(exitCode) {
     deadline.stop()
-    var reply = HaloStatus.replyKind(inFlight)
+    var reply = CymtXStatus.replyKind(inFlight)
     var text = proc.buffer
     proc.buffer = ""
     inFlight = ""
     if (reply === "status") {
-      adopt(proc.overflow ? HaloStatus.emptyState("offline", "Halo's reply was too large to read")
-        : HaloStatus.parse(text, exitCode))
+      adopt(proc.overflow ? CymtXStatus.emptyState("offline", "CymtX's reply was too large to read")
+        : CymtXStatus.parse(text, exitCode))
     } else if (reply === "lyrics") {
-      var words = proc.overflow ? HaloStatus.emptyLyrics() : HaloStatus.parseLyrics(text)
+      var words = proc.overflow ? CymtXStatus.emptyLyrics() : CymtXStatus.parseLyrics(text)
       root.lyrics = words
       root.lyricsWanted = words.timed || words.searching
     }
@@ -212,14 +212,14 @@ BarWidget {
     Qt.callLater(function() { root.request(next.name, next.value) })
   }
 
-  function openHalo() {
+  function openCymtX() {
     if (!installed) {
       popupOpen = true
       return
     }
-    // Detached and without a shell: Halo starts, or the running window comes
+    // Detached and without a shell: CymtX starts, or the running window comes
     // forward. The widget doesn't wait for it.
-    Quickshell.execDetached([root.haloBinary, "open"])
+    Quickshell.execDetached([root.cymtxBinary, "open"])
     pollSoon.restart()
   }
 
@@ -246,13 +246,13 @@ BarWidget {
   }
 
   function cycleRepeat() {
-    var next = HaloStatus.nextRepeat(state.repeat)
+    var next = CymtXStatus.nextRepeat(state.repeat)
     expect({ repeat: next })
     request("repeat", next)
   }
 
   function cycleSleep() {
-    var next = HaloStatus.nextSleep(sleepLeft)
+    var next = CymtXStatus.nextSleep(sleepLeft)
     expect({ sleep: next === "off" ? 0 : Number(next) * 60 })
     request("sleep", next)
   }
@@ -267,7 +267,7 @@ BarWidget {
     stdout: SplitParser {
       onRead: function(data) {
         if (proc.overflow) return
-        if (proc.buffer.length + data.length + 1 > HaloStatus.MaxReplyBytes) {
+        if (proc.buffer.length + data.length + 1 > CymtXStatus.MaxReplyBytes) {
           proc.overflow = true
           proc.signal(15)
           return
@@ -282,15 +282,15 @@ BarWidget {
       if (!running && !started) {
         deadline.stop()
         root.inFlight = ""
-        root.state = HaloStatus.emptyState("missing", "")
-        root.lyrics = HaloStatus.emptyLyrics()
+        root.state = CymtXStatus.emptyState("missing", "")
+        root.lyrics = CymtXStatus.emptyLyrics()
         root.checked = true
         root.queued = null
       }
     }
   }
 
-  // The `halo` command gives up on its own after three seconds; this is the
+  // The `cymtx` command gives up on its own after three seconds; this is the
   // backstop if it somehow doesn't.
   Timer {
     id: deadline
@@ -299,7 +299,7 @@ BarWidget {
   }
 
   // The clock runs on its own between replies, so the poll only has to catch
-  // changes: a new song, a pause, a setting flipped in the Halo window.
+  // changes: a new song, a pause, a setting flipped in the CymtX window.
   Timer {
     id: poll
     interval: root.popupOpen ? 2000 : root.playing ? 3000 : root.reachable ? 6000 : 15000
@@ -319,7 +319,7 @@ BarWidget {
     onTriggered: root.request("lyrics")
   }
 
-  // A moment after `halo open`, so the bar catches the window coming up.
+  // A moment after `cymtx open`, so the bar catches the window coming up.
   Timer {
     id: pollSoon
     interval: 1200
@@ -336,7 +336,7 @@ BarWidget {
 
   function pressedWith(mouseButton) {
     if (mouseButton === Qt.MiddleButton) { if (root.hasSong) root.request("toggle") }
-    else if ((mouseButton === Qt.RightButton) !== root.clickOpensHalo) root.openHalo()
+    else if ((mouseButton === Qt.RightButton) !== root.clickOpensCymtX) root.openCymtX()
     else root.popupOpen = !root.popupOpen
   }
 
@@ -351,7 +351,7 @@ BarWidget {
     else root.request("next")
   }
 
-  // The album cover, when Halo has one: a small square before the song. It
+  // The album cover, when CymtX has one: a small square before the song. It
   // takes clicks and the wheel the same as the rest of the widget.
   Item {
     id: artBox
@@ -507,7 +507,7 @@ BarWidget {
             font.pixelSize: root.hasSong ? Style.font.display : Style.font.displayLarge
           }
 
-          // The picture Halo cut and cached for the album: a local file,
+          // The picture CymtX cut and cached for the album: a local file,
           // never a link.
           SizedImage {
             id: cover
@@ -540,8 +540,8 @@ BarWidget {
           Text {
             textFormat: Text.PlainText
             text: root.hasSong ? root.state.artist
-              : root.kind === "missing" ? strings.t("halo.missingHint", "Install the Halo app; see its README.")
-              : root.kind === "offline" && root.checked ? strings.t("halo.offlineHint", "Click Open Halo to start it.")
+              : root.kind === "missing" ? strings.t("cymtx.missingHint", "Install the CymtX app; see its README.")
+              : root.kind === "offline" && root.checked ? strings.t("cymtx.offlineHint", "Click Open CymtX to start it.")
               : ""
             color: root.fgSoft
             font.family: root.face
@@ -607,7 +607,7 @@ BarWidget {
             anchors.left: parent.left
             anchors.leftMargin: seekSlider.knobSize / 2
             textFormat: Text.PlainText
-            text: HaloStatus.clock(seekSlider.dragging ? seekSlider.liveValue : root.shownPosition)
+            text: CymtXStatus.clock(seekSlider.dragging ? seekSlider.liveValue : root.shownPosition)
             color: seekSlider.dragging ? root.fg : root.fgFaint
             font.family: root.face
             font.pixelSize: Style.font.caption
@@ -617,7 +617,7 @@ BarWidget {
             anchors.right: parent.right
             anchors.rightMargin: seekSlider.knobSize / 2
             textFormat: Text.PlainText
-            text: HaloStatus.clock(root.state.duration)
+            text: CymtXStatus.clock(root.state.duration)
             color: root.fgFaint
             font.family: root.face
             font.pixelSize: Style.font.caption
@@ -635,7 +635,7 @@ BarWidget {
 
         Button {
           iconText: "\u{f049d}"   // nf-md-shuffle
-          tooltipText: root.state.shuffle ? strings.t("halo.shuffleOn", "Shuffle is on") : strings.t("halo.shuffleOff", "Shuffle is off")
+          tooltipText: root.state.shuffle ? strings.t("cymtx.shuffleOn", "Shuffle is on") : strings.t("cymtx.shuffleOff", "Shuffle is off")
           foreground: root.fg
           selected: root.state.shuffle
           anchors.verticalCenter: parent.verticalCenter
@@ -644,7 +644,7 @@ BarWidget {
 
         Button {
           iconText: "\u{f04ae}"   // nf-md-skip_previous
-          tooltipText: strings.t("halo.previous", "Previous")
+          tooltipText: strings.t("cymtx.previous", "Previous")
           foreground: root.fg
           enabled: root.hasSong
           opacity: enabled ? 1.0 : 0.4
@@ -654,7 +654,7 @@ BarWidget {
 
         Button {
           iconText: root.playing ? "\u{f03e4}" : "\u{f040a}"   // pause / play
-          tooltipText: root.playing ? strings.t("halo.pause", "Pause") : strings.t("halo.play", "Play")
+          tooltipText: root.playing ? strings.t("cymtx.pause", "Pause") : strings.t("cymtx.play", "Play")
           foreground: root.fg
           horizontalPadding: Style.spacing.panelGap
           iconSize: Style.font.iconLarge
@@ -666,7 +666,7 @@ BarWidget {
 
         Button {
           iconText: "\u{f04ad}"   // nf-md-skip_next
-          tooltipText: strings.t("halo.next", "Next")
+          tooltipText: strings.t("cymtx.next", "Next")
           foreground: root.fg
           enabled: root.hasSong
           opacity: enabled ? 1.0 : 0.4
@@ -676,9 +676,9 @@ BarWidget {
 
         Button {
           iconText: root.state.repeat === "one" ? "\u{f0458}" : "\u{f0456}"   // repeat once / repeat
-          tooltipText: root.state.repeat === "one" ? strings.t("halo.repeatOne", "Repeating this song")
-            : root.state.repeat === "all" ? strings.t("halo.repeatAll", "Repeating the queue")
-            : strings.t("halo.repeatOff", "Repeat is off")
+          tooltipText: root.state.repeat === "one" ? strings.t("cymtx.repeatOne", "Repeating this song")
+            : root.state.repeat === "all" ? strings.t("cymtx.repeatAll", "Repeating the queue")
+            : strings.t("cymtx.repeatOff", "Repeat is off")
           foreground: root.fg
           selected: root.state.repeat !== "off"
           anchors.verticalCenter: parent.verticalCenter
@@ -686,7 +686,7 @@ BarWidget {
         }
       }
 
-      // What makes Halo Halo: Blend, Drift, the sleep timer and moments.
+      // What makes CymtX CymtX: Blend, Drift, the sleep timer and moments.
       Row {
         id: modes
         width: parent.width
@@ -696,16 +696,16 @@ BarWidget {
 
         ModeButton {
           width: modes.each
-          text: strings.t("halo.blend", "Blend")
-          tooltipText: strings.t("halo.blendTip", "Mix each song into the next on the beat")
+          text: strings.t("cymtx.blend", "Blend")
+          tooltipText: strings.t("cymtx.blendTip", "Mix each song into the next on the beat")
           selected: root.state.blend
           onClicked: root.setMode("blend", !root.state.blend)
         }
 
         ModeButton {
           width: modes.each
-          text: strings.t("halo.drift", "Drift")
-          tooltipText: strings.t("halo.driftTip", "Keep playing similar music when the queue ends")
+          text: strings.t("cymtx.drift", "Drift")
+          tooltipText: strings.t("cymtx.driftTip", "Keep playing similar music when the queue ends")
           selected: root.state.drift
           onClicked: root.setMode("drift", !root.state.drift)
         }
@@ -713,25 +713,25 @@ BarWidget {
         ModeButton {
           width: modes.each
           text: root.sleepLeft > 0
-            ? strings.t("halo.sleepLeft", "%1 min").arg(Math.max(1, Math.ceil(root.sleepLeft / 60)))
-            : strings.t("halo.sleep", "Sleep")
+            ? strings.t("cymtx.sleepLeft", "%1 min").arg(Math.max(1, Math.ceil(root.sleepLeft / 60)))
+            : strings.t("cymtx.sleep", "Sleep")
           tooltipText: root.sleepLeft > 0
-            ? strings.t("halo.sleepOnTip", "Pauses when the time is up. Click for longer, then off.")
-            : strings.t("halo.sleepTip", "Fade out and pause after 15, 30, 60 or 90 minutes")
+            ? strings.t("cymtx.sleepOnTip", "Pauses when the time is up. Click for longer, then off.")
+            : strings.t("cymtx.sleepTip", "Fade out and pause after 15, 30, 60 or 90 minutes")
           selected: root.sleepLeft > 0
           onClicked: root.cycleSleep()
         }
 
         ModeButton {
           width: modes.each
-          text: strings.t("halo.moment", "Moment")
-          tooltipText: strings.t("halo.momentTip", "Save this second of the song")
+          text: strings.t("cymtx.moment", "Moment")
+          tooltipText: strings.t("cymtx.momentTip", "Save this second of the song")
           enabled: root.hasSong
           onClicked: root.request("moment")
         }
       }
 
-      // Halo's own volume, not the system's.
+      // CymtX's own volume, not the system's.
       Row {
         width: parent.width
         spacing: Style.space(6)
@@ -813,7 +813,7 @@ BarWidget {
       Text {
         textFormat: Text.PlainText
         visible: root.hasSong && root.state.hasNext && root.state.nextTitle !== ""
-        text: strings.t("halo.upNext", "Up next: %1").arg(root.state.nextTitle + (root.state.nextArtist ? " · " + root.state.nextArtist : ""))
+        text: strings.t("cymtx.upNext", "Up next: %1").arg(root.state.nextTitle + (root.state.nextArtist ? " · " + root.state.nextArtist : ""))
         color: root.fgSoft
         font.family: root.face
         font.pixelSize: Style.font.caption
@@ -821,7 +821,7 @@ BarWidget {
         width: parent.width
       }
 
-      // Something Halo wants said: a file it couldn't play, say.
+      // Something CymtX wants said: a file it couldn't play, say.
       Text {
         textFormat: Text.PlainText
         visible: root.reachable && root.state.problem !== ""
@@ -846,13 +846,13 @@ BarWidget {
 
         Button {
           width: footer.width - (visualButton.visible ? visualButton.width + footer.spacing : 0)
-          text: strings.t("halo.open", "Open Halo")
+          text: strings.t("cymtx.open", "Open CymtX")
           foreground: root.fg
           bordered: true
           enabled: root.installed
           opacity: enabled ? 1.0 : 0.4
           onClicked: {
-            root.openHalo()
+            root.openCymtX()
             root.popupOpen = false
           }
         }
@@ -860,8 +860,8 @@ BarWidget {
         Button {
           id: visualButton
           visible: root.reachable
-          text: strings.t("halo.visual", "Visual")
-          tooltipText: strings.t("halo.visualTip", "Switch the visual in the Halo window")
+          text: strings.t("cymtx.visual", "Visual")
+          tooltipText: strings.t("cymtx.visualTip", "Switch the visual in the CymtX window")
           foreground: root.fg
           bordered: true
           onClicked: root.request("visual", "next")

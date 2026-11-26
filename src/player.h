@@ -186,7 +186,7 @@ public:
                                   const QList<QPair<QString, TrackAnalysis>> &candidates);
 
     QJsonObject status() const;
-    // Never write the state file (a second Halo handing over to the first).
+    // Never write the state file (a second CymtX handing over to the first).
     void forgetState() { m_stateFile.clear(); }
 
 public slots:
@@ -300,7 +300,7 @@ private:
     bool m_normalize = true;
     bool m_calm = false;
     bool m_onboarded = false;
-    int m_visualStyle = 0;
+    int m_visualStyle = 12;   // Cymatics, the visual CymtX is named for
     bool m_eqEnabled = false;
     std::array<double, 10> m_eqGains{};
     double m_eqPreamp = 0;

@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // A row of square pixels for work in progress. With a known fraction the
 // pixels fill left to right; without one a short bright run sweeps across,

@@ -1,5 +1,5 @@
 import QtQuick
-import Halo
+import CymtX
 
 // A playlist's face: its first album's cover, or four covers in a grid
 // once it holds four albums. Empty and smart playlists get a glyph tile.

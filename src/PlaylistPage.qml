@@ -3,10 +3,10 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
 import QtCore
-import Halo
+import CymtX
 
 // One playlist: its face, play / shuffle / queue, the songs, and for a
-// playlist you build by hand, songs Halo thinks would fit (by tempo,
+// playlist you build by hand, songs CymtX thinks would fit (by tempo,
 // loudness, artists and genres, all worked out on this computer).
 FocusScope {
     id: root
@@ -233,7 +233,7 @@ FocusScope {
                             Layout.fillWidth: true
                             text: root.suggestions.length
                                   ? qsTr("Would fit: close in tempo and loudness, or by artists and genres already here")
-                                  : qsTr("Nothing to suggest yet: Halo needs your library analysed, or more songs here.")
+                                  : qsTr("Nothing to suggest yet: CymtX needs your library analysed, or more songs here.")
                             color: Style.faint
                             font.pixelSize: Style.fontSmall
                             wrapMode: Text.Wrap
