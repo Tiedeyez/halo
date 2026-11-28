@@ -11,7 +11,7 @@ start. It is not sandboxed.
 
 ## Where it came from
 
-CymtX was called Halo until 1.0.3. The first time CymtX starts for a user
+CymtX was called Halo until 1.1.0. The first time CymtX starts for a user
 who has Halo's folders (`~/.local/state/halo`, `~/.cache/halo`,
 `~/.config/halo`, `~/.local/share/halo`), it copies each to the same place
 under the name `cymtx`. It reads Halo's folders once and never changes or

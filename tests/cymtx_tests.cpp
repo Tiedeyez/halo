@@ -1942,18 +1942,30 @@ private slots:
         QVERIFY(!remote.handle({{"cmd", "nonsense"}}).value("ok").toBool());
         QVERIFY(!remote.handle({{"cmd", "grab"}, {"args", QJsonArray{"/tmp/x.txt"}}}).value("ok").toBool());
         // visual: by name, by number, next/previous wrapping, bad names refused.
-        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"halo"}}}).value("visual").toString(), QString("halo"));
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"turntable"}}}).value("visual").toString(), QString("turntable"));
         QCOMPARE(player.visualStyle(), 9);
-        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("turntable"));
-        QCOMPARE(player.visualStyle(), 10);
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("hologram"));
-        QCOMPARE(player.visualStyle(), 11);
+        QCOMPARE(player.visualStyle(), 10);
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("cymatics"));
-        QCOMPARE(player.visualStyle(), 12);
+        QCOMPARE(player.visualStyle(), 11);
+        // The Halo visual was removed in 1.1.0: its name is refused, and a
+        // state saved by 1.0.x (a number, Halo in ninth place) keeps its visual.
+        QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"halo"}}}).value("ok").toBool());
+        QCOMPARE(player.visualStyle(), 11);
+        QCOMPARE(Player::visualCount(), 12);
+        QCOMPARE(Player::visualFromSaved({{"visual", 2}}), 2);
+        QCOMPARE(Player::visualFromSaved({{"visual", 9}}), 11);
+        QCOMPARE(Player::visualFromSaved({{"visual", 10}}), 9);
+        QCOMPARE(Player::visualFromSaved({{"visual", 11}}), 10);
+        QCOMPARE(Player::visualFromSaved({{"visual", 12}}), 11);
+        QCOMPARE(Player::visualFromSaved({{"visual", 99}}), 11);
+        QCOMPARE(Player::visualFromSaved({}), 11);
+        QCOMPARE(Player::visualFromSaved({{"visualName", "hologram"}, {"visual", 3}}), 10);
+        QCOMPARE(Player::visualFromSaved({{"visualName", "halo"}}), 11);
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"next"}}}).value("visual").toString(), QString("ring"));
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"previous"}}}).value("visual").toString(), QString("cymatics"));
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"3"}}}).value("visual").toString(), QString("skyline"));
-        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"10"}}}).value("visual").toString(), QString("turntable"));
+        QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"9"}}}).value("visual").toString(), QString("turntable"));
         QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"13"}}}).value("ok").toBool());
         QCOMPARE(remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"3"}}}).value("visual").toString(), QString("skyline"));
         QVERIFY(!remote.handle({{"cmd", "visual"}, {"args", QJsonArray{"mandelbrot"}}}).value("ok").toBool());

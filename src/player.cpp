@@ -454,10 +454,33 @@ void Player::setOnboarded(bool on) {
     scheduleSave();
 }
 
+const QStringList &Player::visualNames() {
+    static const QStringList names{"ring", "bars", "kaleidoscope", "skyline", "phosphor", "pulsar",
+                                   "waterfall", "warp", "aurora", "turntable", "hologram", "cymatics"};
+    return names;
+}
+
+int Player::visualFromSaved(const QJsonObject &settings) {
+    const int cymatics = int(visualNames().indexOf("cymatics"));
+    const int named = int(visualNames().indexOf(settings.value("visualName").toString()));
+    if (named >= 0)
+        return named;
+    if (!settings.contains("visual"))
+        return cymatics;
+    // 1.0.x: ring .. aurora were 0 to 8 as now, then halo 9, turntable 10,
+    // hologram 11, cymatics 12. The Halo visual is gone; it becomes Cymatics.
+    const int old = settings.value("visual").toInt(-1);
+    if (old >= 0 && old <= 8)
+        return old;
+    if (old == 10 || old == 11)
+        return old - 1;
+    return cymatics;
+}
+
 void Player::setVisualStyle(int style) {
     if (style == m_visualStyle)
         return;
-    m_visualStyle = std::clamp(style, 0, 12);
+    m_visualStyle = std::clamp(style, 0, visualCount() - 1);
     emit settingsChanged();
     scheduleSave();
 }
@@ -1223,7 +1246,7 @@ void Player::save() {
         {"volume", m_volume},
         {"settings", QJsonObject{{"blend", m_blend}, {"drift", m_drift}, {"shuffle", m_shuffle},
                                  {"repeat", m_repeat}, {"normalize", m_normalize}, {"calm", m_calm},
-                                 {"visual", m_visualStyle}, {"onboarded", m_onboarded}}},
+                                 {"visualName", visualNames().value(m_visualStyle)}, {"onboarded", m_onboarded}}},
         {"eq", QJsonObject{{"enabled", m_eqEnabled}, {"gains", gains}, {"preamp", m_eqPreamp},
                            {"preset", m_eqPreset}}},
         {"moments", moments}};
@@ -1257,7 +1280,7 @@ void Player::restore() {
     m_normalize = settings.value("normalize").toBool(true);
     m_calm = settings.value("calm").toBool(false);
     m_onboarded = settings.value("onboarded").toBool(false);
-    m_visualStyle = std::clamp(settings.value("visual").toInt(12), 0, 12);
+    m_visualStyle = visualFromSaved(settings);
     const QJsonObject eq = root.value("eq").toObject();
     m_eqEnabled = eq.value("enabled").toBool(false);
     const QJsonArray gains = eq.value("gains").toArray();

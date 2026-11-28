@@ -21,7 +21,7 @@ Rectangle {
     readonly property bool showWords: lyricsOn && hasWords
     readonly property bool wide: width >= 1080 && height >= 560
     readonly property var visualNames: [qsTr("RING"), qsTr("BARS"), qsTr("KALEIDOSCOPE"), qsTr("SKYLINE"),
-        qsTr("PHOSPHOR"), qsTr("PULSAR"), qsTr("WATERFALL"), qsTr("WARP"), qsTr("AURORA"), qsTr("HALO"), qsTr("TURNTABLE"), qsTr("HOLOGRAM"), qsTr("CYMATICS")]
+        qsTr("PHOSPHOR"), qsTr("PULSAR"), qsTr("WATERFALL"), qsTr("WARP"), qsTr("AURORA"), qsTr("TURNTABLE"), qsTr("HOLOGRAM"), qsTr("CYMATICS")]
     readonly property real gutter: Math.max(16, Math.min(48, Math.min(width, height) * 0.05))
 
     // The cover's colours wash the background, softly: only its colours.
@@ -56,7 +56,7 @@ Rectangle {
     // ---- pieces ----
 
     // The active visual is the background. The pixel visuals fill the whole
-    // window; the round ones (halo, kaleidoscope, hologram, turntable) and the cover
+    // window; the round ones (ring, kaleidoscope, hologram, turntable, cymatics) and the cover
     // centre on the song's side of a wide window, left of the text column,
     // and are sized from that area so they fill its height and bleed a
     // little past it, rather than being centred on the window and half
@@ -77,7 +77,7 @@ Rectangle {
             width: 0
             height: 0
         }
-        // The halo: the ring of rays, drawn one cell per pixel like the
+        // The ring: a circle of rays, drawn one cell per pixel like the
         // others (68 x pixelDensity cells across).
         PixelVisualView {
             anchors.centerIn: focusPoint
@@ -112,23 +112,13 @@ Rectangle {
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
-        // The halo: a ring of light over the whole window, its light
-        // reaching above and below; the ring centres on the song's side.
-        HaloLight {
-            anchors.fill: parent
-            centre: Qt.point(focusPoint.x / Math.max(1, width), focusPoint.y / Math.max(1, height))
-            ringRadius: stage.shortSide * 0.36
-            opacity: player.visualStyle === 9 ? 1 : 0
-            visible: opacity > 0
-            Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
-        }
         // The hologram: the Turntable's deck made of light, the same square
         // render, so the same size.
         HologramVisual {
             anchors.centerIn: focusPoint
             width: Math.min(stage.focusH * 1.2, stage.focusW * 1.15)
             height: width
-            opacity: player.visualStyle === 11 ? 1 : 0
+            opacity: player.visualStyle === 10 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
@@ -140,7 +130,7 @@ Rectangle {
             origin: Qt.point(focusPoint.x, focusPoint.y)
             plate: Math.min(stage.focusH * 0.94, stage.focusW * 0.98)
             cell: Math.max(3, Math.round(plate / (160 * Style.pixelDensity)))
-            opacity: player.visualStyle === 12 ? 1 : 0
+            opacity: player.visualStyle === 11 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
@@ -150,7 +140,7 @@ Rectangle {
             anchors.centerIn: focusPoint
             width: Math.min(stage.focusH * 1.2, stage.focusW * 1.15)
             height: width
-            opacity: player.visualStyle === 10 ? 1 : 0
+            opacity: player.visualStyle === 9 ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
         }
@@ -161,7 +151,7 @@ Rectangle {
             Behavior on anchors.verticalCenterOffset { NumberAnimation { duration: Style.motion ? Style.gentle : 0; easing.type: Easing.OutCubic } }
             glitchOnChange: true
             visible: player.visualStyle <= 2
-            // Inside the halo's ring; small in the kaleidoscope so the
+            // Inside the ring; small in the kaleidoscope so the
             // fractal leads; as large over the bars as the room above them.
             width: player.visualStyle === 0 ? stage.haloSide * 0.46
                  : player.visualStyle === 2 ? stage.shortSide * 0.28
@@ -437,7 +427,7 @@ Rectangle {
 
     // ---- layouts ----
 
-    // Without lyrics: the halo large, the song beside it.
+    // Without lyrics: the visual large, the song beside it.
     Component {
         id: songLayout
         RowLayout {
@@ -502,7 +492,7 @@ Rectangle {
         }
     }
 
-    // Lyrics, wide: halo and song on the left, the words filling the right.
+    // Lyrics, wide: visual and song on the left, the words filling the right.
     Component {
         id: wideLyricsLayout
         RowLayout {

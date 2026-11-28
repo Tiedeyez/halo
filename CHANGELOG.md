@@ -1,9 +1,9 @@
 # Changelog
 
-Halo follows [semantic versioning](https://semver.org). Each release has
+CymtX follows [semantic versioning](https://semver.org). Each release has
 notes on its GitHub release page as well.
 
-## Unreleased
+## 1.1.0 (2026-11-27)
 
 Halo is now CymtX: the same player, named for cymatics, the shapes sound
 makes, and built round them.
@@ -16,13 +16,19 @@ makes, and built round them.
   scripts and bar widgets that still call it. Playlists and `.haloignore`
   files from Halo still work. `HALO_*` environment variables are now
   `CYMTX_*`.
-- **Cymatics, a thirteenth visual and the one CymtX opens with**
+- **Cymatics, a new visual and the one CymtX opens with**
   (`cymtx visual cymatics`): sand on a round plate shaken by the song,
   worked out from the plate's physics. The plate's modes (the free-edge
   solutions of the plate equation, tested against Leissa's table) ring to
   the spectrum, each in its own time; thousands of grains walk to where the
   plate is still, take up room, and are thrown by every beat; and the
   whole is mirrored into a mandala whose fold comes from the song.
+- **The Halo visual is gone.** Cymatics takes its place, and there are
+  twelve visuals as before. If Halo was the visual you had chosen, CymtX
+  opens on Cymatics; any other choice is kept. `cymtx visual halo` is no
+  longer a name, and the numbers after `aurora` moved down by one
+  (`turntable` 9, `hologram` 10, `cymatics` 11), so scripts should use the
+  names.
 - **The window's background is the same plate**, in place of the water:
   sand only, dim and in the accent. A click knocks the plate. Text over it
   still reads at 7:1.
@@ -44,9 +50,9 @@ makes, and built round them.
 
 The bar widget grows into a small player.
 
-- **A player in the bar.** Click the Halo widget for the cover, a seek bar
+- **A player in the bar.** Click the CymtX widget for the cover, a seek bar
   you can drag, shuffle and repeat, Blend and Drift, the sleep timer, a
-  moment button, Halo's own volume, the line being sung, the song's tempo
+  moment button, CymtX's own volume, the line being sung, the song's tempo
   and loudness, its place in the queue, and a button that switches the
   visual. The clock runs smoothly between replies, and a change shows at
   once instead of after the next poll.
@@ -54,24 +60,24 @@ The bar widget grows into a small player.
   is one (`"artwork": false` hides it), a thin line shows how far the song
   is (`"progress": false` hides it), and the wheel can change the volume
   instead of skipping (`"scroll": "volume"`).
-- **Click now opens the player and right click opens Halo**, the reverse
+- **Click now opens the player and right click opens CymtX**, the reverse
   of before; `"click": "open"` in the widget's settings puts it back.
-- **`halo status --json` names the cover** (`cover`, the cached picture's
+- **`cymtx status --json` names the cover** (`cover`, the cached picture's
   path) once the album's art is cached, for the widget and for scripts.
-- The widget still runs only `/usr/bin/halo` with a fixed list of commands.
+- The widget still runs only `/usr/bin/cymtx` with a fixed list of commands.
   The values it passes are whole numbers in a range and a few fixed words;
-  the list and the checks are in `plugin/HaloStatus.js` and are tested.
+  the list and the checks are in `plugin/CymtXStatus.js` and are tested.
 
 Library Doctor, made to hold up on a badly kept library.
 
-- **`halo doctor`, for the terminal and for your agent.** `halo doctor`
+- **`cymtx doctor`, for the terminal and for your agent.** `cymtx doctor`
   sums up what is wrong, `list` shows the findings with each file's tags
   (`--json` for an agent), `fix` writes the certain fixes, `set` and `apply`
   write answers from outside (one tag, or a JSON list undone together), and
   `undo` takes the last of them back. No window is needed, nothing touches
   the network, only songs in your music folders can be written, and every
   write goes through the same checks and undo log as the window. The skill
-  (`halo skill install`) now teaches a coding agent to finish a library the
+  (`cymtx skill install`) now teaches a coding agent to finish a library the
   Doctor couldn't: answer what it recognises, leave the rest, say what it
   changed.
 

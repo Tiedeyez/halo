@@ -96,6 +96,7 @@ class Player : public QObject {
     // The welcome screen has been seen (or music was found without it).
     Q_PROPERTY(bool onboarded READ onboarded WRITE setOnboarded NOTIFY settingsChanged)
     Q_PROPERTY(int visualStyle READ visualStyle WRITE setVisualStyle NOTIFY settingsChanged)
+    Q_PROPERTY(int visualCount READ visualCount CONSTANT)
     Q_PROPERTY(bool eqEnabled READ eqEnabled WRITE setEqEnabled NOTIFY eqChanged)
     Q_PROPERTY(QVariantList eqGains READ eqGains NOTIFY eqChanged)
     Q_PROPERTY(double eqPreamp READ eqPreamp WRITE setEqPreamp NOTIFY eqChanged)
@@ -158,6 +159,13 @@ public:
     void setOnboarded(bool on);
     int visualStyle() const { return m_visualStyle; }
     void setVisualStyle(int style);
+    // The visuals in the order V cycles them. A visual is saved by its name,
+    // so the list can change between versions without moving anyone's choice.
+    static const QStringList &visualNames();
+    static int visualCount() { return int(visualNames().size()); }
+    // The visual a saved state means: its name, or (from 1.0.x, which saved a
+    // number and had the Halo visual in ninth place) the old number.
+    static int visualFromSaved(const QJsonObject &settings);
     bool eqEnabled() const { return m_eqEnabled; }
     void setEqEnabled(bool on);
     QVariantList eqGains() const;
@@ -300,7 +308,7 @@ private:
     bool m_normalize = true;
     bool m_calm = false;
     bool m_onboarded = false;
-    int m_visualStyle = 12;   // Cymatics, the visual CymtX is named for
+    int m_visualStyle = 11;   // Cymatics, the visual CymtX is named for
     bool m_eqEnabled = false;
     std::array<double, 10> m_eqGains{};
     double m_eqPreamp = 0;

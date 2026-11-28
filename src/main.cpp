@@ -36,7 +36,7 @@
 #include "visual.h"
 #include "visualizers.h"
 
-static constexpr const char *Version = "1.0.3";
+static constexpr const char *Version = "1.1.0";
 
 int main(int argc, char *argv[]) {
     // CymtX was Halo: the first start takes a copy of what Halo kept.

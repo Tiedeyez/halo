@@ -22,7 +22,6 @@
         <file alias="PixelKaleido.qml">PixelKaleido.qml</file>
         <file alias="PixelVisualView.qml">PixelVisualView.qml</file>
         <file alias="HologramVisual.qml">HologramVisual.qml</file>
-        <file alias="HaloLight.qml">HaloLight.qml</file>
         <file alias="BarsVisual.qml">BarsVisual.qml</file>
         <file alias="VolumeControl.qml">VolumeControl.qml</file>
         <file alias="DeckSpot.qml">DeckSpot.qml</file>

@@ -3,14 +3,14 @@
 # pkgbuild/PKGBUILD). Install with:  makepkg -si   (in this folder)
 # Maintainer: Tiedeyez <84999823+Tiedeyez@users.noreply.github.com>
 pkgname=cymtx
-pkgver=1.0.3
+pkgver=1.1.0
 pkgrel=1
 pkgdesc='Music you can see. A music player for Omarchy: your library, mixed like a DJ would, drawn in sand by its own sound'
 arch=('x86_64' 'aarch64')
 url='https://github.com/Tiedeyez/cymtx'
 license=('MIT' 'CC-BY-SA-4.0')
 depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'taglib' 'ffmpeg')
-# CymtX was called Halo until 1.0.3: it takes that package's place, and
+# CymtX was called Halo until 1.1.0: it takes that package's place, and
 # keeps a `halo` command for the scripts and bar widgets that still call it.
 provides=('halo')
 conflicts=('halo')
@@ -19,7 +19,7 @@ makedepends=('git' 'gcc' 'make' 'qt6-shadertools')
 # Pinned to the release tag. After tagging, the tag's commit goes in
 # _commit in a follow-up commit (a commit can't hold its own hash), and
 # prepare() refuses to build if the tag ever points anywhere else.
-_commit='20ac29adfdbcc7b7a5c6337e4a6bdb938f5121ec'
+_commit=''
 source=("cymtx::git+$url.git#tag=v$pkgver")
 sha256sums=('SKIP')
 

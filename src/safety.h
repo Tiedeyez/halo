@@ -95,7 +95,7 @@ inline QStringList ownFolders() {
             QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/cymtx"};
 }
 
-// CymtX was called Halo until 1.0.3. The first time it starts where a Halo
+// CymtX was called Halo until 1.1.0. The first time it starts where a Halo
 // has been, it takes a copy of each of Halo's folders (settings and queue,
 // playlists, the analysis and cover caches, the music folders) under its own
 // name, so nothing has to be set up or analysed again. A copy, not a move:

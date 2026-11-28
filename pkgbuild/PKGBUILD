@@ -1,11 +1,11 @@
 pkgname=cymtx
-pkgver=1.0.3
+pkgver=1.1.0
 pkgrel=1
 pkgdesc='Music you can see. A music player for Omarchy: your library, mixed like a DJ would, drawn in sand by its own sound'
 arch=('x86_64' 'aarch64')
 license=('MIT' 'CC-BY-SA-4.0')
 depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'taglib' 'ffmpeg')
-# CymtX was called Halo until 1.0.3: it takes that package's place, and
+# CymtX was called Halo until 1.1.0: it takes that package's place, and
 # keeps a `halo` command for the scripts and bar widgets that still call it.
 provides=('halo')
 conflicts=('halo')

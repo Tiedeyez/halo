@@ -2,6 +2,8 @@
 
 ![CymtX playing a song: a mandala of pixel sand on a round plate](docs/screenshot.png)
 
+**See it move:** [ten seconds of Cymatics](https://github.com/Tiedeyez/cymtx/releases/download/v1.1.0/cymtx-cymatics.mp4) (a made-up demo song, no sound).
+
 Music you can see. CymtX (say "cymatics") is a music player for Omarchy
 built round one idea: sound has a shape. Scatter sand on a metal plate, play
 a note into it, and the sand walks into a figure; change the note and it
@@ -17,7 +19,7 @@ the queue never has to run out, and a loud mixtape sits next to a quiet
 album at the same level. Nothing leaves your computer. The window follows
 your Omarchy theme and language.
 
-CymtX was called Halo until version 1.0.3. It is the same player: the first
+CymtX was called Halo until version 1.1.0. It is the same player: the first
 time it starts it takes a copy of Halo's settings, queue, playlists and
 analysis, and a `halo` command still works.
 
@@ -86,13 +88,8 @@ checked against the source.
   **Phosphor** (an oscilloscope trace with afterglow), **Pulsar** (stacked
   ridge lines of the spectrum), **Waterfall** (a scrolling spectrogram),
   **Warp** (flying through stars, faster as the music gets louder),
-  **Aurora** (curtains of light with rays). Then three drawn at the screen's
-  full resolution: **CymtX** (a ring of light in 3D, seen through a camera
-  and moved by physics: each kick strikes it, so it swells, bounces back and
-  rocks on its tilt; plasma flows round it, its brightness round the ring
-  follows the spectrum, and every beat sends out radiation, a wavefront
-  across its plane and a shell of light round it, with sparks flung off the
-  rim and light surging up and down), **Turntable** (a deck rendered in Blender, seen face
+  **Aurora** (curtains of light with rays). Then two drawn at the screen's
+  full resolution: **Turntable** (a deck rendered in Blender, seen face
   up, with the album cover turning on the label and the tonearm following
   the song) and **Hologram** (the Turntable's
   deck made of light and energy: every edge a line of light with faint
@@ -103,7 +100,7 @@ checked against the source.
   In Now Playing, the active visual fills the window behind the song and
   lyrics; a soft window-colour scrim keeps the text at WCAG AAA contrast.
   Ring, Bars, Kaleidoscope, Turntable and Hologram grow beyond the window
-  edges, while CymtX and the six square-pixel visuals fill the whole window.
+  edges, while Cymatics and the six square-pixel visuals fill the whole window.
   In a wide window the visuals with a middle (Skyline's bass, Pulsar's
   peak, Warp's vanishing point) put it on the song's side, clear of the
   text.
@@ -279,7 +276,7 @@ cymtx status                     # what is playing and the library scan; --json 
 cymtx add song.flac ; cymtx playnext ~/Music/Other
 cymtx next ; cymtx pause ; cymtx seek +30 ; cymtx volume 60
 cymtx blend on ; cymtx drift off ; cymtx repeat all ; cymtx sleep 30
-cymtx visual hologram            # switch the visual (next, previous, or one of the thirteen by name)
+cymtx visual hologram            # switch the visual (next, previous, or one of the twelve by name)
 cymtx lyrics                     # the words of the song playing, the sung line marked
 cymtx lyrics online on           # look lyrics up on lrclib.net (off by default)
 cymtx lyrics offset +0.3         # this song's lyrics 0.3 s earlier
@@ -337,7 +334,7 @@ sleep timer (15, 30, 60, 90 minutes, then off) and a button that saves a
 moment; CymtX's own volume; the line being sung and the one coming, when the
 song has lyrics with times; what plays next; and a button that switches the
 visual in the CymtX window. The cover, in the bar and in the player, needs
-CymtX newer than 1.0.3; with an older CymtX the bar has none and the player
+CymtX 1.1.0 or newer; with an older CymtX the bar has none and the player
 shows the note in its place.
 
 Settings, all optional, in the widget's entry in `~/.config/omarchy/shell.json`:
