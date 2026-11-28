@@ -35,6 +35,7 @@
 #include <cmath>
 #include <vector>
 
+#include "agent.h"
 #include "analysis.h"
 #include "dsp.h"
 #include "engine.h"
@@ -1369,6 +1370,72 @@ private slots:
 
     // What `cymtx doctor` and an agent use: the same checks and guarded
     // writes with no window, sharing one undo log with the window.
+    // Updating from Halo: once CymtX has its own folder, Halo's goes, and so
+    // does the skill Halo installed. Anything that isn't Halo's own is left.
+    void theOldNameIsClearedAway() {
+        QTemporaryDir home;
+        const QString root = home.filePath("state"), other = home.filePath("config"), third = home.filePath("data");
+        QVERIFY(QDir().mkpath(root + "/halo/deep") && QDir().mkpath(other + "/halo") && QDir().mkpath(third + "/cymtx"));
+        QFile note(root + "/halo/deep/queue.json");
+        QVERIFY(note.open(QIODevice::WriteOnly) && note.write("{}") == 2);
+        note.close();
+        QVERIFY(QFile::link(home.path(), third + "/halo")); // a link named halo: never followed
+        QCOMPARE(Safety::adoptOldFolders({root}), 1);
+        QVERIFY(QFile::exists(root + "/cymtx/deep/queue.json"));
+        // `other` has no CymtX folder (nothing adopted it): its Halo folder stays.
+        QCOMPARE(Safety::retireOldFolders({root, other, third, QString()}), 1);
+        QVERIFY(!QFileInfo::exists(root + "/halo"));
+        QVERIFY(QFileInfo(other + "/halo").isDir());
+        QVERIFY(QFileInfo(third + "/halo").isSymLink());
+        QVERIFY(QFile::exists(root + "/cymtx/deep/queue.json"));
+
+        // The skill: only the file Halo's command wrote.
+        const QString skills = home.filePath(".agents/skills"), links = home.filePath(".claude/skills");
+        QVERIFY(QDir().mkpath(skills + "/halo") && QDir().mkpath(links));
+        auto write = [](const QString &path, const QByteArray &text) {
+            QFile f(path);
+            return f.open(QIODevice::WriteOnly | QIODevice::Truncate) && f.write(text) == text.size();
+        };
+        QVERIFY(write(skills + "/halo/SKILL.md", "---\nname: halo-effects\n---\nSomeone else's.\n"));
+        QVERIFY(!Safety::retireOldSkill(home.path()));
+        QVERIFY(QFile::exists(skills + "/halo/SKILL.md"));
+        QVERIFY(write(skills + "/halo/SKILL.md", "---\nname: halo\ndescription: Control Halo\n---\n"));
+        QVERIFY(QFile::link("../../.agents/skills/halo", links + "/halo"));
+        QVERIFY(Safety::retireOldSkill(home.path()));
+        QVERIFY(!QFileInfo::exists(skills + "/halo"));
+        QVERIFY(!QFileInfo(links + "/halo").isSymLink());
+        QVERIFY(!Safety::retireOldSkill(home.path()));
+
+        // The marker that leaves a folder out of the library takes the new name.
+        QVERIFY(QDir().mkpath(home.filePath("music/skip")) && QDir().mkpath(home.filePath("music/keep")));
+        QVERIFY(write(home.filePath("music/skip/.haloignore"), ""));
+        QVERIFY(Safety::ignoreMarked(home.filePath("music/skip")));
+        QVERIFY(QFile::exists(home.filePath("music/skip/.cymtxignore")));
+        QVERIFY(!QFile::exists(home.filePath("music/skip/.haloignore")));
+        QVERIFY(Safety::ignoreMarked(home.filePath("music/skip")));
+        QVERIFY(!Safety::ignoreMarked(home.filePath("music/keep")));
+    }
+
+    // "Ask my agent": the agents found, and exactly what would be run.
+    void theAgentIsAskedWithAFixedRequest() {
+        QTemporaryDir bin;
+        QVERIFY(AgentHelp::installed({bin.path()}).isEmpty());
+        for (const QString name : {"opencode", "codex", "unrelated"}) {
+            QFile f(bin.filePath(name));
+            QVERIFY(f.open(QIODevice::WriteOnly) && f.write("#!/bin/sh\n") > 0);
+            f.close();
+            QVERIFY(f.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner));
+        }
+        const QList<AgentHelp::Agent> found = AgentHelp::installed({bin.path()});
+        QCOMPARE(found.size(), 2);
+        QCOMPARE(found[0].id, QString("opencode"));
+        QCOMPARE(AgentHelp::commandLine(found[0]),
+                 (QStringList{bin.filePath("opencode"), "--prompt", AgentHelp::request()}));
+        QCOMPARE(AgentHelp::commandLine(found[1]), (QStringList{bin.filePath("codex"), AgentHelp::request()}));
+        QVERIFY(AgentHelp::request().contains("cymtx doctor fix"));
+        QVERIFY(!AgentHelp::request().contains('\n'));
+    }
+
     void doctorWorksWithoutAWindow() {
         QTemporaryDir music, state;
         QVERIFY(QDir(music.path()).mkpath("Some Tape"));
@@ -1401,7 +1468,7 @@ private slots:
                                        {songs[2], "artist", ""},
                                        {songs[2], "tracknumber", "0"},
                                        {songs[2], "tracknumber", "12"},
-                                       {songs[2], "genre", "Rap"},
+                                       {songs[2], "lyricist", "Nobody"},
                                        {songs[2], "title", "Song 3"},
                                        {music.filePath("missing.mp3"), "artist", "Nobody"}}),
                  3);
@@ -1411,6 +1478,15 @@ private slots:
         QVERIFY(Doctor::readTags(songs[2], t));
         QCOMPARE(t.number, 12);
         QCOMPARE(t.artist, QString());
+        // Genre and year are written too; a year has to be one.
+        QCOMPARE(command.applyAnswers({{songs[0], "genre", "Hip-Hop"}, {songs[0], "year", "2009"},
+                                       {songs[1], "year", "last year"}, {songs[1], "year", "20091"}}),
+                 2);
+        QVERIFY(Doctor::readTags(songs[0], t));
+        QCOMPARE(t.genre, QString("Hip-Hop"));
+        QCOMPARE(t.year, QString("2009"));
+        QVERIFY(Doctor::readTags(songs[1], t));
+        QCOMPARE(t.year, QString());
         // An empty value clears an album, never a title.
         QCOMPARE(command.applyAnswers({{songs[0], "album", "Wrong"}}), 1);
         QCOMPARE(command.applyAnswers({{songs[0], "album", ""}, {songs[0], "title", ""}}), 1);
@@ -1423,6 +1499,10 @@ private slots:
         QVERIFY(Doctor::readTags(songs[0], t));
         QCOMPARE(t.album, QString("Wrong"));
         QVERIFY(window.undoLast()); // the album
+        QVERIFY(window.undoLast()); // the genre and the year, together
+        QVERIFY(Doctor::readTags(songs[0], t));
+        QCOMPARE(t.genre, QString());
+        QCOMPARE(t.year, QString());
         QVERIFY(window.undoLast()); // the three answers, whole
         QVERIFY(Doctor::readTags(songs[1], t));
         QCOMPARE(t.artist, QString());

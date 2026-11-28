@@ -373,5 +373,10 @@
   "%1 copy": "%1 (kopi)",
   "Playlists, new playlist": "Playlister, ny playliste",
   "In a playlist: move or remove the selected song": "I en playliste: flyt eller fjern den valgte sang",
-  "TURNTABLE": "PLADESPILLER"
+  "TURNTABLE": "PLADESPILLER",
+  "Ask %1 to help": "Bed %1 om hjælp",
+  "Copy the request": "Kopiér anmodningen",
+  "Copy a request for my agent": "Kopiér en anmodning til min agent",
+  "Opens %1 in a terminal with a request to fix what is left": "Åbner %1 i en terminal med en anmodning om at rette det, der er tilbage",
+  "Copies the request to paste into a coding agent": "Kopierer anmodningen, så den kan indsættes i en kodeagent"
 }

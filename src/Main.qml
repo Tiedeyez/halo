@@ -500,9 +500,40 @@ ApplicationWindow {
                                 Layout.bottomMargin: 12
                                 Layout.fillWidth: true
                                 wrapMode: Text.Wrap
-                                text: qsTr("Checks your songs' tags on this computer and proposes fixes from the tags, file names and folders. Fix all writes only the fixes that are certain; the rest are for you to check, one song or one folder at a time, or to answer yourself. Nothing is written until you say so, and U undoes the last thing you did. Duplicates are only pointed out. A coding agent can answer what is left: run cymtx skill install once, then ask it to fix your music library.")
+                                text: qsTr("Checks your songs' tags on this computer and proposes fixes from the tags, file names and folders. Fix all writes only the fixes that are certain; the rest are for you to check, one song or one folder at a time, or to answer yourself. Nothing is written until you say so, and U undoes the last thing you did. Duplicates are only pointed out. What is left needs someone who knows the music: your coding agent can answer it.")
                                 color: Style.faint
                                 font.pixelSize: Style.fontSmall
+                            }
+                            // What CymtX can't be sure of goes to the person's own
+                            // agent: one button per agent found on this computer,
+                            // or the request to copy when there is none.
+                            Flow {
+                                id: agentRow
+                                Layout.leftMargin: 24
+                                Layout.rightMargin: 24
+                                Layout.bottomMargin: 12
+                                Layout.fillWidth: true
+                                spacing: 8
+                                visible: !doctor.scanning && doctor.findings.length > 0
+                                Repeater {
+                                    model: agent.agents
+                                    Button {
+                                        required property var modelData
+                                        text: qsTr("Ask %1 to help").arg(modelData.name)
+                                        Material.foreground: Style.accentText
+                                        implicitHeight: Style.target
+                                        Accessible.description: qsTr("Opens %1 in a terminal with a request to fix what is left").arg(modelData.name)
+                                        onClicked: agent.ask(modelData.id)
+                                    }
+                                }
+                                Button {
+                                    text: agent.agents.length > 0 ? qsTr("Copy the request") : qsTr("Copy a request for my agent")
+                                    flat: true
+                                    Material.foreground: Style.accentText
+                                    implicitHeight: Style.target
+                                    Accessible.description: qsTr("Copies the request to paste into a coding agent")
+                                    onClicked: agent.copyRequest()
+                                }
                             }
                             EmptyState {
                                 Layout.fillWidth: true
@@ -731,6 +762,10 @@ ApplicationWindow {
             }
             Connections {
                 target: doctor
+                function onMessage(text) { toast.show(text) }
+            }
+            Connections {
+                target: agent
                 function onMessage(text) { toast.show(text) }
             }
             Connections {

@@ -76,7 +76,7 @@ Library Doctor (needs no running CymtX; every write is logged and can be undone)
   doctor fix [kind]            Write the fixes that are certain
   doctor set <file> <field> <value>
                                Write one tag. Fields: title artist album
-                               albumartist comment tracknumber
+                               albumartist comment tracknumber genre year
   doctor apply <answers.json>  Write many: [{"path":..,"field":..,"value":..}],
                                undone together
   doctor undo                  Take back the last fix, set or apply, whole
@@ -159,7 +159,8 @@ album albumartist case duplicate. A finding has `path`, `field`, `before`,
 `after` (the Doctor's proposal, empty when it has none), `certain`, `why`
 (where the proposal comes from) and `tags` (what the file says now).
 answers.json is `[{"path": "/abs/song.mp3", "field": "artist", "value": "Drake"}]`;
-fields are title, artist, album, albumartist, comment, tracknumber. An empty
+fields are title, artist, album, albumartist, comment, tracknumber, genre,
+year. An empty
 value clears album, albumartist or comment.
 
 How to work:
@@ -556,6 +557,7 @@ int doctor(QStringList args, bool json) {
                           {"before", f.before}, {"after", f.after}, {"certain", f.sure}, {"why", f.why},
                           {"tags", QJsonObject{{"title", t.title}, {"artist", t.artist}, {"album", t.album},
                                                {"albumartist", t.albumArtist}, {"tracknumber", t.number},
+                                               {"genre", t.genre}, {"year", t.year},
                                                {"seconds", int(t.duration)}}}};
             if (!f.others.isEmpty())
                 o.insert("others", QJsonArray::fromStringList(f.others));
@@ -580,6 +582,44 @@ int doctor(QStringList args, bool json) {
 
 // Installs like Hype: the skill lives in ~/.agents/skills/cymtx and is linked
 // into ~/.claude/skills so every agent on the machine finds it.
+bool writeSkill(QString *error, bool force, QString *where) {
+    auto refuse = [error](const QString &why) {
+        if (error)
+            *error = why;
+        return false;
+    };
+    const QString home = QDir::homePath();
+    const QString directory = home + "/.agents/skills/cymtx";
+    if (where)
+        *where = directory;
+    // Only replace a SKILL.md this command wrote (it starts with "name: cymtx");
+    // anything else there is someone else's, so it's left alone without --force.
+    {
+        QFile existing(directory + "/SKILL.md");
+        if (!force && existing.open(QIODevice::ReadOnly)) {
+            const QByteArray head = existing.read(256);
+            if (!head.startsWith("---\nname: cymtx\n"))
+                return refuse(QString("%1 isn't CymtX's; left it alone (cymtx skill install --force replaces it)")
+                                  .arg(existing.fileName()));
+        }
+    }
+    if (QFileInfo(directory).isSymLink())
+        return refuse(QString("%1 is a link; left it alone").arg(directory));
+    QDir().mkpath(directory);
+    QSaveFile file(directory + "/SKILL.md");
+    const QByteArray bytes(Skill);
+    if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit())
+        return refuse(QString("%1: %2").arg(file.fileName(), file.errorString()));
+    const QString link = home + "/.claude/skills/cymtx";
+    QDir().mkpath(home + "/.claude/skills");
+    const QFileInfo existing(link);
+    if (!existing.exists() && !existing.isSymLink())
+        QFile::link("../../.agents/skills/cymtx", link);
+    else if (!existing.isSymLink() && error)
+        *error = QString("left %1 alone; it isn't a link this command made").arg(link);
+    return true;
+}
+
 int skill(const QStringList &args) {
     if (args.isEmpty()) {
         out() << Skill;
@@ -588,33 +628,11 @@ int skill(const QStringList &args) {
     const bool force = args == QStringList{"install", "--force"};
     if (args != QStringList{"install"} && !force)
         return fail("usage: cymtx skill [install [--force]]", false);
-    const QString home = QDir::homePath();
-    const QString directory = home + "/.agents/skills/cymtx";
-    // Only replace a SKILL.md this command wrote (it starts with "name: cymtx");
-    // anything else there is someone else's, so it's left alone without --force.
-    {
-        QFile existing(directory + "/SKILL.md");
-        if (!force && existing.open(QIODevice::ReadOnly)) {
-            const QByteArray head = existing.read(256);
-            if (!head.startsWith("---\nname: cymtx\n"))
-                return fail(QString("%1 isn't CymtX's; left it alone (cymtx skill install --force replaces it)")
-                                .arg(existing.fileName()), false);
-        }
-    }
-    if (QFileInfo(directory).isSymLink())
-        return fail(QString("%1 is a link; left it alone").arg(directory), false);
-    QDir().mkpath(directory);
-    QSaveFile file(directory + "/SKILL.md");
-    const QByteArray bytes(Skill);
-    if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit())
-        return fail(QString("%1: %2").arg(file.fileName(), file.errorString()), false);
-    const QString link = home + "/.claude/skills/cymtx";
-    QDir().mkpath(home + "/.claude/skills");
-    const QFileInfo existing(link);
-    if (!existing.exists() && !existing.isSymLink())
-        QFile::link("../../.agents/skills/cymtx", link);
-    else if (!existing.isSymLink())
-        err() << "cymtx: left " << link << " alone; it isn't a link this command made\n";
+    QString error, directory;
+    if (!writeSkill(&error, force, &directory))
+        return fail(error, false);
+    if (!error.isEmpty())
+        err() << "cymtx: " << error << "\n";
     out() << "Installed the CymtX skill in " << directory << "\n";
     return 0;
 }
@@ -622,6 +640,14 @@ int skill(const QStringList &args) {
 }
 
 namespace Cli {
+bool installSkill(QString *error, bool force) {
+    QString note;
+    const bool ok = writeSkill(&note, force, nullptr);
+    if (error)
+        *error = ok ? QString() : note;
+    return ok;
+}
+
 
 bool isCommand(const QStringList &arguments) {
     static const QStringList commands{"status", "play", "pause", "toggle", "next", "previous", "prev", "seek",

@@ -274,5 +274,10 @@
   "Counting the songs in %n folder(s).": {
     "one": "Counting the songs in %n folder.",
     "other": "Counting the songs in %n folders."
-  }
+  },
+  "Ask %1 to help": "",
+  "Copy the request": "",
+  "Copy a request for my agent": "",
+  "Opens %1 in a terminal with a request to fix what is left": "",
+  "Copies the request to paste into a coding agent": ""
 }

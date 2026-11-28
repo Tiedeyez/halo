@@ -3,6 +3,22 @@
 CymtX follows [semantic versioning](https://semver.org). Each release has
 notes on its GitHub release page as well.
 
+## Unreleased
+
+- **Ask my agent.** The Library Doctor page has a button for each coding
+  agent on your computer (Claude Code, OpenCode, Codex). It installs the
+  CymtX skill if it is missing and opens the agent in a terminal with one
+  fixed request to fix what the Doctor couldn't be sure of. With no agent
+  installed, the button copies the request instead.
+- **Genre and year.** `cymtx doctor set` and `apply` write `genre` and
+  `year` as well, logged and undone like every other tag, and
+  `cymtx doctor list --json` shows them.
+- **Nothing is left called Halo.** After taking over Halo's folders, CymtX
+  now removes them; it replaces the agent skill Halo installed with its
+  own; and a `.haloignore` file is renamed `.cymtxignore` when a scan meets
+  it. The `halo` command and the plugin id `tiedeyez.halo` stay, so key
+  bindings and plugin updates keep working.
+
 ## 1.1.0 (2026-11-27)
 
 Halo is now CymtX: the same player, named for cymatics, the shapes sound

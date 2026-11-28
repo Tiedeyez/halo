@@ -14,10 +14,30 @@ start. It is not sandboxed.
 CymtX was called Halo until 1.1.0. The first time CymtX starts for a user
 who has Halo's folders (`~/.local/state/halo`, `~/.cache/halo`,
 `~/.config/halo`, `~/.local/share/halo`), it copies each to the same place
-under the name `cymtx`. It reads Halo's folders once and never changes or
-removes them; it does not follow or copy symbolic links; and it never
-writes into a `cymtx` folder that already exists. The package also installs
-`/usr/bin/halo` as a link to `/usr/bin/cymtx`.
+under the name `cymtx`; it does not follow or copy symbolic links, and it
+never writes into a `cymtx` folder that already exists.
+
+It then clears away what still carries the old name, each time it starts
+until none is left:
+
+- **Halo's folders are deleted**, each one only where the `cymtx` folder
+  beside it exists (so a copy that failed loses nothing), only a real
+  folder named exactly `halo`, never through a link.
+- **Halo's agent skill is replaced.** If `~/.agents/skills/halo/SKILL.md`
+  is the file Halo's own command wrote (it opens with `name: halo`), that
+  folder and the link `~/.claude/skills/halo` are removed and CymtX's skill
+  is installed in their place. A skill there that Halo did not write is
+  left alone.
+- **`.haloignore` files are renamed** to `.cymtxignore` when a scan of your
+  music folders meets one. This is the one case where CymtX renames a file
+  in a music folder; it is a marker file of its own, never a song.
+
+Three things keep the old name on purpose. The package installs
+`/usr/bin/halo` as a link to `/usr/bin/cymtx`, so key bindings and scripts
+that run `halo` keep working. The Omarchy plugin keeps the id
+`tiedeyez.halo`, because changing it would stop updates for everyone who
+has it. And CymtX does not edit your own files, so a Hyprland rule or a
+script of yours that says `halo` is yours to change.
 
 ## What it needs
 
@@ -32,7 +52,7 @@ program. It talks to PipeWire through Qt to play sound.
 | `~/.config/cymtx/folders` | Your music folders, one per line: exactly the ones ticked in the setup | Only when you press Next on the setup's folders step |
 | `~/.local/state/cymtx/stats.json` | Play counts and last-played times per file | After you hear half a song |
 | `~/.local/state/cymtx/headphones.json` | Outputs you turned headphone correction off for, by name | When you turn it off or on |
-| Your music files' tags (title, artist, album, album artist, comment, track number) | The fix shown in the Library Doctor, or the answer you typed there for a folder | Only when you press Fix, Fix all, Fix these, Write (after Type the answer) or U (undo) there, or when `cymtx doctor fix`, `set`, `apply` or `undo` is run |
+| Your music files' tags (title, artist, album, album artist, comment, track number, genre, year) | The fix shown in the Library Doctor, or the answer you typed there for a folder | Only when you press Fix, Fix all, Fix these, Write (after Type the answer) or U (undo) there, or when `cymtx doctor fix`, `set`, `apply` or `undo` is run |
 | `~/.local/state/cymtx/doctor.json` | Each Library Doctor fix: the file, the field, and the old and new value, so it can be undone. The newest 50,000 fixes are kept | When you fix or undo |
 | `~/.local/state/cymtx/doctor.json.unreadable` | The Library Doctor log itself, renamed, if CymtX could not read it (damaged, or over 64 MiB). CymtX sets it aside and starts a new log; it never cuts the old one short or writes over it | At start, only in that case |
 | `~/.cache/cymtx/library.json` | The list of music files with their tags and durations | After each library scan |
@@ -41,7 +61,7 @@ program. It talks to PipeWire through Qt to play sound.
 | `~/.cache/cymtx/lyrics/*.json` | Lyrics found on lrclib.net, or a note that none were, one file per song | Only with online lyrics on, after a lookup |
 | `~/.local/state/cymtx/lyrics.json` | Whether online lyrics is on, whether lyrics are shown, and per-song timing nudges | When you change them |
 | `$XDG_RUNTIME_DIR/cymtx.sock` | The local socket the `cymtx` command talks to | While CymtX runs |
-| `~/.agents/skills/cymtx/SKILL.md` and the link `~/.claude/skills/cymtx` | A skill for coding agents | Only when you run `cymtx skill install`. An existing `SKILL.md` that CymtX didn't write, or a folder that is a link, is left alone unless you add `--force`; an existing `~/.claude/skills/cymtx` that isn't a link is never touched |
+| `~/.agents/skills/cymtx/SKILL.md` and the link `~/.claude/skills/cymtx` | A skill for coding agents | When you run `cymtx skill install`, press an "Ask my agent" button, or start CymtX where Halo's skill was installed. An existing `SKILL.md` that CymtX didn't write, or a folder that is a link, is left alone unless you add `--force`; an existing `~/.claude/skills/cymtx` that isn't a link is never touched |
 | A `.png` path you name | A picture of the window | Only on the socket command `grab`, and never over an existing file |
 
 Every file is written beside its target and renamed into place, so a crash
@@ -62,6 +82,16 @@ window, or a `cymtx doctor fix`, `set` or `apply` command that you or a
 coding agent working for you runs. Those commands write only to songs in
 your music folders, refuse any other path, and log every write to the same
 undo log. CymtX never edits your Omarchy or Hyprland configuration.
+
+**"Ask my agent" starts another program.** On the Library Doctor page, a
+button for each coding agent found on your computer (`claude`, `opencode`,
+`codex`) installs the CymtX skill if it is missing and runs
+`xdg-terminal-exec` with that agent and one fixed sentence asking it to fix
+what is left. Nothing from your songs is put on that command line, no shell
+reads it, and CymtX sends nothing anywhere itself. What the agent then
+does, including any network use, is that program's own and is covered by
+its terms, not this page. "Copy the request" puts the same sentence on the
+clipboard and starts nothing.
 
 ## What it reads
 

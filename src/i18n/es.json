@@ -373,5 +373,10 @@
   "%1 copy": "%1 (copia)",
   "Playlists, new playlist": "Listas, nueva lista",
   "In a playlist: move or remove the selected song": "En una lista: mover o quitar la canción seleccionada",
-  "TURNTABLE": "TOCADISCOS"
+  "TURNTABLE": "TOCADISCOS",
+  "Ask %1 to help": "Pedir ayuda a %1",
+  "Copy the request": "Copiar la petición",
+  "Copy a request for my agent": "Copiar una petición para mi agente",
+  "Opens %1 in a terminal with a request to fix what is left": "Abre %1 en una terminal con una petición para arreglar lo que queda",
+  "Copies the request to paste into a coding agent": "Copia la petición para pegarla en un agente de programación"
 }

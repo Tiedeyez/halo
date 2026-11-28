@@ -202,6 +202,8 @@ QString field(const Tags &t, const QString &name) {
     if (name == "albumartist") return t.albumArtist;
     if (name == "comment") return t.comment;
     if (name == "tracknumber") return t.number > 0 ? QString::number(t.number) : QString();
+    if (name == "genre") return t.genre;
+    if (name == "year") return t.year;
     return {};
 }
 
@@ -766,6 +768,8 @@ const char *propertyName(const QString &field) {
     if (field == "albumartist") return "ALBUMARTIST";
     if (field == "comment") return "COMMENT";
     if (field == "tracknumber") return "TRACKNUMBER";
+    if (field == "genre") return "GENRE";
+    if (field == "year") return "DATE";
     return nullptr;
 }
 }
@@ -784,6 +788,8 @@ bool readTags(const QString &path, Tags &out) {
     out.album = first("ALBUM");
     out.albumArtist = first("ALBUMARTIST");
     out.comment = first("COMMENT");
+    out.genre = first("GENRE");
+    out.year = first("DATE");
     out.number = int(file.tag()->track());
     out.duration = file.audioProperties() ? file.audioProperties()->lengthInMilliseconds() / 1000.0 : 0;
     return true;
@@ -1187,8 +1193,8 @@ int LibraryDoctor::applyAnswers(const QList<Answer> &answers) {
     refreshLog();
     ++m_batch;
     int done = 0;
-    static const QStringList fields{"title", "artist", "album", "albumartist", "comment", "tracknumber"};
-    static const QStringList clearable{"album", "albumartist", "comment"};
+    static const QStringList fields{"title", "artist", "album", "albumartist", "comment", "tracknumber", "genre", "year"};
+    static const QStringList clearable{"album", "albumartist", "comment", "genre", "year"};
     for (const Answer &a : answers) {
         const QString name = QFileInfo(a.path).fileName();
         const QString value = cleanAnswer(a.value);
@@ -1197,7 +1203,11 @@ int LibraryDoctor::applyAnswers(const QList<Answer> &answers) {
             emit message(tr("%1: CymtX doesn't write a field called %2.").arg(name, a.field));
             continue;
         }
-        if (a.field == "tracknumber" ? !number.match(value).hasMatch() : (value.isEmpty() && !clearable.contains(a.field))) {
+        static const QRegularExpression year("^(19|20)[0-9]{2}$");
+        const bool valid = a.field == "tracknumber" ? number.match(value).hasMatch()
+                           : a.field == "year" ? (value.isEmpty() || year.match(value).hasMatch())
+                           : (!value.isEmpty() || clearable.contains(a.field));
+        if (!valid) {
             emit message(tr("%1: that isn't a value for %2.").arg(name, a.field));
             continue;
         }

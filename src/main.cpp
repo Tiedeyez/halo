@@ -16,6 +16,7 @@
 #include <QUrl>
 #include <cstdio>
 
+#include "agent.h"
 #include "doctor.h"
 #include "headphones.h"
 #include "kaleidopilot.h"
@@ -39,8 +40,12 @@
 static constexpr const char *Version = "1.1.0";
 
 int main(int argc, char *argv[]) {
-    // CymtX was Halo: the first start takes a copy of what Halo kept.
+    // CymtX was Halo: the first start takes over what Halo kept, then clears
+    // away what still carries the old name (its folders and its agent skill).
     Safety::adoptOldFolders(Safety::ownRoots());
+    Safety::retireOldFolders(Safety::ownRoots());
+    if (Safety::retireOldSkill(QDir::homePath()))
+        Cli::installSkill();
     // Before anything is written: CymtX's files are private to you.
     Safety::makePrivate(Safety::ownFolders());
     QStringList arguments;
@@ -176,6 +181,8 @@ int main(int argc, char *argv[]) {
     context->setContextProperty("headphones", &headphones);
     LibraryDoctor doctor(&library);
     context->setContextProperty("doctor", &doctor);
+    AgentLauncher agent;
+    context->setContextProperty("agent", &agent);
     qmlRegisterUncreatableType<LyricsService>("CymtX", 1, 0, "Lyrics", "from main");
     context->setContextProperty("spectrumSource", &spectrum);
     context->setContextProperty("albums", &albums);

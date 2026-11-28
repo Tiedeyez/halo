@@ -20,8 +20,9 @@ album at the same level. Nothing leaves your computer. The window follows
 your Omarchy theme and language.
 
 CymtX was called Halo until version 1.1.0. It is the same player: the first
-time it starts it takes a copy of Halo's settings, queue, playlists and
-analysis, and a `halo` command still works.
+time it starts it takes over Halo's settings, queue, playlists and analysis,
+removes Halo's own folders and agent skill, and installs its own skill in
+their place. A `halo` command still works.
 
 What [DISCLOSURE.md](DISCLOSURE.md) says CymtX reads, writes and runs is
 checked against the source.
@@ -294,8 +295,11 @@ cymtx skill install              # a skill for coding agents
 **Let your agent finish the job.** Omarchy is agent-first, and so is the
 Library Doctor. CymtX fixes what it can work out from the tags, file names
 and folders, with no network. What is left usually needs someone who knows
-the music, and a coding agent does: after `cymtx skill install`, ask yours
-to "fix my music library". It reads `cymtx doctor list --json`, answers what
+the music, and a coding agent does. The Doctor page has a button for each
+agent it finds (Claude Code, OpenCode, Codex): it installs the skill and
+opens that agent in a terminal with the request already typed. From a
+terminal it is the same thing by hand: after `cymtx skill install`, ask
+yours to "fix my music library". It reads `cymtx doctor list --json`, answers what
 it recognises through `cymtx doctor apply`, and leaves the rest. Every tag
 it writes goes through the same checks and the same undo log as the
 window, so `cymtx doctor undo` (or U in the Doctor) takes it back.

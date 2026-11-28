@@ -1,4 +1,5 @@
 #include "library.h"
+#include "safety.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -408,9 +409,7 @@ int Library::countAudioFiles(const QString &folder, bool *more, const std::atomi
         const QString directory = QFileInfo(path).absolutePath();
         auto ignored = ignoredDirectories.constFind(directory);
         if (ignored == ignoredDirectories.constEnd())
-            ignored = ignoredDirectories.insert(directory, QFileInfo::exists(directory + "/.cymtxignore") ||
-                                                               QFileInfo::exists(directory + "/.haloignore") ||
-                                                               QFileInfo::exists(directory + "/.nomedia"));
+            ignored = ignoredDirectories.insert(directory, Safety::ignoreMarked(directory));
         if (!ignored.value())
             ++songs;
     }
@@ -588,9 +587,7 @@ std::vector<Track> Library::scanFolders(const QStringList &folders, const QHash<
             const QString directory = QFileInfo(path).absolutePath();
             auto ignored = ignoredDirectories.constFind(directory);
             if (ignored == ignoredDirectories.constEnd())
-                ignored = ignoredDirectories.insert(directory, QFileInfo::exists(directory + "/.cymtxignore") ||
-                                                               QFileInfo::exists(directory + "/.haloignore") ||
-                                                                   QFileInfo::exists(directory + "/.nomedia"));
+                ignored = ignoredDirectories.insert(directory, Safety::ignoreMarked(directory));
             if (ignored.value())
                 continue;
             seen.insert(path);

@@ -18,6 +18,7 @@ struct Tags {
     QString title, artist, album, albumArtist, comment;
     int number = 0;
     double duration = 0;
+    QString genre, year;   // read and written for `cymtx doctor set`; the Doctor proposes neither
 };
 
 struct File {

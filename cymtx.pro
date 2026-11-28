@@ -9,6 +9,7 @@ TEMPLATE = app
 HEADERS += \
     src/pointer.h \
     src/doctor.h \
+    src/agent.h \
     src/headphones.h \
     src/kaleidopilot.h \
     src/sandplate.h \
@@ -31,6 +32,7 @@ HEADERS += \
 
 SOURCES += \
     src/doctor.cpp \
+    src/agent.cpp \
     src/headphones.cpp \
     src/kaleidopilot.cpp \
     src/sandplate.cpp \
