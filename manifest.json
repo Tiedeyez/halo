@@ -5,7 +5,7 @@
   "version": "1.1.0",
   "author": "Tiedeyez",
   "license": "MIT",
-  "description": "CymtX (called Halo until 1.1.0) in your bar: the song playing in the native CymtX music player, the one that turns every song into a mandala of pixel sand, with a small player behind it: cover, seek bar, play/pause, next and previous, shuffle and repeat, Blend, Drift, the sleep timer, moments, CymtX's volume and the line being sung. The widget only runs the installed /usr/bin/cymtx command with a fixed list of commands (status, toggle, next, previous, seek, volume, shuffle, repeat, blend, drift, sleep, moment, visual, lyrics, open); it writes no files, edits no configuration and opens no network connection. Needs the CymtX app, installed from this repository.",
+  "description": "CymtX (called Halo until 1.1.0) in your bar: the song playing in CymtX, the native music player that turns every song into a mandala of pixel sand, with a small player behind it: cover, seek, play/pause, skip, shuffle, repeat, Blend, Drift, sleep timer, moments, volume and the line being sung. It only runs /usr/bin/cymtx with a fixed list of commands; it writes no files, edits no configuration and opens no network connection. Needs the CymtX app, installed from this repository.",
   "kinds": [
     "bar-widget"
   ],
